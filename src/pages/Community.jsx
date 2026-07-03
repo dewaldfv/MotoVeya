@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import PullToRefresh from '@/components/PullToRefresh';
+import ServicesTab from '@/components/services/ServicesTab';
 import { toast } from 'sonner';
 
 function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
@@ -138,6 +139,7 @@ export default function Community() {
           <TabsList className="mb-4 w-full">
             <TabsTrigger value="groups" className="flex-1">Groups</TabsTrigger>
             <TabsTrigger value="friends" className="flex-1">Friends</TabsTrigger>
+            <TabsTrigger value="services" className="flex-1">Services</TabsTrigger>
           </TabsList>
 
           <TabsContent value="groups" className="space-y-3">
@@ -212,6 +214,9 @@ export default function Community() {
                 );
               })
             )}
+          </TabsContent>
+          <TabsContent value="services">
+            <ServicesTab />
           </TabsContent>
         </Tabs>
 
