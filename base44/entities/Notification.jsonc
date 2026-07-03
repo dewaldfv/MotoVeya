@@ -30,6 +30,9 @@
     },
     "action_url": {
       "type": "string"
+    },
+    "recipient_id": {
+      "type": "string"
     }
   },
   "required": [

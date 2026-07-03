@@ -43,6 +43,19 @@
     "is_premium": {
       "type": "boolean",
       "default": false
+    },
+    "last_lat": {
+      "type": "number"
+    },
+    "last_lng": {
+      "type": "number"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "crash_indicators": {
+      "type": "string"
     }
   },
   "required": [

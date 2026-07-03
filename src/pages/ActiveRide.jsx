@@ -6,6 +6,8 @@ import NavMapView from '@/components/NavMapView';
 import NavigationCard from '@/components/NavigationCard';
 import Speedometer from '@/components/Speedometer';
 import NavActionButtons from '@/components/NavActionButtons';
+import EmergencyOverlay from '@/components/EmergencyOverlay';
+import { useCrashDetection, requestMotionPermission } from '@/hooks/useCrashDetection';
 import LayersSheet from '@/components/LayersSheet';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
 import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
@@ -46,6 +48,11 @@ export default function ActiveRide() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [distressActive, setDistressActive] = useState(false);
+  const [crashPhase, setCrashPhase] = useState(null);
+  const [crashAlertId, setCrashAlertId] = useState(null);
+  const [emergencyContactsNotified, setEmergencyContactsNotified] = useState(false);
+  const [nearbyRidersNotified, setNearbyRidersNotified] = useState(false);
+  const [crashIndicators, setCrashIndicators] = useState(null);
   const [ending, setEnding] = useState(false);
   const [heading, setHeading] = useState(null);
   const [accuracy, setAccuracy] = useState(null);
@@ -138,6 +145,30 @@ export default function ActiveRide() {
     const t = setTimeout(() => setCrashCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [crashCountdown]);
+
+  useCrashDetection({
+    enabled: isActive,
+    speed,
+    onCrashDetected: (data) => {
+      setCrashIndicators(data.indicators);
+      setCrashCountdown(30);
+      setCrashPhase('countdown');
+    },
+  });
+
+  useEffect(() => {
+    if (crashPhase !== 'active' || !crashAlertId || !userPos) return;
+    const interval = setInterval(async () => {
+      try {
+        await base44.functions.invoke('update-emergency-location', {
+          alert_id: crashAlertId,
+          lat: userPos[0],
+          lng: userPos[1],
+        });
+      } catch (e) { console.error(e); }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [crashPhase, crashAlertId, userPos]);
 
   const navProgress = useMemo(() => {
     if (!routeData || !userPos) return null;
@@ -269,28 +300,56 @@ export default function ActiveRide() {
     }
   };
 
-  const handleSimulateCrash = () => setCrashCountdown(30);
-  const handleCancelCrash = () => setCrashCountdown(null);
+  const handleSimulateCrash = () => { setCrashCountdown(30); setCrashPhase('countdown'); };
+  const handleCancelCrash = () => {
+    setCrashCountdown(null);
+    setCrashPhase(null);
+    if (userPos) {
+      base44.entities.CrashAlert.create({
+        rider_id: user?.id, rider_name: user?.nickname || user?.full_name || 'Rider',
+        lat: userPos[0], lng: userPos[1], timestamp: new Date().toISOString(),
+        status: 'false_alarm', crash_indicators: crashIndicators ? JSON.stringify(crashIndicators) : 'manual',
+      }).catch(() => {});
+    }
+    setCrashIndicators(null);
+  };
 
   const handleCrashConfirmed = async () => {
     setCrashCountdown(null);
+    setCrashPhase('active');
     const pos = userPos || SA_CENTER;
     try {
+      const res = await base44.functions.invoke('trigger-emergency-response', {
+        lat: pos[0], lng: pos[1],
+        rider_name: user?.nickname || user?.full_name || 'Rider',
+        is_premium: user?.subscription_tier === 'premium',
+        indicators: crashIndicators,
+      });
+      const data = res.data;
+      if (data?.alert?.id) setCrashAlertId(data.alert.id);
+      setEmergencyContactsNotified(data?.contact_notified || false);
+      setNearbyRidersNotified(data?.nearby_notified > 0 || false);
+      setDistressActive(true);
+    } catch (e) {
+      console.error(e);
       await base44.entities.CrashAlert.create({
         rider_id: user?.id, rider_name: user?.nickname || user?.full_name || 'Rider',
         lat: pos[0], lng: pos[1], timestamp: new Date().toISOString(),
         status: 'active', is_premium: user?.subscription_tier === 'premium',
-        notified_emergency_contact: true, notified_emergency_services: user?.subscription_tier === 'premium',
-        notified_nearby_riders: user?.subscription_tier === 'premium',
-      });
-      if (user?.emergency_contact_phone) {
-        await base44.integrations.Core.SendEmail({
-          to: '', subject: 'MotoGo Crash Alert',
-          body: `Emergency: ${user?.nickname || user?.full_name} may have been in a crash at ${pos[0]}, ${pos[1]}. https://www.openstreetmap.org/?mlat=${pos[0]}&mlon=${pos[1]}#map=16/${pos[0]}/${pos[1]}`,
-        });
-      }
-      if (user?.subscription_tier === 'premium') setDistressActive(true);
-    } catch (e) { console.error(e); }
+      }).catch(() => {});
+    }
+  };
+
+  const handleResolveEmergency = async () => {
+    if (crashAlertId) {
+      try { await base44.entities.CrashAlert.update(crashAlertId, { status: 'resolved' }); } catch (e) { console.error(e); }
+    }
+    setCrashPhase(null);
+    setCrashAlertId(null);
+    setDistressActive(false);
+    setEmergencyContactsNotified(false);
+    setNearbyRidersNotified(false);
+    setCrashIndicators(null);
   };
 
   const handleDistress = async () => {
@@ -307,6 +366,7 @@ export default function ActiveRide() {
   };
 
   const handleStartRide = async () => {
+    await requestMotionPermission();
     setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
     setHeading(null); setAccuracy(null); setDistressActive(false);
     positionsRef.current = []; lastPosRef.current = null;
@@ -326,6 +386,9 @@ export default function ActiveRide() {
 
   const handleEndRide = async () => {
     setEnding(true);
+    if (crashAlertId) {
+      try { await base44.entities.CrashAlert.update(crashAlertId, { status: 'resolved' }); } catch (e) { console.error(e); }
+    }
     if (watchIdRef.current) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     try {
@@ -358,6 +421,8 @@ export default function ActiveRide() {
       setDestInput('');
       setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
       setHeading(null); setAccuracy(null); setDistressActive(false);
+      setCrashPhase(null); setCrashAlertId(null);
+      setEmergencyContactsNotified(false); setNearbyRidersNotified(false); setCrashIndicators(null);
       setNearbyService(null); setDismissedServiceIds(new Set());
       positionsRef.current = []; lastPosRef.current = null;
       setRideStatus('idle');
@@ -485,17 +550,17 @@ export default function ActiveRide() {
         </div>
       )}
 
-      {crashCountdown !== null && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-destructive/95">
-          <AlertTriangle size={72} className="mb-4 text-white" />
-          <p className="mb-2 text-2xl font-bold text-white">CRASH DETECTED</p>
-          <p className="mb-6 text-lg text-white/80">Emergency alert in</p>
-          <div className="mb-8 text-8xl font-black text-white landscape:text-6xl">{crashCountdown}</div>
-          <button onClick={handleCancelCrash} className="min-h-[64px] rounded-2xl bg-white px-12 text-xl font-bold text-destructive active:scale-95">
-            I'M OK — CANCEL
-          </button>
-        </div>
-      )}
+      <EmergencyOverlay
+        phase={crashPhase}
+        countdown={crashCountdown}
+        onCancel={handleCancelCrash}
+        onResolve={handleResolveEmergency}
+        emergencyNumber="112"
+        contactNotified={emergencyContactsNotified}
+        nearbyNotified={nearbyRidersNotified}
+        riderName={user?.nickname || user?.full_name}
+        location={userPos}
+      />
     </div>
   );
 }
