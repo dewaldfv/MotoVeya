@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import MapView from '@/components/MapView';
 import LayersSheet from '@/components/LayersSheet';
 import { useMapLayer } from '@/lib/mapLayers';
+import { toast } from 'sonner';
 
 const SA_CENTER = [-26.2041, 28.0473];
 
@@ -54,12 +55,15 @@ export default function ActiveRide() {
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [distressActive, setDistressActive] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [rideStatus, setRideStatus] = useState('idle');
   const [layer, setLayer] = useMapLayer();
   const [layersOpen, setLayersOpen] = useState(false);
 
   const lastPosRef = useRef(null);
   const positionsRef = useRef([]);
   const startTimeRef = useRef(Date.now());
+  const watchIdRef = useRef(null);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -81,7 +85,7 @@ export default function ActiveRide() {
   }, []);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (rideStatus !== 'active' || !navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const newPos = [pos.coords.latitude, pos.coords.longitude];
@@ -99,13 +103,16 @@ export default function ActiveRide() {
       () => {},
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
     );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+    watchIdRef.current = watchId;
+    return () => { navigator.geolocation.clearWatch(watchId); watchIdRef.current = null; };
+  }, [rideStatus]);
 
   useEffect(() => {
+    if (rideStatus !== 'active') return;
     const timer = setInterval(() => setDuration((d) => d + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    timerRef.current = timer;
+    return () => { clearInterval(timer); timerRef.current = null; };
+  }, [rideStatus]);
 
   useEffect(() => {
     if (bike && bike.tank_capacity_l && bike.fuel_consumption_l_per_100km) {
@@ -185,13 +192,28 @@ export default function ActiveRide() {
     } catch (e) { console.error(e); }
   };
 
+  const handleStartRide = () => {
+    setSpeed(0);
+    setMaxSpeed(0);
+    setDistance(0);
+    setDuration(0);
+    setDistressActive(false);
+    positionsRef.current = [];
+    lastPosRef.current = null;
+    startTimeRef.current = Date.now();
+    setRideStatus('active');
+  };
+
   const handleEndRide = async () => {
     setEnding(true);
+    // Stop recording immediately
+    if (watchIdRef.current) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     try {
       const mins = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 60000));
       const avg = mins > 0 ? distance / (mins / 60) : 0;
       const fuelUsed = bike ? distance * (bike.fuel_consumption_l_per_100km / 100) : 0;
-      const ride = await base44.entities.Ride.create({
+      await base44.entities.Ride.create({
         title: destination ? `Ride to ${destination.name}` : 'Free Ride',
         start_lat: positionsRef.current[0]?.[0], start_lng: positionsRef.current[0]?.[1],
         end_lat: userPos?.[0], end_lng: userPos?.[1],
@@ -207,9 +229,23 @@ export default function ActiveRide() {
           total_rides: (user.total_rides || 0) + 1,
         });
       }
-      navigate(`/rides/${ride.id}`);
+      toast.success('Trip saved to Ride History');
     } catch (e) {
       console.error(e);
+      toast.error('Could not save trip');
+    } finally {
+      // Reset everything and return to idle
+      setRoute(null);
+      setDestination(null);
+      setDestInput('');
+      setSpeed(0);
+      setMaxSpeed(0);
+      setDistance(0);
+      setDuration(0);
+      setDistressActive(false);
+      positionsRef.current = [];
+      lastPosRef.current = null;
+      setRideStatus('idle');
       setEnding(false);
     }
   };
@@ -249,6 +285,7 @@ export default function ActiveRide() {
             )}
           </div>
         </div>
+        {rideStatus === 'active' && (
         <div className="flex items-center justify-between rounded-2xl bg-card/95 px-4 py-3 shadow-lg backdrop-blur-lg">
           <StatBlock label="SPEED" value={speed} unit="km/h" />
           <div className="h-8 w-px bg-border" />
@@ -263,6 +300,7 @@ export default function ActiveRide() {
             <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">km range</div>
           </div>
         </div>
+        )}
       </div>
 
       <button
@@ -277,34 +315,43 @@ export default function ActiveRide() {
       <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} />
 
       <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 to-transparent p-4 pt-10">
-        <div className="flex gap-2">
-          {!distressActive ? (
+        {rideStatus === 'idle' ? (
+          <button
+            onClick={handleStartRide}
+            className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground shadow-lg transition-transform active:scale-95"
+          >
+            <Navigation size={22} fill="white" /> START RIDE
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            {!distressActive ? (
+              <button
+                onClick={handleDistress}
+                disabled={!user || user.subscription_tier !== 'premium'}
+                className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl bg-destructive font-bold text-destructive-foreground shadow-lg transition-transform active:scale-95 disabled:opacity-40"
+              >
+                <Siren size={22} /> DISTRESS
+              </button>
+            ) : (
+              <div className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl bg-destructive font-bold text-destructive-foreground animate-pulse">
+                <Siren size={22} /> DISTRESS ACTIVE
+              </div>
+            )}
             <button
-              onClick={handleDistress}
-              disabled={!user || user.subscription_tier !== 'premium'}
-              className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl bg-destructive font-bold text-destructive-foreground shadow-lg transition-transform active:scale-95 disabled:opacity-40"
+              onClick={handleSimulateCrash}
+              className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-card px-5 font-bold shadow-lg transition-transform active:scale-95"
             >
-              <Siren size={22} /> DISTRESS
+              <AlertTriangle size={22} className="text-destructive" /> CRASH
             </button>
-          ) : (
-            <div className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl bg-destructive font-bold text-destructive-foreground animate-pulse">
-              <Siren size={22} /> DISTRESS ACTIVE
-            </div>
-          )}
-          <button
-            onClick={handleSimulateCrash}
-            className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-card px-5 font-bold shadow-lg transition-transform active:scale-95"
-          >
-            <AlertTriangle size={22} className="text-destructive" /> CRASH
-          </button>
-          <button
-            onClick={handleEndRide}
-            disabled={ending}
-            className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-primary px-6 font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 disabled:opacity-50"
-          >
-            {ending ? '...' : 'END'}
-          </button>
-        </div>
+            <button
+              onClick={handleEndRide}
+              disabled={ending}
+              className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-primary px-6 font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 disabled:opacity-50"
+            >
+              {ending ? '...' : 'END'}
+            </button>
+          </div>
+        )}
       </div>
 
       {crashCountdown !== null && (
