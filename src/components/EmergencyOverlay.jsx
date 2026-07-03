@@ -1,4 +1,4 @@
-import { AlertTriangle, Phone, ShieldCheck, MapPin, Users, Mail, Volume2, VolumeX, Battery, Gauge, Navigation, Bike } from 'lucide-react';
+import { AlertTriangle, Phone, ShieldCheck, MapPin, Users, Mail, Volume2, VolumeX, Battery, Gauge, Navigation, Bike, Mic, Bluetooth } from 'lucide-react';
 
 const SEVERITY_STYLES = {
   low: { bg: 'bg-amber-600', label: 'Low' },
@@ -21,6 +21,8 @@ export default function EmergencyOverlay({
   beaconActive,
   audioEnabled,
   onToggleAudio,
+  voiceSupported,
+  voiceListening,
 }) {
   if (!phase) return null;
 
@@ -42,6 +44,23 @@ export default function EmergencyOverlay({
         >
           I'M OK — CANCEL
         </button>
+
+        <div className="mt-6 flex flex-col items-center gap-2 text-center">
+          <p className="text-xs text-white/60">or cancel using:</p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80">
+              <Volume2 size={12} /> Volume ↑↑ / ↓↓
+            </span>
+            {voiceSupported && (
+              <span className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80">
+                <Mic size={12} /> {voiceListening ? 'Listening…' : '"MotoGo, I\'m OK"'}
+              </span>
+            )}
+            <span className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80">
+              <Bluetooth size={12} /> Headset ×2
+            </span>
+          </div>
+        </div>
       </div>
     );
   }

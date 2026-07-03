@@ -9,6 +9,7 @@ import NavActionButtons from '@/components/NavActionButtons';
 import EmergencyOverlay from '@/components/EmergencyOverlay';
 import { useCrashDetection, requestMotionPermission } from '@/hooks/useCrashDetection';
 import { useEmergencyBeacon } from '@/hooks/useEmergencyBeacon';
+import { useEmergencyCancellation } from '@/hooks/useEmergencyCancellation';
 import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '@/lib/emergencyCache';
 import LayersSheet from '@/components/LayersSheet';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
@@ -419,6 +420,14 @@ export default function ActiveRide() {
     setSeverity('medium');
   };
 
+  const { voiceSupported, voiceListening } = useEmergencyCancellation({
+    enabled: crashPhase === 'countdown' || crashPhase === 'active',
+    onCancel: () => {
+      if (crashPhase === 'countdown') handleCancelCrash();
+      else if (crashPhase === 'active') handleResolveEmergency();
+    },
+  });
+
   const handleDistress = async () => {
     const pos = userPos || SA_CENTER;
     try {
@@ -641,6 +650,8 @@ export default function ActiveRide() {
         beaconActive={beacon.isActive}
         audioEnabled={beacon.audioEnabled}
         onToggleAudio={beacon.toggleAudio}
+        voiceSupported={voiceSupported}
+        voiceListening={voiceListening}
       />
     </div>
   );
