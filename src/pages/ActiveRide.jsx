@@ -55,6 +55,8 @@ export default function ActiveRide() {
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [distressActive, setDistressActive] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [heading, setHeading] = useState(null);
+  const [accuracy, setAccuracy] = useState(null);
   const [rideStatus, setRideStatus] = useState('idle');
   const [layer, setLayer] = useMapLayer();
   const [layersOpen, setLayersOpen] = useState(false);
@@ -91,6 +93,8 @@ export default function ActiveRide() {
         const newPos = [pos.coords.latitude, pos.coords.longitude];
         setUserPos(newPos);
         positionsRef.current.push(newPos);
+        if (pos.coords.heading != null && !isNaN(pos.coords.heading)) setHeading(pos.coords.heading);
+        if (pos.coords.accuracy != null) setAccuracy(pos.coords.accuracy);
         const spd = pos.coords.speed != null && pos.coords.speed > 0 ? pos.coords.speed * 3.6 : 0;
         setSpeed(Math.round(spd));
         setMaxSpeed((prev) => (spd > prev ? Math.round(spd) : prev));
@@ -197,6 +201,8 @@ export default function ActiveRide() {
     setMaxSpeed(0);
     setDistance(0);
     setDuration(0);
+    setHeading(null);
+    setAccuracy(null);
     setDistressActive(false);
     positionsRef.current = [];
     lastPosRef.current = null;
@@ -242,6 +248,8 @@ export default function ActiveRide() {
       setMaxSpeed(0);
       setDistance(0);
       setDuration(0);
+      setHeading(null);
+      setAccuracy(null);
       setDistressActive(false);
       positionsRef.current = [];
       lastPosRef.current = null;
@@ -259,7 +267,8 @@ export default function ActiveRide() {
         zoom={14}
         layer={layer}
         route={route}
-        riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
+        followRider={rideStatus === 'active'}
+        riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1], heading: heading, accuracy: accuracy }] : []}
         distressAlerts={distressActive && userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
         className="absolute inset-0 z-0 h-full w-full"
       />

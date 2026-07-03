@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getEventMarkerUrl } from '@/lib/eventMarkers';
 import { MAP_LAYERS } from '@/lib/mapLayers';
+import RiderMarker from '@/components/RiderMarker';
 
 const CATEGORY_CONFIG = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -91,6 +92,7 @@ export default function MapView({
   route = null,
   recenterSignal = 0,
   layer = 'dark',
+  followRider = false,
   onMarkerClick,
   className = '',
 }) {
@@ -121,11 +123,12 @@ export default function MapView({
         <Marker key={`distress-${d.id}`} position={[d.lat, d.lng]} icon={createIcon('distress')} />
       ))}
       {riders.map((r) => (
-        <CircleMarker
+        <RiderMarker
           key={`rider-${r.id}`}
-          center={[r.lat, r.lng]}
-          radius={10}
-          pathOptions={{ color: '#FF6F00', fillColor: '#FF6F00', fillOpacity: 0.8 }}
+          position={[r.lat, r.lng]}
+          heading={r.heading}
+          accuracy={r.accuracy}
+          zIndex={1200}
         />
       ))}
     </MapContainer>

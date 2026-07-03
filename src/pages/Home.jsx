@@ -150,6 +150,7 @@ export default function Home() {
         events={eventsToShow}
         distressAlerts={distressToShow}
         riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
+        followRider={false}
         onMarkerClick={setSelected}
         className="absolute inset-0 z-0 h-full w-full"
       />
