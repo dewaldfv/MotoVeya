@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MapView from '@/components/MapView';
 import BottomSheet from '@/components/BottomSheet';
+import SearchPanel from '@/components/SearchPanel';
 
 const CATEGORIES = [
   { key: 'all', label: 'All', emoji: '🌐' },
@@ -28,6 +29,7 @@ export default function Home() {
   const [selected, setSelected] = useState(null);
   const [activeCat, setActiveCat] = useState('all');
   const [userPos, setUserPos] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -61,6 +63,10 @@ export default function Home() {
     navigate('/ride/active', { state: { destination: { lat: item.lat, lng: item.lng, name: item.name || item.title } } });
   };
 
+  const handleSearchSelect = (dest) => {
+    navigate('/ride/active', { state: { destination: dest } });
+  };
+
   return (
     <div className="relative h-screen w-full overflow-hidden">
       <MapView
@@ -73,16 +79,22 @@ export default function Home() {
         className="absolute inset-0 z-0 h-full w-full"
       />
 
-      <div className="absolute left-4 right-4 z-10" style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}>
-        <div className="flex items-center gap-2 rounded-2xl bg-card/95 px-4 py-3.5 shadow-lg backdrop-blur-lg">
-          <Search size={20} className="text-muted-foreground" />
-          <input
-            placeholder="Search destination..."
-            className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
-            onKeyDown={(e) => { if (e.key === 'Enter' && e.target.value) { navigate('/ride/active', { state: { searchText: e.target.value } }); } }}
-          />
-        </div>
-      </div>
+      <button
+        onClick={() => setSearchOpen(true)}
+        className="glove-target absolute left-4 z-20 flex items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+        aria-label="Search"
+      >
+        <Search size={22} className="text-foreground" />
+      </button>
+
+      <SearchPanel
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onSelect={handleSearchSelect}
+        pois={pois}
+        events={events}
+      />
 
       <div className="absolute left-4 right-4 z-10" style={{ top: 'calc(4.5rem + env(safe-area-inset-top))' }}>
         <div className="no-scrollbar flex gap-2 overflow-x-auto">
