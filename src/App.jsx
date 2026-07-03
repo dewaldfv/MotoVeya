@@ -8,6 +8,8 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import { TabHistoryProvider } from '@/lib/TabHistoryContext';
+import { AppSettingsProvider } from '@/hooks/useAppSettings';
+import OrientationLockOverlay from '@/components/OrientationLockOverlay';
 // Add page imports here
 import AppLayout from '@/components/AppLayout';
 import Home from '@/pages/Home';
@@ -19,6 +21,7 @@ import Community from '@/pages/Community';
 import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
 import GoPremium from '@/pages/GoPremium';
+import Settings from '@/pages/Settings';
 import ActiveRide from '@/pages/ActiveRide';
 import Onboarding from '@/pages/Onboarding';
 import Login from '@/pages/Login';
@@ -68,6 +71,7 @@ const AuthenticatedApp = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/premium" element={<GoPremium />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="/ride/active" element={<ActiveRide />} />
       <Route path="/onboarding" element={<Onboarding />} />
@@ -81,16 +85,19 @@ function App() {
 
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <TabHistoryProvider>
-            <AuthenticatedApp />
-          </TabHistoryProvider>
-        </Router>
+      <AppSettingsProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <ScrollToTop />
+            <TabHistoryProvider>
+              <OrientationLockOverlay />
+              <AuthenticatedApp />
+            </TabHistoryProvider>
+          </Router>
         <Toaster />
         <SonnerToaster position="top-center" />
-      </QueryClientProvider>
+        </QueryClientProvider>
+      </AppSettingsProvider>
     </AuthProvider>
   )
 }
