@@ -2,6 +2,9 @@
   "name": "Subscription",
   "type": "object",
   "properties": {
+    "user_id": {
+      "type": "string"
+    },
     "plan": {
       "type": "string",
       "enum": [
@@ -20,18 +23,33 @@
       ],
       "default": "active"
     },
+    "billing_cycle": {
+      "type": "string",
+      "enum": [
+        "monthly",
+        "annual"
+      ],
+      "default": "monthly"
+    },
     "amount_zar": {
       "type": "number"
     },
-    "start_date": {
+    "purchase_date": {
       "type": "string",
       "format": "date-time"
     },
-    "end_date": {
+    "renewal_date": {
       "type": "string",
       "format": "date-time"
     },
-    "payment_method": {
+    "expiry_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "purchase_token": {
+      "type": "string"
+    },
+    "payment_provider": {
       "type": "string"
     },
     "auto_renew": {
