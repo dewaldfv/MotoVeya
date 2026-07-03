@@ -223,7 +223,7 @@ export default function ActiveRide() {
         className="absolute inset-0 z-0 h-full w-full"
       />
 
-      <div className="absolute left-0 right-0 top-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4 pb-10">
+      <div className="absolute left-0 right-0 top-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4 pb-10" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
         <div className="mb-3 flex items-center gap-2">
           <button onClick={() => navigate('/')} className="glove-target flex items-center justify-center rounded-full bg-card/90">
             <ChevronLeft size={24} />

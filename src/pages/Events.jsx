@@ -33,7 +33,7 @@ export default function Events() {
   const fmtDate = (d) => new Date(d).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24">
+    <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Events</h1>
         {canSubmit && (

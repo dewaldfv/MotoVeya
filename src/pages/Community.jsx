@@ -102,7 +102,7 @@ export default function Community() {
   if (!user) return <LoginPrompt message="Log in to connect with riders" />;
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24">
+    <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
       <h1 className="mb-4 text-2xl font-bold">Community</h1>
       <Tabs defaultValue="groups">
         <TabsList className="mb-4 w-full">

@@ -73,7 +73,7 @@ export default function Home() {
         className="absolute inset-0 z-0 h-full w-full"
       />
 
-      <div className="absolute left-4 right-4 top-4 z-10">
+      <div className="absolute left-4 right-4 z-10" style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}>
         <div className="flex items-center gap-2 rounded-2xl bg-card/95 px-4 py-3.5 shadow-lg backdrop-blur-lg">
           <Search size={20} className="text-muted-foreground" />
           <input
@@ -84,7 +84,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="absolute left-4 right-4 top-[72px] z-10">
+      <div className="absolute left-4 right-4 z-10" style={{ top: 'calc(4.5rem + env(safe-area-inset-top))' }}>
         <div className="no-scrollbar flex gap-2 overflow-x-auto">
           {CATEGORIES.map((cat) => (
             <button

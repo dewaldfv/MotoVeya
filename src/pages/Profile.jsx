@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import { toast } from 'sonner';
 
@@ -18,6 +19,8 @@ export default function Profile() {
   const [bikeDialog, setBikeDialog] = useState(false);
   const [editingBike, setEditingBike] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [bikeForm, setBikeForm] = useState({ make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '', color: '', nickname: '', is_primary: false });
 
   useEffect(() => { loadAll(); }, []);
@@ -54,6 +57,19 @@ export default function Profile() {
 
   const handleLogout = () => base44.auth.logout('/');
 
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await base44.entities.User.delete(user.id);
+      base44.auth.logout('/');
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to delete account');
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   const copyCode = () => { navigator.clipboard.writeText(user.id); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
@@ -62,7 +78,7 @@ export default function Profile() {
   const isPremium = user.subscription_tier === 'premium';
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24">
+    <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
       <div className="mb-6 flex flex-col items-center text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-black text-primary">
           {user.nickname?.[0]?.toUpperCase() || user.full_name?.[0]?.toUpperCase() || 'R'}
@@ -154,6 +170,9 @@ export default function Profile() {
         <Button variant="ghost" className="min-h-[48px] w-full justify-start text-destructive" onClick={handleLogout}>
           <LogOut size={18} className="mr-2" /> Log Out
         </Button>
+        <Button variant="ghost" className="min-h-[48px] w-full justify-start text-destructive" onClick={() => setDeleteDialogOpen(true)}>
+          <Trash2 size={18} className="mr-2" /> Delete Account
+        </Button>
       </div>
 
       <Dialog open={bikeDialog} onOpenChange={setBikeDialog}>
@@ -181,6 +200,23 @@ export default function Profile() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your MotoGo account. This action cannot be undone. Your ride history, bikes, and profile data will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAccount} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? 'Deleting...' : 'Delete Account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

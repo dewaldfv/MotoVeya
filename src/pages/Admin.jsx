@@ -51,7 +51,7 @@ export default function Admin() {
   if (user.role !== 'admin') return <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center"><Shield size={48} className="text-muted-foreground" /><p className="text-lg text-muted-foreground">Admin access required.</p></div>;
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24">
+    <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
       <div className="mb-4 flex items-center gap-2">
         <Shield size={24} className="text-primary" />
         <h1 className="text-2xl font-bold">Admin Portal</h1>

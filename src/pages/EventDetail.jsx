@@ -32,14 +32,14 @@ export default function EventDetail() {
         <div className="relative h-56 w-full">
           <img src={event.photo_urls[0]} alt={event.title} className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-          <div className="absolute left-4 top-4 z-10">
+          <div className="absolute left-4 z-10" style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}>
             <button onClick={() => navigate('/events')} className="glove-target flex items-center justify-center rounded-full bg-card/95 backdrop-blur-lg">
               <ChevronLeft size={24} />
             </button>
           </div>
         </div>
       ) : (
-        <div className="p-4">
+        <div className="p-4" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
           <button onClick={() => navigate('/events')} className="glove-target flex items-center gap-2 text-muted-foreground">
             <ChevronLeft size={24} /> Back
           </button>

@@ -39,7 +39,7 @@ export default function RideDetail() {
     <div className="min-h-screen bg-background pb-24">
       <div className="relative h-64 w-full">
         <MapView center={center} zoom={13} route={route} className="absolute inset-0 h-full w-full" />
-        <div className="absolute left-4 top-4 z-10">
+        <div className="absolute left-4 z-10" style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}>
           <button onClick={() => navigate('/rides')} className="glove-target flex items-center justify-center rounded-full bg-card/95 backdrop-blur-lg">
             <ChevronLeft size={24} />
           </button>

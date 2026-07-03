@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 100%;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 4%;
     --primary: 26 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14%;
-    --accent-foreground: 0 0% 100%;
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 4%;
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 4%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
     --ring: 26 100% 50%;
     --chart-1: 26 100% 50%;
     --chart-2: 173 58% 39%;
@@ -33,14 +33,51 @@
     --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    --sidebar-background: 0 0% 7%;
-    --sidebar-foreground: 0 0% 98%;
+    --sidebar-background: 0 0% 96%;
+    --sidebar-foreground: 0 0% 4%;
     --sidebar-primary: 26 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 14%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 18%;
+    --sidebar-accent: 0 0% 92%;
+    --sidebar-accent-foreground: 0 0% 4%;
+    --sidebar-border: 0 0% 85%;
     --sidebar-ring: 26 100% 50%;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: 0 0% 4%;
+      --foreground: 0 0% 100%;
+      --card: 0 0% 10%;
+      --card-foreground: 0 0% 100%;
+      --popover: 0 0% 10%;
+      --popover-foreground: 0 0% 100%;
+      --primary: 26 100% 50%;
+      --primary-foreground: 0 0% 100%;
+      --secondary: 0 0% 14%;
+      --secondary-foreground: 0 0% 100%;
+      --muted: 0 0% 14%;
+      --muted-foreground: 0 0% 63.9%;
+      --accent: 0 0% 14%;
+      --accent-foreground: 0 0% 100%;
+      --destructive: 0 72% 51%;
+      --destructive-foreground: 0 0% 100%;
+      --border: 0 0% 18%;
+      --input: 0 0% 18%;
+      --ring: 26 100% 50%;
+      --chart-1: 26 100% 50%;
+      --chart-2: 173 58% 39%;
+      --chart-3: 197 37% 24%;
+      --chart-4: 43 74% 66%;
+      --chart-5: 27 87% 67%;
+      --sidebar-background: 0 0% 7%;
+      --sidebar-foreground: 0 0% 98%;
+      --sidebar-primary: 26 100% 50%;
+      --sidebar-primary-foreground: 0 0% 100%;
+      --sidebar-accent: 0 0% 14%;
+      --sidebar-accent-foreground: 0 0% 98%;
+      --sidebar-border: 0 0% 18%;
+      --sidebar-ring: 26 100% 50%;
+    }
   }
 
   .dark {
@@ -86,6 +123,14 @@
 
   body {
     @apply bg-background text-foreground font-body antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  button,
+  [role="tab"],
+  svg {
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 

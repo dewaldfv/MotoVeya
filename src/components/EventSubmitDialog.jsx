@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
@@ -46,10 +47,21 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
           <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Tell riders about your event" rows={3} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Date & Time *</Label><Input type="datetime-local" value={form.event_date} onChange={(e) => set('event_date', e.target.value)} className="min-h-[48px]" /></div>
-            <div><Label>Category</Label>
-              <select value={form.category} onChange={(e) => set('category', e.target.value)} className="flex min-h-[48px] w-full rounded-md border border-input bg-background px-3 text-sm">
-                <option value="meet">Meet</option><option value="rally">Rally</option><option value="race">Race</option><option value="charity">Charity</option><option value="track_day">Track Day</option><option value="other">Other</option>
-              </select>
+            <div>
+              <Label>Category</Label>
+              <Select value={form.category} onValueChange={(v) => set('category', v)}>
+                <SelectTrigger className="min-h-[48px] w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="meet">Meet</SelectItem>
+                  <SelectItem value="rally">Rally</SelectItem>
+                  <SelectItem value="race">Race</SelectItem>
+                  <SelectItem value="charity">Charity</SelectItem>
+                  <SelectItem value="track_day">Track Day</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div><Label>Venue Name *</Label><Input value={form.venue_name} onChange={(e) => set('venue_name', e.target.value)} placeholder="Kyalami Circuit" className="min-h-[48px]" /></div>

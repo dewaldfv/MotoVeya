@@ -52,7 +52,7 @@ export default function Rides() {
   const totalKm = rides.reduce((s, r) => s + (r.distance_km || 0), 0);
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24">
+    <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
       <h1 className="mb-4 text-2xl font-bold">My Rides</h1>
       {rides.length > 0 && (
         <div className="mb-4 grid grid-cols-2 gap-3">
