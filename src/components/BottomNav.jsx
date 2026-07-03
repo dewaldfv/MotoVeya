@@ -16,21 +16,24 @@ export default function BottomNav() {
 
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-lg transition-transform duration-200 ${
+      className={`fixed left-4 right-4 z-40 rounded-[20px] border border-border bg-card/95 backdrop-blur-lg transition-transform duration-200 ${
         keyboardVisible ? 'translate-y-full' : 'translate-y-0'
       }`}
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      style={{
+        bottom: 'calc(env(safe-area-inset-bottom) + 8px)',
+        boxShadow: '0 -2px 12px rgba(0, 0, 0, 0.08)',
+      }}
     >
-      <div className="mx-auto flex max-w-2xl items-center justify-around gap-1 px-2 pt-2 pb-1 landscape:pt-1.5 landscape:pb-0.5">
+      <div className="mx-auto flex max-w-2xl items-center justify-around gap-1 px-2 py-1.5 landscape:py-1">
         {navItems.map(({ key, icon: Icon, label }) => (
           <button
             key={key}
             onClick={() => switchToTab(key)}
-            className={`flex min-h-[56px] min-w-[56px] flex-col items-center justify-center gap-1 rounded-xl transition-colors ${
+            className={`flex min-h-[50px] min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-xl transition-colors ${
               currentTab === key ? 'text-primary' : 'text-muted-foreground'
             }`}
           >
-            <Icon size={26} strokeWidth={2.2} />
+            <Icon size={24} strokeWidth={2.2} />
             <span className="text-[11px] font-semibold">{label}</span>
           </button>
         ))}
