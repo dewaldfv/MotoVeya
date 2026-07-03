@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bike as BikeIcon, Plus, Crown, Phone, Settings, LogOut, Route, TrendingUp, Pencil, Trash2, Copy, Check } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Bike as BikeIcon, Plus, Crown, Phone, LogOut, Route, TrendingUp, Pencil, Trash2, Copy, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,10 +11,17 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import LoginPrompt from '@/components/LoginPrompt';
 import { toast } from 'sonner';
 
+const coerceBike = (form) => ({
+  ...form,
+  year: Number(form.year) || undefined,
+  engine_size_cc: Number(form.engine_size_cc) || undefined,
+  tank_capacity_l: Number(form.tank_capacity_l) || undefined,
+  fuel_consumption_l_per_100km: Number(form.fuel_consumption_l_per_100km) || undefined,
+});
+
 export default function Profile() {
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
-  const [bikes, setBikes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bikeDialog, setBikeDialog] = useState(false);
   const [editingBike, setEditingBike] = useState(null);
@@ -23,36 +30,86 @@ export default function Profile() {
   const [deleting, setDeleting] = useState(false);
   const [bikeForm, setBikeForm] = useState({ make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '', color: '', nickname: '', is_primary: false });
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const authed = await base44.auth.isAuthenticated();
+        if (!authed) { setLoading(false); return; }
+        const me = await base44.auth.me();
+        setUser(me);
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    })();
+  }, []);
 
-  const loadAll = async () => {
-    try {
+  const { data: bikes = [], isLoading: bikesLoading } = useQuery({
+    queryKey: ['bikes'],
+    queryFn: async () => {
       const authed = await base44.auth.isAuthenticated();
-      if (!authed) { setLoading(false); return; }
-      const me = await base44.auth.me();
-      setUser(me);
-      const bikeData = await base44.entities.Bike.list('-created_date', 20);
-      setBikes(bikeData || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
+      if (!authed) return [];
+      return (await base44.entities.Bike.list('-created_date', 20)) || [];
+    },
+  });
+
+  const saveBikeMutation = useMutation({
+    mutationFn: ({ editing, form }) => {
+      const data = coerceBike(form);
+      if (editing) return base44.entities.Bike.update(editing.id, data);
+      return base44.entities.Bike.create(data);
+    },
+    onMutate: async ({ editing, form }) => {
+      await queryClient.cancelQueries({ queryKey: ['bikes'] });
+      const prev = queryClient.getQueryData(['bikes']);
+      const data = coerceBike(form);
+      queryClient.setQueryData(['bikes'], (old) => {
+        const list = old || [];
+        if (editing) {
+          return list.map((b) => {
+            if (b.id !== editing.id) return b;
+            const merged = { ...b };
+            Object.entries(data).forEach(([k, v]) => { if (v !== undefined) merged[k] = v; });
+            return merged;
+          });
+        }
+        return [...list, { ...data, id: 'temp-' + Date.now(), created_date: new Date().toISOString() }];
+      });
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(['bikes'], ctx.prev); },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ['bikes'] }); },
+  });
+
+  const deleteBikeMutation = useMutation({
+    mutationFn: (id) => base44.entities.Bike.delete(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['bikes'] });
+      const prev = queryClient.getQueryData(['bikes']);
+      queryClient.setQueryData(['bikes'], (old) => (old || []).filter((b) => b.id !== id));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(['bikes'], ctx.prev); },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ['bikes'] }); },
+  });
 
   const openAddBike = () => { setEditingBike(null); setBikeForm({ make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '', color: '', nickname: '', is_primary: bikes.length === 0 }); setBikeDialog(true); };
   const openEditBike = (bike) => { setEditingBike(bike); setBikeForm({ ...bike, year: bike.year || '', engine_size_cc: bike.engine_size_cc || '', tank_capacity_l: bike.tank_capacity_l || '', fuel_consumption_l_per_100km: bike.fuel_consumption_l_per_100km || '' }); setBikeDialog(true); };
 
   const handleSaveBike = async () => {
     try {
-      const data = { ...bikeForm, year: Number(bikeForm.year) || undefined, engine_size_cc: Number(bikeForm.engine_size_cc) || undefined, tank_capacity_l: Number(bikeForm.tank_capacity_l) || undefined, fuel_consumption_l_per_100km: Number(bikeForm.fuel_consumption_l_per_100km) || undefined };
-      if (editingBike) await base44.entities.Bike.update(editingBike.id, data);
-      else await base44.entities.Bike.create(data);
-      setBikeDialog(false); loadAll();
-    } catch (e) { console.error(e); }
+      await saveBikeMutation.mutateAsync({ editing: editingBike, form: bikeForm });
+      setBikeDialog(false);
+    } catch (e) { console.error(e); toast.error('Failed to save bike'); }
   };
 
-  const handleDeleteBike = async (id) => { try { await base44.entities.Bike.delete(id); loadAll(); } catch (e) { console.error(e); } };
+  const handleDeleteBike = async (id) => { try { await deleteBikeMutation.mutateAsync(id); } catch (e) { console.error(e); } };
 
   const handleUpgrade = async () => {
-    try { await base44.auth.updateMe({ subscription_tier: 'premium', subscription_status: 'active' }); await base44.entities.Subscription.create({ plan: 'premium', status: 'active', amount_zar: 69.99, start_date: new Date().toISOString(), auto_renew: true }); toast.success('Upgraded to Premium!'); loadAll(); } catch (e) { console.error(e); }
+    try {
+      await base44.auth.updateMe({ subscription_tier: 'premium', subscription_status: 'active' });
+      await base44.entities.Subscription.create({ plan: 'premium', status: 'active', amount_zar: 69.99, start_date: new Date().toISOString(), auto_renew: true });
+      setUser((prev) => ({ ...prev, subscription_tier: 'premium', subscription_status: 'active' }));
+      toast.success('Upgraded to Premium!');
+    } catch (e) { console.error(e); }
   };
 
   const handleLogout = () => base44.auth.logout('/');
@@ -72,7 +129,7 @@ export default function Profile() {
 
   const copyCode = () => { navigator.clipboard.writeText(user.id); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
-  if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
+  if (loading || bikesLoading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!user) return <LoginPrompt />;
 
   const isPremium = user.subscription_tier === 'premium';

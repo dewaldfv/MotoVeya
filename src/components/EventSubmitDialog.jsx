@@ -5,11 +5,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { ChevronDown, Check } from 'lucide-react';
 import { toast } from 'sonner';
+
+const CATEGORIES = [
+  { value: 'meet', label: 'Meet' },
+  { value: 'rally', label: 'Rally' },
+  { value: 'race', label: 'Race' },
+  { value: 'charity', label: 'Charity' },
+  { value: 'track_day', label: 'Track Day' },
+  { value: 'other', label: 'Other' },
+];
 
 export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
   const [saving, setSaving] = useState(false);
+  const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', event_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'meet' });
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -38,6 +49,8 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
     }
   };
 
+  const categoryLabel = CATEGORIES.find((c) => c.value === form.category)?.label || 'Meet';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -49,19 +62,29 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
             <div><Label>Date & Time *</Label><Input type="datetime-local" value={form.event_date} onChange={(e) => set('event_date', e.target.value)} className="min-h-[48px]" /></div>
             <div>
               <Label>Category</Label>
-              <Select value={form.category} onValueChange={(v) => set('category', v)}>
-                <SelectTrigger className="min-h-[48px] w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="meet">Meet</SelectItem>
-                  <SelectItem value="rally">Rally</SelectItem>
-                  <SelectItem value="race">Race</SelectItem>
-                  <SelectItem value="charity">Charity</SelectItem>
-                  <SelectItem value="track_day">Track Day</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <Drawer open={categoryDrawerOpen} onOpenChange={setCategoryDrawerOpen}>
+                <DrawerTrigger asChild>
+                  <button type="button" className="flex min-h-[48px] w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm">
+                    <span>{categoryLabel}</span>
+                    <ChevronDown size={16} className="text-muted-foreground" />
+                  </button>
+                </DrawerTrigger>
+                <DrawerContent>
+                  <DrawerHeader><DrawerTitle>Select Category</DrawerTitle></DrawerHeader>
+                  <div className="p-4 pb-8">
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.value}
+                        onClick={() => { set('category', cat.value); setCategoryDrawerOpen(false); }}
+                        className={`flex min-h-[48px] w-full items-center justify-between rounded-xl px-4 text-left ${form.category === cat.value ? 'bg-primary/10 text-primary' : 'hover:bg-secondary'}`}
+                      >
+                        <span>{cat.label}</span>
+                        {form.category === cat.value && <Check size={18} className="text-primary" />}
+                      </button>
+                    ))}
+                  </div>
+                </DrawerContent>
+              </Drawer>
             </div>
           </div>
           <div><Label>Venue Name *</Label><Input value={form.venue_name} onChange={(e) => set('venue_name', e.target.value)} placeholder="Kyalami Circuit" className="min-h-[48px]" /></div>

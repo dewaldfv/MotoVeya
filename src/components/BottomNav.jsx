@@ -1,5 +1,6 @@
 import { Map, Route, Calendar, Users, User } from 'lucide-react';
 import { useTabHistory } from '@/lib/TabHistoryContext';
+import useKeyboardVisible from '@/hooks/useKeyboardVisible';
 
 const navItems = [
   { key: 'map', icon: Map, label: 'Map' },
@@ -11,10 +12,13 @@ const navItems = [
 
 export default function BottomNav() {
   const { currentTab, switchToTab } = useTabHistory();
+  const keyboardVisible = useKeyboardVisible();
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-lg"
+      className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-lg transition-transform duration-200 ${
+        keyboardVisible ? 'translate-y-full' : 'translate-y-0'
+      }`}
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="mx-auto flex max-w-2xl items-center justify-around px-2 py-2">
