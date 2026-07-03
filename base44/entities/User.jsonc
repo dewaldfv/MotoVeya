@@ -1,0 +1,65 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user",
+        "organizer"
+      ],
+      "default": "user"
+    },
+    "nickname": {
+      "type": "string"
+    },
+    "motorcycle_club": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "bio": {
+      "type": "string"
+    },
+    "emergency_contact_name": {
+      "type": "string"
+    },
+    "emergency_contact_phone": {
+      "type": "string"
+    },
+    "medical_notes": {
+      "type": "string"
+    },
+    "subscription_tier": {
+      "type": "string",
+      "enum": [
+        "free",
+        "premium"
+      ],
+      "default": "free"
+    },
+    "subscription_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "cancelled",
+        "none"
+      ],
+      "default": "none"
+    },
+    "total_distance_km": {
+      "type": "number",
+      "default": 0
+    },
+    "total_rides": {
+      "type": "number",
+      "default": 0
+    },
+    "onboarding_completed": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

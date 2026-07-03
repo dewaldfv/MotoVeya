@@ -1,0 +1,73 @@
+{
+  "name": "Ride",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "start_location_name": {
+      "type": "string"
+    },
+    "end_location_name": {
+      "type": "string"
+    },
+    "start_lat": {
+      "type": "number"
+    },
+    "start_lng": {
+      "type": "number"
+    },
+    "end_lat": {
+      "type": "number"
+    },
+    "end_lng": {
+      "type": "number"
+    },
+    "distance_km": {
+      "type": "number"
+    },
+    "duration_minutes": {
+      "type": "number"
+    },
+    "average_speed_kmh": {
+      "type": "number"
+    },
+    "max_speed_kmh": {
+      "type": "number"
+    },
+    "fuel_consumed_l": {
+      "type": "number"
+    },
+    "route_polyline": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "bike_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "cancelled"
+      ],
+      "default": "completed"
+    },
+    "ride_date": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

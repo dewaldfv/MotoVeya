@@ -1,0 +1,51 @@
+{
+  "name": "CrashAlert",
+  "type": "object",
+  "properties": {
+    "rider_id": {
+      "type": "string"
+    },
+    "rider_name": {
+      "type": "string"
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "countdown",
+        "active",
+        "resolved",
+        "false_alarm"
+      ],
+      "default": "active"
+    },
+    "notified_emergency_contact": {
+      "type": "boolean",
+      "default": false
+    },
+    "notified_emergency_services": {
+      "type": "boolean",
+      "default": false
+    },
+    "notified_nearby_riders": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_premium": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "rider_id"
+  ]
+}

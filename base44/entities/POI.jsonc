@@ -1,0 +1,53 @@
+{
+  "name": "POI",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "fuel",
+        "food",
+        "pub",
+        "workshop",
+        "dealership",
+        "emergency",
+        "rest_stop",
+        "scenic"
+      ]
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "description": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number"
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "is_open_24h": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "name",
+    "category",
+    "lat",
+    "lng"
+  ]
+}

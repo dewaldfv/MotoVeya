@@ -1,0 +1,72 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "venue_name": {
+      "type": "string"
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "contact_phone": {
+      "type": "string"
+    },
+    "contact_email": {
+      "type": "string"
+    },
+    "booking_link": {
+      "type": "string"
+    },
+    "entry_fee_zar": {
+      "type": "number"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "rejection_reason": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "race",
+        "rally",
+        "meet",
+        "charity",
+        "track_day",
+        "other"
+      ],
+      "default": "meet"
+    }
+  },
+  "required": [
+    "title",
+    "event_date",
+    "venue_name"
+  ]
+}

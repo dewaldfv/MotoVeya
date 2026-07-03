@@ -1,0 +1,39 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "ride_invite",
+        "event_reminder",
+        "weather_alert",
+        "crash_alert",
+        "distress_alert",
+        "friend_request",
+        "nearby_event",
+        "group_update"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    },
+    "data": {
+      "type": "string"
+    },
+    "action_url": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "title"
+  ]
+}
