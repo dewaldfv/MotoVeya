@@ -21,7 +21,7 @@ export default function BottomNav() {
       }`}
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="mx-auto flex max-w-2xl items-center justify-around px-2 py-2">
+      <div className="mx-auto flex max-w-2xl items-center justify-around px-2 py-2 landscape:py-1">
         {navItems.map(({ key, icon: Icon, label }) => (
           <button
             key={key}

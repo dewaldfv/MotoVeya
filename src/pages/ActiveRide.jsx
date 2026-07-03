@@ -386,13 +386,13 @@ export default function ActiveRide() {
             />
           )}
           {routeLoading && !navProgress?.nextStep && (
-            <div className="absolute left-3 right-3 z-20 flex items-center gap-2 rounded-2xl bg-card/95 p-3 shadow-xl backdrop-blur-lg" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
+            <div className="absolute left-3 right-3 z-20 flex items-center gap-2 rounded-2xl bg-card/95 p-3 shadow-xl backdrop-blur-lg landscape:max-w-md" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
               <Loader2 size={20} className="animate-spin text-primary" />
               <span className="text-sm font-medium">Calculating route...</span>
             </div>
           )}
           {nearbyService && (
-            <div className="absolute left-3 right-3 z-[15]" style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }}>
+            <div className="absolute left-3 right-3 z-[15] landscape:max-w-sm landscape:mx-auto" style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }}>
               <div className="mx-auto flex max-w-sm items-center gap-2 rounded-2xl bg-card/95 p-2.5 shadow-xl backdrop-blur-lg">
                 <span className="text-xl">{getServiceCategory(nearbyService.category).emoji}</span>
                 <div className="min-w-0 flex-1">
@@ -409,7 +409,7 @@ export default function ActiveRide() {
         </>
       ) : (
         <div className="absolute left-0 right-0 top-0 z-10 bg-gradient-to-b from-black/60 to-transparent p-3 pb-8" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 landscape:max-w-md">
             <button onClick={() => navigate('/')} className="glove-target flex items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg">
               <ChevronLeft size={24} />
             </button>
@@ -444,7 +444,7 @@ export default function ActiveRide() {
       <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} />
 
       {isActive && (
-        <div className="absolute bottom-5 left-4 z-10 flex flex-col items-center gap-1.5">
+        <div className="absolute bottom-5 hud-left z-10 flex flex-col items-center gap-1.5">
           <Speedometer speed={speed} />
           {fuelRange !== null && (
             <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold shadow-lg ${lowFuel ? 'bg-destructive text-white animate-pulse' : 'bg-card/95 text-foreground'}`}>
@@ -455,7 +455,7 @@ export default function ActiveRide() {
       )}
 
       {isActive ? (
-        <div className="absolute bottom-5 right-4 z-10">
+        <div className="absolute bottom-5 hud-right z-10">
           <NavActionButtons
             onDistress={handleDistress}
             onCrash={handleSimulateCrash}
@@ -469,7 +469,7 @@ export default function ActiveRide() {
         <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/60 to-transparent p-4 pt-10">
           <button
             onClick={handleStartRide}
-            className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground shadow-lg transition-transform active:scale-95"
+            className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 landscape:max-w-xs landscape:mx-auto"
           >
             <Navigation size={22} fill="white" /> START
           </button>
@@ -481,7 +481,7 @@ export default function ActiveRide() {
           <AlertTriangle size={72} className="mb-4 text-white" />
           <p className="mb-2 text-2xl font-bold text-white">CRASH DETECTED</p>
           <p className="mb-6 text-lg text-white/80">Emergency alert in</p>
-          <div className="mb-8 text-8xl font-black text-white">{crashCountdown}</div>
+          <div className="mb-8 text-8xl font-black text-white landscape:text-6xl">{crashCountdown}</div>
           <button onClick={handleCancelCrash} className="min-h-[64px] rounded-2xl bg-white px-12 text-xl font-bold text-destructive active:scale-95">
             I'M OK — CANCEL
           </button>

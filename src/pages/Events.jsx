@@ -70,7 +70,7 @@ export default function Events() {
             <p className="text-muted-foreground">No events in this category yet.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
             {filtered.map((ev) => (
               <Link key={ev.id} to={`/events/${ev.id}`} className="block overflow-hidden rounded-2xl bg-card active:bg-secondary">
                 {ev.photo_urls?.[0] && <img src={ev.photo_urls[0]} alt={ev.title} className="h-36 w-full object-cover" />}

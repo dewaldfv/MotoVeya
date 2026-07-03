@@ -146,7 +146,7 @@ export default function Community() {
             <TabsTrigger value="services" className="flex-1">Services</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="groups" className="space-y-3">
+          <TabsContent value="groups" className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
             <div className="flex gap-2">
               <Button className="min-h-[48px] flex-1" onClick={() => setCreateOpen(true)}><Users size={18} className="mr-2" /> Create</Button>
               <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setJoinOpen(true)}><Ticket size={18} className="mr-2" /> Join</Button>

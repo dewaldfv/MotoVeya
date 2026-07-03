@@ -180,8 +180,7 @@ export default function Home() {
 
       <button
         onClick={() => setSearchOpen(true)}
-        className="glove-target absolute left-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+        className="glove-target absolute hud-left hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
         aria-label="Search"
       >
         <Search size={22} className="text-foreground" />
@@ -199,8 +198,7 @@ export default function Home() {
 
       <button
         onClick={() => setMenuOpen(true)}
-        className="glove-target absolute right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+        className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
         aria-label="Categories"
       >
         <Menu size={22} className="text-foreground" />
@@ -208,8 +206,7 @@ export default function Home() {
 
       <button
         onClick={handleMyLocation}
-        className="glove-target absolute right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        style={{ top: 'calc(4.5rem + env(safe-area-inset-top))' }}
+        className="glove-target absolute hud-right hud-top-2 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
         aria-label="My Location"
       >
         <LocateFixed size={22} className="text-primary" />
@@ -217,8 +214,7 @@ export default function Home() {
 
       <button
         onClick={() => setLayersOpen(true)}
-        className="glove-target absolute right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        style={{ top: 'calc(8rem + env(safe-area-inset-top))' }}
+        className="glove-target absolute hud-right hud-top-3 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
         aria-label="Map Layers"
       >
         <Layers size={22} className="text-foreground" />
@@ -247,7 +243,7 @@ export default function Home() {
       </button>
 
       {(loading || fetchingCat) && (
-        <div className="absolute bottom-24 right-6 z-10 flex h-8 w-8 items-center justify-center">
+        <div className="absolute bottom-24 hud-right z-10 flex h-8 w-8 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" />
         </div>
       )}

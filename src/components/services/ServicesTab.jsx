@@ -128,7 +128,7 @@ export default function ServicesTab({ user }) {
               </div>
             : <>
                 <p className="text-xs text-muted-foreground">{filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''} found</p>
-                <div className="space-y-2.5">
+                <div className="space-y-2.5 landscape:grid landscape:grid-cols-2 landscape:gap-2.5 landscape:space-y-0">
                   {filteredServices.map((service) => (
                     <ServiceListingCard key={service.id} service={service} userPos={userPos}
                       isFavorite={favoriteIds.has(service.id)} onFavorite={handleFavorite}

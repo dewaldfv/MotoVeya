@@ -138,6 +138,28 @@
   .glove-target {
     @apply min-h-[56px] min-w-[56px];
   }
+  .hud-left { left: calc(1rem + env(safe-area-inset-left)); }
+  .hud-right { right: calc(1rem + env(safe-area-inset-right)); }
+  .hud-top-1 { top: calc(1rem + env(safe-area-inset-top)); }
+  .hud-top-2 { top: calc(4.5rem + env(safe-area-inset-top)); }
+  .hud-top-3 { top: calc(8rem + env(safe-area-inset-top)); }
+  .fab {
+    position: fixed;
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    right: calc(1rem + env(safe-area-inset-right));
+    z-index: 30;
+    height: 4rem;
+    width: 4rem;
+    border-radius: 9999px;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .fab:active {
+    transform: scale(0.92);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
 }
 
 .leaflet-container {
@@ -177,4 +199,19 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .hud-top-1 { top: calc(0.75rem + env(safe-area-inset-top)); }
+  .hud-top-2 { top: calc(3.75rem + env(safe-area-inset-top)); }
+  .hud-top-3 { top: calc(6.75rem + env(safe-area-inset-top)); }
+  .fab {
+    bottom: calc(5rem + env(safe-area-inset-bottom));
+    height: 3.5rem;
+    width: 3.5rem;
+  }
+  .glove-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
 }

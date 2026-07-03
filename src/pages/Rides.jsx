@@ -75,7 +75,7 @@ export default function Rides() {
             <p className="text-muted-foreground">No rides yet. Hit the orange RIDE button on the map to start your first ride!</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
             {rides.map((ride) => <RideCard key={ride.id} ride={ride} />)}
           </div>
         )}

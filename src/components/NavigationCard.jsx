@@ -11,7 +11,7 @@ export default function NavigationCard({ step, distanceToManeuver, remainingDist
 
   return (
     <div
-      className="absolute left-3 right-3 z-20 rounded-2xl bg-card/95 p-3 shadow-xl backdrop-blur-lg"
+      className="absolute left-3 right-3 z-20 rounded-2xl bg-card/95 p-3 shadow-xl backdrop-blur-lg landscape:max-w-md"
       style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}
     >
       <div className="flex items-center gap-3">

@@ -180,7 +180,7 @@ export default function Profile() {
             <Button className="mt-3 min-h-[48px]" onClick={openAddBike}><Plus size={18} className="mr-1" /> Add Bike</Button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:gap-2 landscape:space-y-0">
             {bikes.map((bike) => (
               <div key={bike.id} className="rounded-2xl bg-card p-4">
                 <div className="flex items-start justify-between">
