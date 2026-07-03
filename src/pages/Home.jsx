@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Navigation, Phone, MapPin, Calendar, ExternalLink, BadgeCheck, Menu, LocateFixed, X } from 'lucide-react';
+import { Search, Navigation, Phone, MapPin, Calendar, ExternalLink, BadgeCheck, Menu, LocateFixed, Layers, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,8 @@ import MapView from '@/components/MapView';
 import BottomSheet from '@/components/BottomSheet';
 import SearchPanel from '@/components/SearchPanel';
 import CategoryMenu, { MAP_CATEGORIES } from '@/components/CategoryMenu';
+import LayersSheet from '@/components/LayersSheet';
+import { useMapLayer } from '@/lib/mapLayers';
 
 const SA_CENTER = [-26.2041, 28.0473];
 const REMOTE_CATS = {
@@ -33,6 +35,8 @@ export default function Home() {
   const [fetchingCat, setFetchingCat] = useState(false);
   const [recenterSignal, setRecenterSignal] = useState(0);
   const userPosRef = useRef(null);
+  const [layer, setLayer] = useMapLayer();
+  const [layersOpen, setLayersOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -140,6 +144,7 @@ export default function Home() {
       <MapView
         center={userPos || SA_CENTER}
         zoom={12}
+        layer={layer}
         recenterSignal={recenterSignal}
         pois={poisToShow}
         events={eventsToShow}
@@ -186,6 +191,15 @@ export default function Home() {
         <LocateFixed size={22} className="text-primary" />
       </button>
 
+      <button
+        onClick={() => setLayersOpen(true)}
+        className="glove-target absolute right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        style={{ top: 'calc(8rem + env(safe-area-inset-top))' }}
+        aria-label="Map Layers"
+      >
+        <Layers size={22} className="text-foreground" />
+      </button>
+
       <SearchPanel
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
@@ -200,6 +214,8 @@ export default function Home() {
         activeCat={activeCat}
         onSelect={handleSelectCategory}
       />
+
+      <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} />
 
       <button onClick={() => navigate('/ride/active')} className="fab flex flex-col items-center justify-center gap-0.5">
         <Navigation size={26} fill="white" />

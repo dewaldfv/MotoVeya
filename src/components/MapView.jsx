@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, CircleMarker, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getEventMarkerUrl } from '@/lib/eventMarkers';
+import { MAP_LAYERS } from '@/lib/mapLayers';
 
 const CATEGORY_CONFIG = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -45,6 +46,33 @@ function getEventIcon(ev) {
   return eventIconCache[url];
 }
 
+function MapTileLayers({ layer }) {
+  const map = useMap();
+  const [effective, setEffective] = useState(layer);
+  const errorCount = useRef(0);
+
+  useEffect(() => {
+    setEffective(layer);
+    errorCount.current = 0;
+  }, [layer]);
+
+  useEffect(() => {
+    const onTileError = () => {
+      errorCount.current += 1;
+      if (errorCount.current > 8 && effective !== 'standard') {
+        setEffective('standard');
+      }
+    };
+    map.on('tileerror', onTileError);
+    return () => map.off('tileerror', onTileError);
+  }, [map, effective]);
+
+  const config = MAP_LAYERS.find((l) => l.key === effective) || MAP_LAYERS[0];
+  return config.tiles.map((t, i) => (
+    <TileLayer key={`${effective}-${i}`} url={t.url} attribution={t.attribution} />
+  ));
+}
+
 function Recenter({ center, zoom, signal }) {
   const map = useMap();
   useEffect(() => {
@@ -62,15 +90,13 @@ export default function MapView({
   distressAlerts = [],
   route = null,
   recenterSignal = 0,
+  layer = 'dark',
   onMarkerClick,
   className = '',
 }) {
   return (
     <MapContainer center={center} zoom={zoom} className={className} zoomControl={false} scrollWheelZoom>
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; OpenStreetMap &copy; CARTO'
-      />
+      <MapTileLayers layer={layer} />
       <Recenter center={center} zoom={zoom} signal={recenterSignal} />
       {route && route.length > 0 && (
         <Polyline positions={route} pathOptions={{ color: '#FF6F00', weight: 5, opacity: 0.85 }} />

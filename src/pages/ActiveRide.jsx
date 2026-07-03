@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Navigation, Siren, AlertTriangle, X, Fuel, Search, ChevronLeft } from 'lucide-react';
+import { Navigation, Siren, AlertTriangle, X, Fuel, Search, ChevronLeft, Layers } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import MapView from '@/components/MapView';
+import LayersSheet from '@/components/LayersSheet';
+import { useMapLayer } from '@/lib/mapLayers';
 
 const SA_CENTER = [-26.2041, 28.0473];
 
@@ -52,6 +54,8 @@ export default function ActiveRide() {
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [distressActive, setDistressActive] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [layer, setLayer] = useMapLayer();
+  const [layersOpen, setLayersOpen] = useState(false);
 
   const lastPosRef = useRef(null);
   const positionsRef = useRef([]);
@@ -217,6 +221,7 @@ export default function ActiveRide() {
       <MapView
         center={userPos || SA_CENTER}
         zoom={14}
+        layer={layer}
         route={route}
         riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
         distressAlerts={distressActive && userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
@@ -259,6 +264,17 @@ export default function ActiveRide() {
           </div>
         </div>
       </div>
+
+      <button
+        onClick={() => setLayersOpen(true)}
+        className="glove-target absolute right-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        style={{ top: 'calc(9.5rem + env(safe-area-inset-top))' }}
+        aria-label="Map Layers"
+      >
+        <Layers size={20} className="text-foreground" />
+      </button>
+
+      <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} />
 
       <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 to-transparent p-4 pt-10">
         <div className="flex gap-2">
