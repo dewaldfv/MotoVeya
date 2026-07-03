@@ -12,6 +12,8 @@ import { useEmergencyBeacon } from '@/hooks/useEmergencyBeacon';
 import { useEmergencyCancellation } from '@/hooks/useEmergencyCancellation';
 import { useAutoRideStop } from '@/hooks/useAutoRideStop';
 import AutoStopCountdown from '@/components/AutoStopCountdown';
+import { useBackgroundTracking } from '@/hooks/useBackgroundTracking';
+import { saveRideState, getActiveRide, clearActiveRide, savePendingRide, getPendingRides, clearPendingRide } from '@/lib/rideCache';
 import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '@/lib/emergencyCache';
 import LayersSheet from '@/components/LayersSheet';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
@@ -106,17 +108,61 @@ export default function ActiveRide() {
   }, []);
 
   useEffect(() => {
+    const pending = getPendingRides();
+    if (pending.length > 0) {
+      (async () => {
+        let synced = 0;
+        for (const ride of pending) {
+          try {
+            await base44.entities.Ride.create(ride.data);
+            clearPendingRide(ride.id);
+            synced++;
+          } catch (e) { console.error(e); }
+        }
+        if (synced > 0) toast.success(`Synced ${synced} offline ride${synced > 1 ? 's' : ''}`);
+      })();
+    }
+    const cached = getActiveRide();
+    if (cached && Date.now() - cached.savedAt < 4 * 3600 * 1000) {
+      positionsRef.current = cached.positions || [];
+      lastPosRef.current = cached.positions?.[cached.positions.length - 1] || null;
+      startTimeRef.current = cached.startTime || Date.now();
+      setDistance(cached.distance || 0);
+      setDuration(cached.duration || 0);
+      setMaxSpeed(cached.maxSpeed || 0);
+      setDestination(cached.destination || null);
+      setDestInput(cached.destination?.name || '');
+      setRouteData(cached.routeData || null);
+      setRideStatus('active');
+      toast.info('Resuming active ride');
+      return;
+    } else if (cached) {
+      clearActiveRide();
+    }
     if (!location.state?.autoStart) return;
     if (localStorage.getItem('motogo_auto_ride_detection') === 'false') return;
     toast.info('Ride Started Automatically');
     handleStartRide();
   }, []);
 
+  const speedRef = useRef(speed);
+  const headingRef = useRef(heading);
+  useEffect(() => { speedRef.current = speed; }, [speed]);
+  useEffect(() => { headingRef.current = heading; }, [heading]);
+
+  const { gpsConfig, gpsWeak, markGpsUpdate } = useBackgroundTracking({
+    enabled: localStorage.getItem('motogo_background_tracking') !== 'false',
+    isActive: rideStatus === 'active',
+    isNavigating: !!routeData,
+    stats: { speed, duration, distance },
+  });
+
   useEffect(() => {
     if (rideStatus !== 'active' || !navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        const newPos = [pos.coords.latitude, pos.coords.longitude];
+        markGpsUpdate();
+        const newPos = [pos.coords.latitude, pos.coords.longitude, pos.coords.altitude];
         setUserPos(newPos);
         positionsRef.current.push(newPos);
         if (pos.coords.heading != null && !isNaN(pos.coords.heading)) setHeading(pos.coords.heading);
@@ -131,11 +177,11 @@ export default function ActiveRide() {
         lastPosRef.current = newPos;
       },
       () => {},
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+      gpsConfig
     );
     watchIdRef.current = watchId;
     return () => { navigator.geolocation.clearWatch(watchId); watchIdRef.current = null; };
-  }, [rideStatus]);
+  }, [rideStatus, gpsConfig]);
 
   useEffect(() => {
     if (rideStatus !== 'active') return;
@@ -197,6 +243,46 @@ export default function ActiveRide() {
   });
 
   useEffect(() => {
+    if (rideStatus !== 'active') return;
+    const interval = setInterval(() => {
+      saveRideState({
+        positions: positionsRef.current,
+        distance, duration, maxSpeed,
+        startTime: startTimeRef.current,
+        destination, routeData,
+      });
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [rideStatus, distance, duration, maxSpeed, destination, routeData]);
+
+  useEffect(() => {
+    if (rideStatus !== 'active' || !gpsWeak) return;
+    const interval = setInterval(() => {
+      const s = speedRef.current;
+      const h = headingRef.current;
+      const lastPos = lastPosRef.current;
+      if (lastPos && s > 0 && h != null) {
+        const distKm = (s / 3.6) * 5 / 1000;
+        const bearing = h * Math.PI / 180;
+        const lat1 = lastPos[0] * Math.PI / 180;
+        const lng1 = lastPos[1] * Math.PI / 180;
+        const R = 6371;
+        const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distKm / R) + Math.cos(lat1) * Math.sin(distKm / R) * Math.cos(bearing));
+        const lng2 = lng1 + Math.atan2(Math.sin(bearing) * Math.sin(distKm / R) * Math.cos(lat1), Math.cos(distKm / R) - Math.sin(lat1) * Math.sin(lat2));
+        const estimated = [lat2 * 180 / Math.PI, lng2 * 180 / Math.PI, lastPos[2]];
+        setUserPos(estimated);
+        const d = haversine(lastPos[0], lastPos[1], estimated[0], estimated[1]);
+        if (d > 0.005) {
+          setDistance((prev) => prev + d);
+          positionsRef.current.push(estimated);
+          lastPosRef.current = estimated;
+        }
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [rideStatus, gpsWeak]);
+
+  useEffect(() => {
     if (autoStopCountdown === null) return;
     if (autoStopCountdown <= 0) { setAutoStopCountdown(null); handleEndRide(); return; }
     const t = setTimeout(() => setAutoStopCountdown((c) => c - 1), 1000);
@@ -226,6 +312,13 @@ export default function ActiveRide() {
 
   useEffect(() => {
     const handleOnline = async () => {
+      const pendingRides = getPendingRides();
+      for (const ride of pendingRides) {
+        try {
+          await base44.entities.Ride.create(ride.data);
+          clearPendingRide(ride.id);
+        } catch (e) { console.error(e); }
+      }
       const cached = getPendingEmergency();
       if (!cached) return;
       for (let i = 0; i < 3; i++) {
@@ -501,20 +594,21 @@ export default function ActiveRide() {
     }
     if (watchIdRef.current) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    const mins = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 60000));
+    const avg = mins > 0 ? distance / (mins / 60) : 0;
+    const fuelUsed = bike ? distance * (bike.fuel_consumption_l_per_100km / 100) : 0;
+    const rideData = {
+      title: destination ? `Ride to ${destination.name}` : 'Free Ride',
+      start_lat: positionsRef.current[0]?.[0], start_lng: positionsRef.current[0]?.[1],
+      end_lat: userPos?.[0], end_lng: userPos?.[1],
+      distance_km: Math.round(distance * 100) / 100, duration_minutes: mins,
+      average_speed_kmh: Math.round(avg * 10) / 10, max_speed_kmh: maxSpeed,
+      fuel_consumed_l: Math.round(fuelUsed * 10) / 10,
+      route_polyline: JSON.stringify(positionsRef.current), bike_id: bike?.id,
+      status: 'completed', ride_date: new Date(startTimeRef.current).toISOString(),
+    };
     try {
-      const mins = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 60000));
-      const avg = mins > 0 ? distance / (mins / 60) : 0;
-      const fuelUsed = bike ? distance * (bike.fuel_consumption_l_per_100km / 100) : 0;
-      await base44.entities.Ride.create({
-        title: destination ? `Ride to ${destination.name}` : 'Free Ride',
-        start_lat: positionsRef.current[0]?.[0], start_lng: positionsRef.current[0]?.[1],
-        end_lat: userPos?.[0], end_lng: userPos?.[1],
-        distance_km: Math.round(distance * 100) / 100, duration_minutes: mins,
-        average_speed_kmh: Math.round(avg * 10) / 10, max_speed_kmh: maxSpeed,
-        fuel_consumed_l: Math.round(fuelUsed * 10) / 10,
-        route_polyline: JSON.stringify(positionsRef.current), bike_id: bike?.id,
-        status: 'completed', ride_date: new Date(startTimeRef.current).toISOString(),
-      });
+      await base44.entities.Ride.create(rideData);
       if (user) {
         await base44.auth.updateMe({
           total_distance_km: Math.round(((user.total_distance_km || 0) + distance) * 100) / 100,
@@ -524,8 +618,10 @@ export default function ActiveRide() {
       toast.success('Trip saved to Ride History');
     } catch (e) {
       console.error(e);
-      toast.error('Could not save trip');
+      savePendingRide(rideData);
+      toast.error('Offline — trip will sync when reconnected');
     } finally {
+      clearActiveRide();
       setRouteData(null);
       setDestination(null);
       setDestInput('');
@@ -632,6 +728,11 @@ export default function ActiveRide() {
       {isActive && (
         <div className="absolute bottom-5 hud-left z-10 flex flex-col items-center gap-1.5">
           <Speedometer speed={speed} />
+          {gpsWeak && (
+            <div className="flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-xs font-bold text-white shadow-lg">
+              GPS Weak
+            </div>
+          )}
           {fuelRange !== null && (
             <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold shadow-lg ${lowFuel ? 'bg-destructive text-white animate-pulse' : 'bg-card/95 text-foreground'}`}>
               <Fuel size={10} /> {fuelRange}km

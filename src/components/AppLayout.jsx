@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { useOutlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import BottomNav from './BottomNav';
 import { useAutoRideStart } from '@/hooks/useAutoRideStart';
+import RideResumeBanner from './RideResumeBanner';
+import { getActiveRide } from '@/lib/rideCache';
 
 const pageVariants = {
   initial: { opacity: 0, x: '100%' },
@@ -19,8 +22,20 @@ export default function AppLayout() {
     onAutoStart: () => navigate('/ride/active', { state: { autoStart: true } }),
   });
 
+  const [hasActiveRide, setHasActiveRide] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      const ride = getActiveRide();
+      setHasActiveRide(!!ride && Date.now() - ride.savedAt < 4 * 3600 * 1000);
+    };
+    check();
+    const interval = setInterval(check, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="relative min-h-screen bg-background">
+      {hasActiveRide && <RideResumeBanner />}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={location.pathname}
