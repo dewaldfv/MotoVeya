@@ -12,6 +12,8 @@ const CATEGORY_CONFIG = {
   emergency: { color: '#ef4444', emoji: '🏥' },
   rest_stop: { color: '#94a3b8', emoji: '🅿️' },
   scenic: { color: '#10b981', emoji: '🏔️' },
+  accommodation: { color: '#8b5cf6', emoji: '🏨' },
+  atm: { color: '#facc15', emoji: '💳' },
   event: { color: '#FF6F00', emoji: '🏁' },
   distress: { color: '#ef4444', emoji: '🆘' },
 };
@@ -34,11 +36,11 @@ const finishIcon = L.icon({
   popupAnchor: [0, -48],
 });
 
-function Recenter({ center, zoom }) {
+function Recenter({ center, zoom, signal }) {
   const map = useMap();
   useEffect(() => {
     if (center) map.flyTo(center, zoom ?? map.getZoom());
-  }, [center?.[0], center?.[1], zoom, map]);
+  }, [center?.[0], center?.[1], zoom, signal, map]);
   return null;
 }
 
@@ -50,6 +52,7 @@ export default function MapView({
   riders = [],
   distressAlerts = [],
   route = null,
+  recenterSignal = 0,
   onMarkerClick,
   className = '',
 }) {
@@ -59,7 +62,7 @@ export default function MapView({
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         attribution='&copy; OpenStreetMap &copy; CARTO'
       />
-      <Recenter center={center} zoom={zoom} />
+      <Recenter center={center} zoom={zoom} signal={recenterSignal} />
       {route && route.length > 0 && (
         <Polyline positions={route} pathOptions={{ color: '#FF6F00', weight: 5, opacity: 0.85 }} />
       )}

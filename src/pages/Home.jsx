@@ -1,23 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Navigation, Fuel, Phone, MapPin, Calendar, ExternalLink, BadgeCheck } from 'lucide-react';
+import { Search, Navigation, Phone, MapPin, Calendar, ExternalLink, BadgeCheck, Menu, LocateFixed, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MapView from '@/components/MapView';
 import BottomSheet from '@/components/BottomSheet';
 import SearchPanel from '@/components/SearchPanel';
+import CategoryMenu, { MAP_CATEGORIES } from '@/components/CategoryMenu';
 
-const CATEGORIES = [
-  { key: 'all', label: 'All', emoji: '🌐' },
-  { key: 'fuel', label: 'Fuel', emoji: '⛽' },
-  { key: 'food', label: 'Food', emoji: '🍽️' },
-  { key: 'pub', label: 'Pubs', emoji: '🍺' },
-  { key: 'workshop', label: 'Workshop', emoji: '🔧' },
-  { key: 'dealership', label: 'Dealer', emoji: '🏍️' },
-  { key: 'scenic', label: 'Scenic', emoji: '🏔️' },
-  { key: 'event', label: 'Events', emoji: '🏁' },
-];
+const SA_CENTER = [-26.2041, 28.0473];
+const REMOTE_CATS = {
+  accommodation: { query: 'hotel', category: 'accommodation' },
+  hospital: { query: 'hospital', category: 'emergency' },
+  atm: { query: 'atm', category: 'atm' },
+};
 
 const formatDate = (d) => new Date(d).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -30,6 +27,12 @@ export default function Home() {
   const [activeCat, setActiveCat] = useState('all');
   const [userPos, setUserPos] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [remotePois, setRemotePois] = useState([]);
+  const [distressAlerts, setDistressAlerts] = useState([]);
+  const [fetchingCat, setFetchingCat] = useState(false);
+  const [recenterSignal, setRecenterSignal] = useState(0);
+  const userPosRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -48,15 +51,80 @@ export default function Home() {
     })();
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+        (pos) => {
+          const p = [pos.coords.latitude, pos.coords.longitude];
+          userPosRef.current = p;
+          setUserPos(p);
+        },
         () => {}
       );
     }
   }, []);
 
-  const filteredPois = activeCat === 'all' || activeCat === 'event' ? pois : pois.filter((p) => p.category === activeCat);
-  const showEvents = activeCat === 'all' || activeCat === 'event';
+  const isRemoteCat = !!REMOTE_CATS[activeCat];
+  const poisToShow = activeCat === 'all'
+    ? pois
+    : isRemoteCat
+      ? remotePois
+      : activeCat === 'event' || activeCat === 'distress'
+        ? []
+        : pois.filter((p) => p.category === activeCat);
+  const eventsToShow = activeCat === 'all' || activeCat === 'event' ? events : [];
+  const distressToShow = activeCat === 'distress' ? distressAlerts : [];
   const isEvent = !!selected?.event_date;
+  const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
+
+  useEffect(() => {
+    if (REMOTE_CATS[activeCat]) {
+      const { query, category } = REMOTE_CATS[activeCat];
+      const center = userPosRef.current || SA_CENTER;
+      const [lat, lng] = center;
+      const viewbox = `${lng - 0.4},${lat + 0.4},${lng + 0.4},${lat - 0.4}`;
+      setFetchingCat(true);
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=30&countrycodes=za&bounded=1&viewbox=${viewbox}`)
+        .then((r) => r.json())
+        .then((data) => setRemotePois(data.map((d) => ({
+          id: `remote-${d.place_id}`,
+          name: d.display_name.split(',')[0],
+          address: d.display_name,
+          lat: parseFloat(d.lat),
+          lng: parseFloat(d.lon),
+          category,
+          source: 'remote',
+        }))))
+        .catch(() => setRemotePois([]))
+        .finally(() => setFetchingCat(false));
+    } else if (activeCat === 'distress') {
+      setFetchingCat(true);
+      base44.entities.DistressAlert.filter({ status: 'active' }, '-created_date', 50)
+        .then(setDistressAlerts)
+        .catch(() => setDistressAlerts([]))
+        .finally(() => setFetchingCat(false));
+    } else {
+      setRemotePois([]);
+      setDistressAlerts([]);
+    }
+  }, [activeCat]);
+
+  const handleMyLocation = () => {
+    if (userPos) {
+      setRecenterSignal((s) => s + 1);
+    } else if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const p = [pos.coords.latitude, pos.coords.longitude];
+          userPosRef.current = p;
+          setUserPos(p);
+        },
+        () => {}
+      );
+    }
+  };
+
+  const handleSelectCategory = (key) => {
+    setActiveCat(key);
+    setSelected(null);
+  };
 
   const handleDirections = (item) => {
     setSelected(null);
@@ -70,10 +138,12 @@ export default function Home() {
   return (
     <div className="relative h-screen w-full overflow-hidden">
       <MapView
-        center={userPos || [-26.2041, 28.0473]}
+        center={userPos || SA_CENTER}
         zoom={12}
-        pois={filteredPois}
-        events={showEvents ? events : []}
+        recenterSignal={recenterSignal}
+        pois={poisToShow}
+        events={eventsToShow}
+        distressAlerts={distressToShow}
         riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
         onMarkerClick={setSelected}
         className="absolute inset-0 z-0 h-full w-full"
@@ -81,11 +151,39 @@ export default function Home() {
 
       <button
         onClick={() => setSearchOpen(true)}
-        className="glove-target absolute left-4 z-20 flex items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        className="glove-target absolute left-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
         style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
         aria-label="Search"
       >
         <Search size={22} className="text-foreground" />
+      </button>
+
+      {activeCat !== 'all' && (
+        <button
+          onClick={() => handleSelectCategory('all')}
+          className="absolute z-20 flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-lg"
+          style={{ top: 'calc(1.6rem + env(safe-area-inset-top))', left: 'calc(4.5rem + 1.25rem)' }}
+        >
+          {activeLabel} <X size={13} />
+        </button>
+      )}
+
+      <button
+        onClick={() => setMenuOpen(true)}
+        className="glove-target absolute right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+        aria-label="Categories"
+      >
+        <Menu size={22} className="text-foreground" />
+      </button>
+
+      <button
+        onClick={handleMyLocation}
+        className="glove-target absolute right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        style={{ top: 'calc(4.5rem + env(safe-area-inset-top))' }}
+        aria-label="My Location"
+      >
+        <LocateFixed size={22} className="text-primary" />
       </button>
 
       <SearchPanel
@@ -96,29 +194,19 @@ export default function Home() {
         events={events}
       />
 
-      <div className="absolute left-4 right-4 z-10" style={{ top: 'calc(4.5rem + env(safe-area-inset-top))' }}>
-        <div className="no-scrollbar flex gap-2 overflow-x-auto">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.key}
-              onClick={() => setActiveCat(cat.key)}
-              className={`flex min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-sm font-semibold transition-colors ${
-                activeCat === cat.key ? 'bg-primary text-primary-foreground' : 'bg-card/90 text-muted-foreground'
-              }`}
-            >
-              <span>{cat.emoji}</span>
-              {cat.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <CategoryMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        activeCat={activeCat}
+        onSelect={handleSelectCategory}
+      />
 
       <button onClick={() => navigate('/ride/active')} className="fab flex flex-col items-center justify-center gap-0.5">
         <Navigation size={26} fill="white" />
         <span className="text-[10px] font-bold tracking-wide">RIDE</span>
       </button>
 
-      {loading && (
+      {(loading || fetchingCat) && (
         <div className="absolute bottom-24 right-6 z-10 flex h-8 w-8 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" />
         </div>
