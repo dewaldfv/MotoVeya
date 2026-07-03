@@ -54,14 +54,21 @@
     "category": {
       "type": "string",
       "enum": [
-        "race",
         "rally",
-        "meet",
-        "charity",
+        "breakfast_run",
+        "pub_ride",
+        "birthday_bash",
+        "camping",
         "track_day",
+        "charity_ride",
+        "bike_night",
+        "scenic_ride",
         "other"
       ],
-      "default": "meet"
+      "default": "rally"
+    },
+    "markerIcon": {
+      "type": "string"
     }
   },
   "required": [

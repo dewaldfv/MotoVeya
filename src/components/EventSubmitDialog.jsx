@@ -9,21 +9,15 @@ import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from 
 import { ChevronDown, Check, ImagePlus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import LocationPickerMap from '@/components/LocationPickerMap';
-
-const CATEGORIES = [
-  { value: 'meet', label: 'Meet' },
-  { value: 'rally', label: 'Rally' },
-  { value: 'race', label: 'Race' },
-  { value: 'charity', label: 'Charity' },
-  { value: 'track_day', label: 'Track Day' },
-  { value: 'other', label: 'Other' },
-];
+import { EVENT_CATEGORIES, getEventMarkerUrl } from '@/lib/eventMarkers';
 
 export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
   const [saving, setSaving] = useState(false);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', event_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'meet', photo_urls: [] });
+  const [uploadingMarker, setUploadingMarker] = useState(false);
+  const [customMarker, setCustomMarker] = useState(null);
+  const [form, setForm] = useState({ title: '', description: '', event_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -47,12 +41,29 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
     setForm((f) => ({ ...f, photo_urls: f.photo_urls.filter((_, i) => i !== idx) }));
   };
 
+  const handleMarkerUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingMarker(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setCustomMarker(file_url);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to upload marker');
+    } finally {
+      setUploadingMarker(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSubmit = async () => {
     if (!form.title || !form.event_date || !form.venue_name) { toast.error('Please fill in all required fields'); return; }
     setSaving(true);
     try {
       await base44.entities.Event.create({
         ...form,
+        markerIcon: customMarker || getEventMarkerUrl(form.category),
         event_date: new Date(form.event_date).toISOString(),
         lat: form.lat ? Number(form.lat) : undefined,
         lng: form.lng ? Number(form.lng) : undefined,
@@ -62,7 +73,8 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
       toast.success('Event submitted! Awaiting admin approval.');
       onOpenChange(false);
       onSubmitted?.();
-      setForm({ title: '', description: '', event_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'meet', photo_urls: [] });
+      setCustomMarker(null);
+      setForm({ title: '', description: '', event_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
     } catch (e) {
       console.error(e);
       toast.error('Failed to submit event');
@@ -71,7 +83,8 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
     }
   };
 
-  const categoryLabel = CATEGORIES.find((c) => c.value === form.category)?.label || 'Meet';
+  const categoryLabel = EVENT_CATEGORIES.find((c) => c.value === form.category)?.label || 'Rally';
+  const activeMarkerUrl = customMarker || getEventMarkerUrl(form.category);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -94,7 +107,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
                 <DrawerContent>
                   <DrawerHeader><DrawerTitle>Select Category</DrawerTitle></DrawerHeader>
                   <div className="p-4 pb-8">
-                    {CATEGORIES.map((cat) => (
+                    {EVENT_CATEGORIES.map((cat) => (
                       <button
                         key={cat.value}
                         onClick={() => { set('category', cat.value); setCategoryDrawerOpen(false); }}
@@ -144,6 +157,24 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
             <label className="flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input text-sm text-muted-foreground hover:bg-secondary">
               {uploading ? <><Loader2 size={16} className="animate-spin" /> Uploading...</> : <><ImagePlus size={16} /> Upload Image</>}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+            </label>
+          </div>
+          <div>
+            <Label>Map Marker</Label>
+            <div className="mt-2 flex items-center gap-3 rounded-md border border-input p-3">
+              <img src={activeMarkerUrl} alt="Marker" className="h-12 w-12 object-contain" />
+              <div className="flex-1 text-xs text-muted-foreground">
+                {customMarker ? 'Custom marker uploaded' : `Default ${categoryLabel} marker`}
+              </div>
+              {customMarker && (
+                <button type="button" onClick={() => setCustomMarker(null)} className="rounded-full bg-black/70 p-1 text-white">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            <label className="mt-2 flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input text-sm text-muted-foreground hover:bg-secondary">
+              {uploadingMarker ? <><Loader2 size={16} className="animate-spin" /> Uploading...</> : <><ImagePlus size={16} /> Upload Custom Marker (optional)</>}
+              <input type="file" accept="image/*" className="hidden" onChange={handleMarkerUpload} disabled={uploadingMarker} />
             </label>
           </div>
           <p className="text-xs text-muted-foreground">Your event will be reviewed by an admin before appearing on the map.</p>

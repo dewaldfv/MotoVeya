@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, CircleMarker, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { getEventMarkerUrl } from '@/lib/eventMarkers';
 
 const CATEGORY_CONFIG = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -29,12 +30,19 @@ function createIcon(category) {
   });
 }
 
-const finishIcon = L.icon({
-  iconUrl: 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/1326aae27_generated_image.png',
-  iconSize: [48, 48],
-  iconAnchor: [24, 48],
-  popupAnchor: [0, -48],
-});
+const eventIconCache = {};
+function getEventIcon(ev) {
+  const url = ev.markerIcon || getEventMarkerUrl(ev.category);
+  if (!eventIconCache[url]) {
+    eventIconCache[url] = L.icon({
+      iconUrl: url,
+      iconSize: [48, 48],
+      iconAnchor: [24, 48],
+      popupAnchor: [0, -48],
+    });
+  }
+  return eventIconCache[url];
+}
 
 function Recenter({ center, zoom, signal }) {
   const map = useMap();
@@ -78,7 +86,7 @@ export default function MapView({
         <Marker
           key={`event-${ev.id}`}
           position={[ev.lat, ev.lng]}
-          icon={finishIcon}
+          icon={getEventIcon(ev)}
           eventHandlers={{ click: () => onMarkerClick?.(ev) }}
         />
       ))}
