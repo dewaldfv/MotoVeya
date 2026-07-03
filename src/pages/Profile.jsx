@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bike as BikeIcon, Plus, Crown, Phone, LogOut, Route, TrendingUp, Pencil, Trash2, Copy, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -20,6 +21,7 @@ const coerceBike = (form) => ({
 });
 
 export default function Profile() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -103,14 +105,7 @@ export default function Profile() {
 
   const handleDeleteBike = async (id) => { try { await deleteBikeMutation.mutateAsync(id); } catch (e) { console.error(e); } };
 
-  const handleUpgrade = async () => {
-    try {
-      await base44.auth.updateMe({ subscription_tier: 'premium', subscription_status: 'active' });
-      await base44.entities.Subscription.create({ plan: 'premium', status: 'active', amount_zar: 69.99, start_date: new Date().toISOString(), auto_renew: true });
-      setUser((prev) => ({ ...prev, subscription_tier: 'premium', subscription_status: 'active' }));
-      toast.success('Upgraded to Premium!');
-    } catch (e) { console.error(e); }
-  };
+  const handleUpgrade = () => navigate('/premium');
 
   const handleLogout = () => base44.auth.logout('/');
 
@@ -168,8 +163,8 @@ export default function Profile() {
       {!isPremium && (
         <div className="mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 p-4">
           <div className="flex items-center gap-2"><Crown size={20} className="text-primary" /><h3 className="font-bold">Upgrade to Premium</h3></div>
-          <p className="mt-1 text-sm text-muted-foreground">R69.99/month — Rider In Distress, 32-rider groups, friends network, emergency services.</p>
-          <Button className="mt-3 min-h-[48px] w-full" onClick={handleUpgrade}>Upgrade Now — R69.99/mo</Button>
+          <p className="mt-1 text-sm text-muted-foreground">R79.99/month — Rider In Distress, 32-rider groups, friends network, emergency services.</p>
+          <Button className="mt-3 min-h-[48px] w-full" onClick={handleUpgrade}>Go Premium — R79.99/mo</Button>
         </div>
       )}
 

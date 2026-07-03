@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, Crown, ChevronLeft, Loader2, RefreshCw, Zap } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -7,6 +7,11 @@ import { PRICING, PREMIUM_FEATURES } from '@/lib/plans';
 import { usePremium } from '@/hooks/usePremium';
 import PremiumBadge from '@/components/PremiumBadge';
 import { toast } from 'sonner';
+
+const STRIPE_PRICES = {
+  monthly: 'price_1Tp622A8s7qT3884MbxgxhlL',
+  annual: 'price_1Tp622A8s7qT3884IT9D4998',
+};
 
 const FEATURE_ICONS = {
   Navigation: '🧭', Shield: '🛡️', Phone: '📞', Users: '👥', Calendar: '📅',
@@ -19,6 +24,20 @@ export default function GoPremium() {
   const { isPremium, user, refresh } = usePremium();
   const [cycle, setCycle] = useState('monthly');
   const [processing, setProcessing] = useState(false);
+  const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    if (status === 'success') {
+      toast.success('Payment successful! Premium is now active.');
+      refresh();
+      window.history.replaceState({}, '', '/premium');
+    } else if (status === 'cancelled') {
+      toast.error('Payment cancelled. You can try again anytime.');
+      window.history.replaceState({}, '', '/premium');
+    }
+  }, []);
 
   const handleStartTrial = async () => {
     setProcessing(true);
@@ -53,7 +72,30 @@ export default function GoPremium() {
   };
 
   const handleSubscribe = async () => {
-    toast.info('Stripe checkout will be available once payment setup completes. Start a 7-day free trial in the meantime!');
+    if (isInIframe) {
+      toast.error('Checkout only works from a published app. Open the app in a new tab to subscribe.');
+      return;
+    }
+    setProcessing(true);
+    try {
+      const response = await base44.functions.invoke('create-checkout-session', {
+        price_id: STRIPE_PRICES[cycle],
+        user_id: user?.id,
+        user_email: user?.email,
+        billing_cycle: cycle,
+        origin: window.location.origin,
+      });
+      if (response.data?.url) {
+        window.location.href = response.data.url;
+      } else {
+        toast.error('Could not start checkout. Please try again.');
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Checkout failed. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleRestore = async () => {
