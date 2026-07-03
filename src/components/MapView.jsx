@@ -34,11 +34,12 @@ const eventIconCache = {};
 function getEventIcon(ev) {
   const url = ev.markerIcon || getEventMarkerUrl(ev.category);
   if (!eventIconCache[url]) {
-    eventIconCache[url] = L.icon({
-      iconUrl: url,
-      iconSize: [48, 48],
-      iconAnchor: [24, 48],
-      popupAnchor: [0, -48],
+    eventIconCache[url] = L.divIcon({
+      html: `<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.5);"><img src="${url}" style="width:100%;height:100%;object-fit:cover;" /></div>`,
+      className: 'custom-marker',
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+      popupAnchor: [0, -22],
     });
   }
   return eventIconCache[url];
