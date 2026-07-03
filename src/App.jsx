@@ -21,6 +21,7 @@ import Admin from '@/pages/Admin';
 import GoPremium from '@/pages/GoPremium';
 import Settings from '@/pages/Settings';
 import Legal from '@/pages/Legal';
+import FuelTracker from '@/pages/FuelTracker';
 import { useTheme } from '@/hooks/useTheme';
 import ActiveRide from '@/pages/ActiveRide';
 import Onboarding from '@/pages/Onboarding';
@@ -73,6 +74,7 @@ const AuthenticatedApp = () => {
         <Route path="/premium" element={<GoPremium />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/legal/:doc" element={<Legal />} />
+        <Route path="/fuel-tracker" element={<FuelTracker />} />
       </Route>
       <Route path="/ride/active" element={<ActiveRide />} />
       <Route path="/onboarding" element={<Onboarding />} />

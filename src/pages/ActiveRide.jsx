@@ -39,6 +39,7 @@ export default function ActiveRide() {
   const [duration, setDuration] = useState(0);
   const [fuelRemaining, setFuelRemaining] = useState(null);
   const [fuelRange, setFuelRange] = useState(null);
+  const [fuelProfile, setFuelProfile] = useState(null);
   const [destInput, setDestInput] = useState(initialSearch || '');
   const [destination, setDestination] = useState(initialDest || null);
   const [routeData, setRouteData] = useState(null);
@@ -70,8 +71,15 @@ export default function ActiveRide() {
         const me = await base44.auth.me();
         setUser(me);
         const bikes = await base44.entities.Bike.filter({ is_primary: true }, '-created_date', 1);
-        if (bikes.length > 0) setBike(bikes[0]);
-        else { const allBikes = await base44.entities.Bike.list('-created_date', 1); if (allBikes.length > 0) setBike(allBikes[0]); }
+        let primaryBike = bikes[0];
+        if (!primaryBike) { const allBikes = await base44.entities.Bike.list('-created_date', 1); primaryBike = allBikes[0]; }
+        if (primaryBike) {
+          setBike(primaryBike);
+          try {
+            const profiles = await base44.entities.FuelProfile.filter({ bike_id: primaryBike.id }, '-last_calculated', 1);
+            if (profiles.length > 0) setFuelProfile(profiles[0]);
+          } catch (e) { console.error(e); }
+        }
       } catch (e) { console.error(e); }
     })();
   }, []);
@@ -114,14 +122,15 @@ export default function ActiveRide() {
   }, [rideStatus]);
 
   useEffect(() => {
-    if (bike && bike.tank_capacity_l && bike.fuel_consumption_l_per_100km) {
-      const consumed = distance * (bike.fuel_consumption_l_per_100km / 100);
+    const consumption = fuelProfile?.adaptive_l_per_100km || bike?.fuel_consumption_l_per_100km;
+    if (bike && bike.tank_capacity_l && consumption) {
+      const consumed = distance * (consumption / 100);
       const remaining = Math.max(0, bike.tank_capacity_l - consumed);
-      const range = remaining > 0 ? (remaining / bike.fuel_consumption_l_per_100km) * 100 : 0;
+      const range = remaining > 0 ? (remaining / consumption) * 100 : 0;
       setFuelRemaining(Math.round(remaining * 10) / 10);
       setFuelRange(Math.round(range));
     }
-  }, [distance, bike]);
+  }, [distance, bike, fuelProfile]);
 
   useEffect(() => {
     if (crashCountdown === null) return;

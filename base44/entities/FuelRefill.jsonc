@@ -1,0 +1,49 @@
+{
+  "name": "FuelRefill",
+  "type": "object",
+  "properties": {
+    "bike_id": {
+      "type": "string"
+    },
+    "bike_make": {
+      "type": "string"
+    },
+    "bike_model": {
+      "type": "string"
+    },
+    "litres": {
+      "type": "number"
+    },
+    "odometer_km": {
+      "type": "number"
+    },
+    "trip_distance_km": {
+      "type": "number"
+    },
+    "fuel_price_per_litre": {
+      "type": "number"
+    },
+    "total_cost": {
+      "type": "number"
+    },
+    "refill_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "location_name": {
+      "type": "string"
+    },
+    "is_full_tank": {
+      "type": "boolean",
+      "default": true
+    },
+    "consumption_l_per_100km": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "bike_id",
+    "litres",
+    "refill_date"
+  ]
+}

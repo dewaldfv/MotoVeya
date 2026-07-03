@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bike as BikeIcon, Plus, Crown, Phone, Settings, Route, TrendingUp, Pencil, Trash2, Copy, Check } from 'lucide-react';
+import { Bike as BikeIcon, Plus, Crown, Phone, Settings, Route, TrendingUp, Pencil, Trash2, Copy, Check, Fuel, ChevronRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -155,6 +155,19 @@ export default function Profile() {
           <Button className="mt-3 min-h-[48px] w-full" onClick={handleUpgrade}>Go Premium — R79.99/mo</Button>
         </div>
       )}
+
+      <div className="mb-4">
+        <button onClick={() => navigate('/fuel-tracker')} className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-card p-4 text-left active:scale-[0.98]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <Fuel size={24} className="text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold">Fuel Tracker</h3>
+            <p className="text-sm text-muted-foreground">Adaptive consumption & refill history</p>
+          </div>
+          <ChevronRight size={20} className="text-muted-foreground" />
+        </button>
+      </div>
 
       <div className="mb-4">
         <div className="mb-2 flex items-center justify-between">

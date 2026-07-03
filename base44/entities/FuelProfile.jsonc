@@ -1,0 +1,55 @@
+{
+  "name": "FuelProfile",
+  "type": "object",
+  "properties": {
+    "bike_id": {
+      "type": "string"
+    },
+    "bike_make": {
+      "type": "string"
+    },
+    "bike_model": {
+      "type": "string"
+    },
+    "baseline_l_per_100km": {
+      "type": "number"
+    },
+    "adaptive_l_per_100km": {
+      "type": "number"
+    },
+    "km_per_litre": {
+      "type": "number"
+    },
+    "cost_per_km": {
+      "type": "number"
+    },
+    "total_fuel_cost": {
+      "type": "number"
+    },
+    "total_fuel_l": {
+      "type": "number"
+    },
+    "total_distance_km": {
+      "type": "number"
+    },
+    "refill_count": {
+      "type": "number"
+    },
+    "confidence_score": {
+      "type": "number"
+    },
+    "avg_price_per_litre": {
+      "type": "number"
+    },
+    "estimated_range_km": {
+      "type": "number"
+    },
+    "last_calculated": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "bike_id"
+  ]
+}
