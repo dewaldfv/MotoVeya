@@ -17,11 +17,28 @@ function destinationIcon() {
   });
 }
 
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    const resize = () => map.invalidateSize();
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(map.getContainer());
+    window.addEventListener('resize', resize);
+    const onOrient = () => setTimeout(resize, 300);
+    window.addEventListener('orientationchange', onOrient);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', onOrient);
+    };
+  }, [map]);
+  return null;
+}
+
 function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, route }) {
   const map = useMap();
-  const containerRef = useRef(null);
-
-  useEffect(() => { containerRef.current = map.getContainer(); }, [map]);
+  const failCountRef = useRef(0);
 
   const targetZoom = useMemo(() => {
     if (!active) return 13;
@@ -43,38 +60,36 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
     }
   }, [active, map]);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (active && heading != null && !isNaN(heading)) {
-      el.style.transition = 'transform 0.3s ease-out';
-      el.style.transformOrigin = 'center 70%';
-      el.style.willChange = 'transform';
-      el.style.transform = `perspective(750px) rotateZ(${-heading}deg) rotateX(30deg)`;
-    } else {
-      el.style.transition = 'transform 0.3s ease-out';
-      el.style.transform = '';
-      el.style.transformOrigin = '';
-      el.style.willChange = '';
-    }
-  }, [heading, active]);
-
+  // Camera: north-up, pitch 0°, no CSS transforms on the container.
+  // Centers the rider with an offset in the direction of travel so the
+  // upcoming road is visible ahead. RiderMarker rotates to show heading.
   useEffect(() => {
     if (!userPos) return;
-    if (active && heading != null && !isNaN(heading)) {
-      const headingRad = (heading * Math.PI) / 180;
-      const size = map.getSize();
-      const offsetPx = size.y * 0.22;
-      const riderPoint = map.project(userPos, targetZoom);
-      const dx = offsetPx * Math.sin(headingRad);
-      const dy = -offsetPx * Math.cos(headingRad);
-      const centerPoint = L.point(riderPoint.x + dx, riderPoint.y + dy);
-      const newCenter = map.unproject(centerPoint, targetZoom);
-      map.setView(newCenter, targetZoom, { animate: true, duration: 1.0, easeLinearity: 0.5 });
-    } else if (!active && route && route.length > 1) {
-      map.fitBounds(L.latLngBounds(route), { padding: [80, 80], animate: true });
-    } else {
-      map.setView(userPos, targetZoom, { animate: true, duration: 0.5 });
+    try {
+      if (active && heading != null && !isNaN(heading)) {
+        const headingRad = (heading * Math.PI) / 180;
+        const size = map.getSize();
+        if (!size.x || !size.y) throw new Error('Map has no size');
+        const offsetPx = size.y * 0.22;
+        const riderPoint = map.project(userPos, targetZoom);
+        const dx = offsetPx * Math.sin(headingRad);
+        const dy = -offsetPx * Math.cos(headingRad);
+        const centerPoint = L.point(riderPoint.x + dx, riderPoint.y + dy);
+        const newCenter = map.unproject(centerPoint, targetZoom);
+        map.setView(newCenter, targetZoom, { animate: true, duration: 1.0, easeLinearity: 0.5 });
+      } else if (!active && route && route.length > 1) {
+        map.fitBounds(L.latLngBounds(route), { padding: [80, 80], animate: true });
+      } else {
+        map.setView(userPos, targetZoom, { animate: true, duration: 0.5 });
+      }
+      failCountRef.current = 0;
+    } catch (e) {
+      failCountRef.current++;
+      if (failCountRef.current >= 2) {
+        // Fallback: reset to center=rider, zoom=target, bearing=north, pitch=0
+        map.setView(userPos, targetZoom, { animate: false });
+        failCountRef.current = 0;
+      }
     }
   }, [userPos, heading, active, targetZoom, route, map]);
 
@@ -107,6 +122,7 @@ export default function NavMapView({
       style={{ background: bgColor }}
     >
       <TileLayer url={tileUrl} attribution={tileAttr} />
+      <MapResizer />
       <NavCamera
         userPos={userPos}
         heading={heading}
