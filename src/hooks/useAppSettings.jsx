@@ -36,13 +36,6 @@ export function AppSettingsProvider({ children }) {
   const setOrientation = (o) => {
     setOrientationState(o);
     try { localStorage.setItem(STORAGE_KEY_ORIENTATION, o); } catch {}
-    try {
-      if (o === 'auto') {
-        screen.orientation?.unlock?.();
-      } else {
-        screen.orientation?.lock?.(o).catch(() => {});
-      }
-    } catch {}
   };
 
   return (
