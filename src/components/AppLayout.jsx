@@ -1,6 +1,7 @@
-import { useOutlet, useLocation } from 'react-router-dom';
+import { useOutlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import BottomNav from './BottomNav';
+import { useAutoRideStart } from '@/hooks/useAutoRideStart';
 
 const pageVariants = {
   initial: { opacity: 0, x: '100%' },
@@ -11,6 +12,12 @@ const pageVariants = {
 export default function AppLayout() {
   const location = useLocation();
   const outlet = useOutlet();
+  const navigate = useNavigate();
+
+  useAutoRideStart({
+    enabled: localStorage.getItem('motogo_auto_ride_detection') !== 'false',
+    onAutoStart: () => navigate('/ride/active', { state: { autoStart: true } }),
+  });
 
   return (
     <div className="relative min-h-screen bg-background">

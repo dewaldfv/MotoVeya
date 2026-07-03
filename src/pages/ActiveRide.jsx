@@ -10,6 +10,8 @@ import EmergencyOverlay from '@/components/EmergencyOverlay';
 import { useCrashDetection, requestMotionPermission } from '@/hooks/useCrashDetection';
 import { useEmergencyBeacon } from '@/hooks/useEmergencyBeacon';
 import { useEmergencyCancellation } from '@/hooks/useEmergencyCancellation';
+import { useAutoRideStop } from '@/hooks/useAutoRideStop';
+import AutoStopCountdown from '@/components/AutoStopCountdown';
 import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '@/lib/emergencyCache';
 import LayersSheet from '@/components/LayersSheet';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
@@ -58,6 +60,7 @@ export default function ActiveRide() {
   const [crashIndicators, setCrashIndicators] = useState(null);
   const [severity, setSeverity] = useState('medium');
   const [batteryLevel, setBatteryLevel] = useState(null);
+  const [autoStopCountdown, setAutoStopCountdown] = useState(null);
   const [ending, setEnding] = useState(false);
   const [heading, setHeading] = useState(null);
   const [accuracy, setAccuracy] = useState(null);
@@ -100,6 +103,13 @@ export default function ActiveRide() {
   useEffect(() => {
     if (initialDest) handleDestination(initialDest);
     else if (initialSearch) { setDestInput(initialSearch); handleSearch(initialSearch); }
+  }, []);
+
+  useEffect(() => {
+    if (!location.state?.autoStart) return;
+    if (localStorage.getItem('motogo_auto_ride_detection') === 'false') return;
+    toast.info('Ride Started Automatically');
+    handleStartRide();
   }, []);
 
   useEffect(() => {
@@ -176,6 +186,29 @@ export default function ActiveRide() {
       }
     },
   });
+
+  useAutoRideStop({
+    enabled: localStorage.getItem('motogo_auto_ride_detection') !== 'false',
+    isActive: rideStatus === 'active',
+    speed,
+    userPos,
+    onPromptStop: () => setAutoStopCountdown(30),
+    isCountingDown: autoStopCountdown !== null,
+  });
+
+  useEffect(() => {
+    if (autoStopCountdown === null) return;
+    if (autoStopCountdown <= 0) { setAutoStopCountdown(null); handleEndRide(); return; }
+    const t = setTimeout(() => setAutoStopCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [autoStopCountdown]);
+
+  useEffect(() => {
+    if (autoStopCountdown !== null && speed >= 15) {
+      setAutoStopCountdown(null);
+      toast.info('Movement detected — continuing ride');
+    }
+  }, [speed, autoStopCountdown]);
 
   useEffect(() => {
     if (crashPhase !== 'active' || !crashAlertId || !userPos) return;
@@ -501,6 +534,7 @@ export default function ActiveRide() {
       setCrashPhase(null); setCrashAlertId(null);
       setEmergencyContactsNotified(false); setNearbyRidersNotified(false); setCrashIndicators(null);
       setSeverity('medium');
+      setAutoStopCountdown(null);
       setNearbyService(null); setDismissedServiceIds(new Set());
       positionsRef.current = []; lastPosRef.current = null;
       setRideStatus('idle');
@@ -627,6 +661,12 @@ export default function ActiveRide() {
           </button>
         </div>
       )}
+
+      <AutoStopCountdown
+        countdown={autoStopCountdown}
+        onEnd={handleEndRide}
+        onContinue={() => setAutoStopCountdown(null)}
+      />
 
       <EmergencyOverlay
         phase={crashPhase}

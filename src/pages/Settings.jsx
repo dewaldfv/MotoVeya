@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, User, KeyRound, LogOut, Trash2, Shield, FileText, ScrollText, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, User, KeyRound, LogOut, Trash2, Shield, FileText, ScrollText, Check, Bike } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useTheme } from '@/hooks/useTheme';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -35,6 +35,7 @@ export default function Settings() {
   const [user, setUser] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [autoRideEnabled, setAutoRideEnabled] = useState(localStorage.getItem('motogo_auto_ride_detection') !== 'false');
 
   useEffect(() => {
     (async () => {
@@ -69,6 +70,13 @@ export default function Settings() {
 
   const goLegal = (doc) => navigate(`/legal/${doc}`);
 
+  const toggleAutoRide = () => {
+    const newValue = !autoRideEnabled;
+    setAutoRideEnabled(newValue);
+    localStorage.setItem('motogo_auto_ride_detection', newValue ? 'true' : 'false');
+    toast.success(`Auto Ride Detection ${newValue ? 'enabled' : 'disabled'}`);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-lg">
@@ -97,6 +105,13 @@ export default function Settings() {
           <Row icon={RotateCw} label="Auto-Rotate" value="Follows device" />
           <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
             The app rotates automatically with your device. If Rotation Lock is enabled on your phone, the app respects that and stays in the current orientation.
+          </p>
+        </Section>
+
+        <Section title="🏍️ Riding">
+          <Row icon={Bike} label="Auto Ride Detection" value={autoRideEnabled ? 'On' : 'Off'} onClick={toggleAutoRide} last />
+          <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+            Automatically starts a ride when you begin moving above 15 km/h, and prompts you to end the ride after 5 minutes of being stationary.
           </p>
         </Section>
 
