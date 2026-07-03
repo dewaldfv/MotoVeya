@@ -1,29 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Navigation, Siren, AlertTriangle, X, Fuel, Search, ChevronLeft, Layers, Loader2 } from 'lucide-react';
+import { Navigation, AlertTriangle, X, Fuel, Search, ChevronLeft, Layers, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
-import MapView from '@/components/MapView';
+import NavMapView from '@/components/NavMapView';
+import NavigationCard from '@/components/NavigationCard';
+import Speedometer from '@/components/Speedometer';
+import NavActionButtons from '@/components/NavActionButtons';
 import LayersSheet from '@/components/LayersSheet';
-import { useMapLayer } from '@/lib/mapLayers';
+import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
 import { toast } from 'sonner';
 
 const SA_CENTER = [-26.2041, 28.0473];
-
-function haversine(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function fmtTime(s) {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
-}
 
 function getCurrentPosition() {
   return new Promise((resolve, reject) => {
@@ -34,15 +21,6 @@ function getCurrentPosition() {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   });
-}
-
-function StatBlock({ label, value, unit }) {
-  return (
-    <div className="text-center">
-      <div className="text-2xl font-black leading-none">{value}</div>
-      <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{unit || label}</div>
-    </div>
-  );
 }
 
 export default function ActiveRide() {
@@ -62,16 +40,15 @@ export default function ActiveRide() {
   const [fuelRange, setFuelRange] = useState(null);
   const [destInput, setDestInput] = useState(initialSearch || '');
   const [destination, setDestination] = useState(initialDest || null);
-  const [route, setRoute] = useState(null);
+  const [routeData, setRouteData] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
-  const [fitSignal, setFitSignal] = useState(0);
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [distressActive, setDistressActive] = useState(false);
   const [ending, setEnding] = useState(false);
   const [heading, setHeading] = useState(null);
   const [accuracy, setAccuracy] = useState(null);
   const [rideStatus, setRideStatus] = useState('idle');
-  const [layer, setLayer] = useMapLayer();
+  const [layer, setLayer] = useState('standard');
   const [layersOpen, setLayersOpen] = useState(false);
 
   const lastPosRef = useRef(null);
@@ -143,7 +120,20 @@ export default function ActiveRide() {
   }, [distance, bike]);
 
   useEffect(() => {
-    if (rideStatus !== 'active' || !route || !destination || !userPos) return;
+    if (crashCountdown === null) return;
+    if (crashCountdown <= 0) { handleCrashConfirmed(); return; }
+    const t = setTimeout(() => setCrashCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [crashCountdown]);
+
+  const navProgress = useMemo(() => {
+    if (!routeData || !userPos) return null;
+    return getRouteProgress(routeData, userPos);
+  }, [routeData, userPos]);
+
+  useEffect(() => {
+    if (rideStatus !== 'active' || !routeData || !destination || !userPos) return;
+    const route = routeData.coordinates;
     let minDist = Infinity;
     for (let i = 0; i < route.length; i += 3) {
       const d = haversine(userPos[0], userPos[1], route[i][0], route[i][1]);
@@ -153,32 +143,24 @@ export default function ActiveRide() {
       lastRecalcRef.current = Date.now();
       (async () => {
         try {
-          const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${destination.lng},${destination.lat}?overview=full&geometries=geojson`);
+          const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true`);
           const data = await res.json();
           if (data.routes?.[0]) {
-            setRoute(data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]));
+            setRouteData(processRouteData(data));
             toast.info('Off route — recalculating...');
           }
         } catch (e) { console.error(e); }
       })();
     }
-  }, [userPos, rideStatus, route, destination]);
-
-  useEffect(() => {
-    if (crashCountdown === null) return;
-    if (crashCountdown <= 0) { handleCrashConfirmed(); return; }
-    const t = setTimeout(() => setCrashCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [crashCountdown]);
+  }, [userPos, rideStatus, routeData, destination]);
 
   const fetchRoute = async (origin, dest) => {
     setRouteLoading(true);
     try {
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${dest.lng},${dest.lat}?overview=full&geometries=geojson`);
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=true`);
       const data = await res.json();
       if (data.routes?.[0]) {
-        setRoute(data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]));
-        if (rideStatus === 'idle') setFitSignal((s) => s + 1);
+        setRouteData(processRouteData(data));
       }
     } catch (e) {
       console.error(e);
@@ -254,23 +236,26 @@ export default function ActiveRide() {
     } catch (e) { console.error(e); }
   };
 
-  const handleStartRide = () => {
-    setSpeed(0);
-    setMaxSpeed(0);
-    setDistance(0);
-    setDuration(0);
-    setHeading(null);
-    setAccuracy(null);
-    setDistressActive(false);
-    positionsRef.current = [];
-    lastPosRef.current = null;
+  const handleStartRide = async () => {
+    setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
+    setHeading(null); setAccuracy(null); setDistressActive(false);
+    positionsRef.current = []; lastPosRef.current = null;
     startTimeRef.current = Date.now();
     setRideStatus('active');
+    if (destination) {
+      try {
+        const origin = await getCurrentPosition();
+        setUserPos(origin);
+        await fetchRoute(origin, destination);
+      } catch (e) {
+        console.error(e);
+        toast.error('Could not get GPS for route');
+      }
+    }
   };
 
   const handleEndRide = async () => {
     setEnding(true);
-    // Stop recording immediately
     if (watchIdRef.current) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     try {
@@ -298,83 +283,82 @@ export default function ActiveRide() {
       console.error(e);
       toast.error('Could not save trip');
     } finally {
-      // Reset everything and return to idle
-      setRoute(null);
+      setRouteData(null);
       setDestination(null);
       setDestInput('');
-      setSpeed(0);
-      setMaxSpeed(0);
-      setDistance(0);
-      setDuration(0);
-      setHeading(null);
-      setAccuracy(null);
-      setDistressActive(false);
-      positionsRef.current = [];
-      lastPosRef.current = null;
+      setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
+      setHeading(null); setAccuracy(null); setDistressActive(false);
+      positionsRef.current = []; lastPosRef.current = null;
       setRideStatus('idle');
       setEnding(false);
     }
   };
 
   const lowFuel = fuelRange !== null && fuelRange < 50;
+  const isActive = rideStatus === 'active';
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-background">
-      <MapView
-        center={userPos || SA_CENTER}
-        zoom={14}
+      <NavMapView
+        userPos={userPos}
+        heading={heading}
+        accuracy={accuracy}
+        active={isActive}
+        speed={speed}
+        nextManeuverDistance={navProgress?.distanceToManeuver}
+        remainingRoute={navProgress?.remainingRoute || routeData?.coordinates}
+        completedRoute={navProgress?.completedRoute || []}
+        destination={destination}
         layer={layer}
-        route={route}
-        fitRouteSignal={fitSignal}
-        followRider={rideStatus === 'active'}
-        riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1], heading: heading, accuracy: accuracy }] : []}
-        distressAlerts={distressActive && userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
-        className="absolute inset-0 z-0 h-full w-full"
       />
 
-      <div className="absolute left-0 right-0 top-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4 pb-10" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
-        <div className="mb-3 flex items-center gap-2">
-          <button onClick={() => navigate('/')} className="glove-target flex items-center justify-center rounded-full bg-card/90">
-            <ChevronLeft size={24} />
-          </button>
-          <div className="flex flex-1 items-center gap-2 rounded-2xl bg-card/95 px-4 py-2.5 backdrop-blur-lg">
-            {routeLoading ? <Loader2 size={18} className="animate-spin text-muted-foreground" /> : <Search size={18} className="text-muted-foreground" />}
-            <input
-              value={destInput}
-              onChange={(e) => setDestInput(e.target.value)}
-              placeholder="Set destination..."
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              onKeyDown={(e) => { if (e.key === 'Enter' && destInput) handleSearch(destInput); }}
+      {isActive ? (
+        <>
+          {navProgress?.nextStep && (
+            <NavigationCard
+              step={navProgress.nextStep}
+              distanceToManeuver={navProgress.distanceToManeuver}
+              remainingDistance={navProgress.remainingDistance}
+              remainingDuration={navProgress.remainingDuration}
+              destinationName={destination?.name}
             />
-            {destInput && (
-              <button onClick={() => { setDestInput(''); setDestination(null); setRoute(null); }}>
-                <X size={16} className="text-muted-foreground" />
-              </button>
-            )}
-          </div>
-        </div>
-        {rideStatus === 'active' && (
-        <div className="flex items-center justify-between rounded-2xl bg-card/95 px-4 py-3 shadow-lg backdrop-blur-lg">
-          <StatBlock label="SPEED" value={speed} unit="km/h" />
-          <div className="h-8 w-px bg-border" />
-          <StatBlock label="DISTANCE" value={distance.toFixed(1)} unit="km" />
-          <div className="h-8 w-px bg-border" />
-          <StatBlock label="TIME" value={fmtTime(duration)} unit="" />
-          <div className="h-8 w-px bg-border" />
-          <div className={`text-center ${lowFuel ? 'text-destructive' : ''}`}>
-            <div className="flex items-center justify-center gap-1 text-2xl font-black leading-none">
-              <Fuel size={16} />{fuelRange ?? '—'}
+          )}
+          {routeLoading && !navProgress?.nextStep && (
+            <div className="absolute left-3 right-3 z-20 flex items-center gap-2 rounded-2xl bg-card/95 p-3 shadow-xl backdrop-blur-lg" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
+              <Loader2 size={20} className="animate-spin text-primary" />
+              <span className="text-sm font-medium">Calculating route...</span>
             </div>
-            <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">km range</div>
+          )}
+        </>
+      ) : (
+        <div className="absolute left-0 right-0 top-0 z-10 bg-gradient-to-b from-black/60 to-transparent p-3 pb-8" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/')} className="glove-target flex items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg">
+              <ChevronLeft size={24} />
+            </button>
+            <div className="flex flex-1 items-center gap-2 rounded-2xl bg-card/95 px-4 py-2.5 shadow-lg backdrop-blur-lg">
+              {routeLoading ? <Loader2 size={18} className="animate-spin text-muted-foreground" /> : <Search size={18} className="text-muted-foreground" />}
+              <input
+                value={destInput}
+                onChange={(e) => setDestInput(e.target.value)}
+                placeholder="Where to?"
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                onKeyDown={(e) => { if (e.key === 'Enter' && destInput) handleSearch(destInput); }}
+              />
+              {destInput && (
+                <button onClick={() => { setDestInput(''); setDestination(null); setRouteData(null); }}>
+                  <X size={16} className="text-muted-foreground" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
-        )}
-      </div>
+      )}
 
       <button
         onClick={() => setLayersOpen(true)}
-        className="glove-target absolute right-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        style={{ top: 'calc(9.5rem + env(safe-area-inset-top))' }}
+        className="glove-target absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        style={{ top: isActive ? 'calc(0.75rem + env(safe-area-inset-top))' : 'calc(4.5rem + env(safe-area-inset-top))' }}
         aria-label="Map Layers"
       >
         <Layers size={20} className="text-foreground" />
@@ -382,45 +366,38 @@ export default function ActiveRide() {
 
       <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} />
 
-      <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 to-transparent p-4 pt-10">
-        {rideStatus === 'idle' ? (
+      {isActive && (
+        <div className="absolute bottom-5 left-4 z-10 flex flex-col items-center gap-1.5">
+          <Speedometer speed={speed} />
+          {fuelRange !== null && (
+            <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold shadow-lg ${lowFuel ? 'bg-destructive text-white animate-pulse' : 'bg-card/95 text-foreground'}`}>
+              <Fuel size={10} /> {fuelRange}km
+            </div>
+          )}
+        </div>
+      )}
+
+      {isActive ? (
+        <div className="absolute bottom-5 right-4 z-10">
+          <NavActionButtons
+            onDistress={handleDistress}
+            onCrash={handleSimulateCrash}
+            onEnd={handleEndRide}
+            distressActive={distressActive}
+            ending={ending}
+            disabled={!user || user.subscription_tier !== 'premium'}
+          />
+        </div>
+      ) : (
+        <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/60 to-transparent p-4 pt-10">
           <button
             onClick={handleStartRide}
             className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground shadow-lg transition-transform active:scale-95"
           >
-            <Navigation size={22} fill="white" /> START RIDE
+            <Navigation size={22} fill="white" /> START
           </button>
-        ) : (
-          <div className="flex gap-2">
-            {!distressActive ? (
-              <button
-                onClick={handleDistress}
-                disabled={!user || user.subscription_tier !== 'premium'}
-                className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl bg-destructive font-bold text-destructive-foreground shadow-lg transition-transform active:scale-95 disabled:opacity-40"
-              >
-                <Siren size={22} /> DISTRESS
-              </button>
-            ) : (
-              <div className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl bg-destructive font-bold text-destructive-foreground animate-pulse">
-                <Siren size={22} /> DISTRESS ACTIVE
-              </div>
-            )}
-            <button
-              onClick={handleSimulateCrash}
-              className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-card px-5 font-bold shadow-lg transition-transform active:scale-95"
-            >
-              <AlertTriangle size={22} className="text-destructive" /> CRASH
-            </button>
-            <button
-              onClick={handleEndRide}
-              disabled={ending}
-              className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-primary px-6 font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 disabled:opacity-50"
-            >
-              {ending ? '...' : 'END'}
-            </button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {crashCountdown !== null && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-destructive/95">
