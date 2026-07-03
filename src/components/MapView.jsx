@@ -27,6 +27,13 @@ function createIcon(category) {
   });
 }
 
+const finishIcon = L.icon({
+  iconUrl: 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/1326aae27_generated_image.png',
+  iconSize: [48, 48],
+  iconAnchor: [24, 48],
+  popupAnchor: [0, -48],
+});
+
 function Recenter({ center, zoom }) {
   const map = useMap();
   useEffect(() => {
@@ -68,7 +75,7 @@ export default function MapView({
         <Marker
           key={`event-${ev.id}`}
           position={[ev.lat, ev.lng]}
-          icon={createIcon('event')}
+          icon={finishIcon}
           eventHandlers={{ click: () => onMarkerClick?.(ev) }}
         />
       ))}
