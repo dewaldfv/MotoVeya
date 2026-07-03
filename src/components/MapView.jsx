@@ -82,6 +82,18 @@ function Recenter({ center, zoom, signal }) {
   return null;
 }
 
+function FitRoute({ route, signal }) {
+  const map = useMap();
+  useEffect(() => {
+    if (signal > 0 && route && route.length > 1) {
+      const bounds = L.latLngBounds(route);
+      map.fitBounds(bounds, { padding: [60, 60] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signal, map]);
+  return null;
+}
+
 export default function MapView({
   center = [-26.2041, 28.0473],
   zoom = 12,
@@ -91,6 +103,7 @@ export default function MapView({
   distressAlerts = [],
   route = null,
   recenterSignal = 0,
+  fitRouteSignal = 0,
   layer = 'dark',
   followRider = false,
   onMarkerClick,
@@ -100,6 +113,7 @@ export default function MapView({
     <MapContainer center={center} zoom={zoom} className={className} zoomControl={false} scrollWheelZoom>
       <MapTileLayers layer={layer} />
       <Recenter center={center} zoom={zoom} signal={recenterSignal} />
+      <FitRoute route={route} signal={fitRouteSignal} />
       {route && route.length > 0 && (
         <Polyline positions={route} pathOptions={{ color: '#FF6F00', weight: 5, opacity: 0.85 }} />
       )}

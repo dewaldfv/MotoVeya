@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Navigation, Siren, AlertTriangle, X, Fuel, Search, ChevronLeft, Layers } from 'lucide-react';
+import { Navigation, Siren, AlertTriangle, X, Fuel, Search, ChevronLeft, Layers, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import MapView from '@/components/MapView';
@@ -23,6 +23,17 @@ function fmtTime(s) {
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error('Geolocation not supported'));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  });
 }
 
 function StatBlock({ label, value, unit }) {
@@ -52,6 +63,8 @@ export default function ActiveRide() {
   const [destInput, setDestInput] = useState(initialSearch || '');
   const [destination, setDestination] = useState(initialDest || null);
   const [route, setRoute] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [fitSignal, setFitSignal] = useState(0);
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [distressActive, setDistressActive] = useState(false);
   const [ending, setEnding] = useState(false);
@@ -66,6 +79,7 @@ export default function ActiveRide() {
   const startTimeRef = useRef(Date.now());
   const watchIdRef = useRef(null);
   const timerRef = useRef(null);
+  const lastRecalcRef = useRef(0);
 
   useEffect(() => {
     (async () => {
@@ -129,11 +143,50 @@ export default function ActiveRide() {
   }, [distance, bike]);
 
   useEffect(() => {
+    if (rideStatus !== 'active' || !route || !destination || !userPos) return;
+    let minDist = Infinity;
+    for (let i = 0; i < route.length; i += 3) {
+      const d = haversine(userPos[0], userPos[1], route[i][0], route[i][1]);
+      if (d < minDist) minDist = d;
+    }
+    if (minDist > 0.2 && Date.now() - lastRecalcRef.current > 30000) {
+      lastRecalcRef.current = Date.now();
+      (async () => {
+        try {
+          const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${destination.lng},${destination.lat}?overview=full&geometries=geojson`);
+          const data = await res.json();
+          if (data.routes?.[0]) {
+            setRoute(data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]));
+            toast.info('Off route — recalculating...');
+          }
+        } catch (e) { console.error(e); }
+      })();
+    }
+  }, [userPos, rideStatus, route, destination]);
+
+  useEffect(() => {
     if (crashCountdown === null) return;
     if (crashCountdown <= 0) { handleCrashConfirmed(); return; }
     const t = setTimeout(() => setCrashCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [crashCountdown]);
+
+  const fetchRoute = async (origin, dest) => {
+    setRouteLoading(true);
+    try {
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${dest.lng},${dest.lat}?overview=full&geometries=geojson`);
+      const data = await res.json();
+      if (data.routes?.[0]) {
+        setRoute(data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]));
+        if (rideStatus === 'idle') setFitSignal((s) => s + 1);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not calculate route');
+    } finally {
+      setRouteLoading(false);
+    }
+  };
 
   const handleSearch = async (query) => {
     try {
@@ -142,21 +195,26 @@ export default function ActiveRide() {
       if (data.length > 0) {
         const dest = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), name: data[0].display_name.split(',')[0] };
         handleDestination(dest);
+      } else {
+        toast.error('Location not found');
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      toast.error('Search failed');
+    }
   };
 
   const handleDestination = async (dest) => {
     setDestination(dest);
     setDestInput(dest.name);
-    const start = userPos || SA_CENTER;
     try {
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${dest.lng},${dest.lat}?overview=full&geometries=geojson`);
-      const data = await res.json();
-      if (data.routes?.[0]) {
-        setRoute(data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]));
-      }
-    } catch (e) { console.error(e); }
+      const origin = await getCurrentPosition();
+      setUserPos(origin);
+      await fetchRoute(origin, dest);
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not get your location. Enable GPS and try again.');
+    }
   };
 
   const handleSimulateCrash = () => setCrashCountdown(30);
@@ -267,6 +325,7 @@ export default function ActiveRide() {
         zoom={14}
         layer={layer}
         route={route}
+        fitRouteSignal={fitSignal}
         followRider={rideStatus === 'active'}
         riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1], heading: heading, accuracy: accuracy }] : []}
         distressAlerts={distressActive && userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
@@ -279,7 +338,7 @@ export default function ActiveRide() {
             <ChevronLeft size={24} />
           </button>
           <div className="flex flex-1 items-center gap-2 rounded-2xl bg-card/95 px-4 py-2.5 backdrop-blur-lg">
-            <Search size={18} className="text-muted-foreground" />
+            {routeLoading ? <Loader2 size={18} className="animate-spin text-muted-foreground" /> : <Search size={18} className="text-muted-foreground" />}
             <input
               value={destInput}
               onChange={(e) => setDestInput(e.target.value)}
