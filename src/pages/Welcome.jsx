@@ -13,23 +13,23 @@ export default function Welcome() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0a0a0a] px-6" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="flex min-h-screen flex-col bg-[#0c0e12] px-6" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex flex-1 flex-col items-center justify-center">
         <motion.div
-          initial={{ opacity: 0, scale: 0.85 }}
+          initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <LogoMark size={100} />
+          <LogoMark size={220} />
         </motion.div>
 
         <motion.h1
-          className="mt-6 text-3xl font-bold tracking-tight text-white"
+          className="mt-8 text-2xl font-bold tracking-tight text-white"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.4 }}
         >
-          Welcome to MotoGo
+          Welcome to Mo&rsquo;toGo
         </motion.h1>
 
         <motion.p

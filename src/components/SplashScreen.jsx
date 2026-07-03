@@ -38,67 +38,47 @@ export default function SplashScreen({ isFirstLaunch, loading, onComplete }) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#0a0a0a]"
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center overflow-hidden bg-[#0c0e12]"
       animate={{ opacity: fadingOut ? 0 : 1 }}
       transition={{ duration: FADE_OUT_MS / 1000, ease: 'easeInOut' }}
     >
-      <div className="relative">
+      <div className="relative flex items-center justify-center">
         {/* Glow halo */}
         {isFirstLaunch && (
           <motion.div
-            className="pointer-events-none absolute -inset-10 rounded-full"
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: [0, 0.7, 0.3], scale: [0.6, 1.1, 1] }}
-            transition={{ delay: 0.3, duration: 1.4, ease: 'easeOut' }}
-            style={{ background: 'radial-gradient(circle, hsla(26, 100%, 50%, 0.45), transparent 70%)' }}
+            className="pointer-events-none absolute inset-0 scale-150"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: [0, 0.6, 0.3], scale: [0.7, 1.2, 1] }}
+            transition={{ delay: 0.3, duration: 1.5, ease: 'easeOut' }}
+            style={{ background: 'radial-gradient(circle, hsla(18, 100%, 53%, 0.4), transparent 65%)' }}
           />
         )}
 
         {/* Logo fade-in + scale-up */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.7 }}
+          className="relative"
+          initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: isFirstLaunch ? 0.7 : 0.3, ease: [0.16, 1, 0.3, 1] }}
         >
-          <LogoMark size={isFirstLaunch ? 112 : 84} />
+          <LogoMark size={isFirstLaunch ? 280 : 220} />
+
+          {/* Light sweep across logo */}
+          {isFirstLaunch && (
+            <motion.div
+              className="pointer-events-none absolute inset-0 overflow-hidden"
+              initial={{ x: '-130%' }}
+              animate={{ x: '250%' }}
+              transition={{ delay: 0.8, duration: 0.8, ease: 'easeInOut' }}
+            >
+              <div
+                className="h-full w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent"
+                style={{ transform: 'skewX(-15deg)' }}
+              />
+            </motion.div>
+          )}
         </motion.div>
-
-        {/* Light sweep across logo */}
-        {isFirstLaunch && (
-          <motion.div
-            className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]"
-            initial={{ x: '-120%' }}
-            animate={{ x: '220%' }}
-            transition={{ delay: 0.7, duration: 0.7, ease: 'easeInOut' }}
-          >
-            <div
-              className="h-full w-2/5 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-              style={{ transform: 'skewX(-15deg)' }}
-            />
-          </motion.div>
-        )}
       </div>
-
-      {/* Wordmark */}
-      <motion.h1
-        className="mt-6 text-2xl font-bold tracking-[0.18em] text-white"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: isFirstLaunch ? 0.4 : 0.1, duration: 0.5 }}
-      >
-        MotoGo
-      </motion.h1>
-
-      {isFirstLaunch && (
-        <motion.p
-          className="mt-1.5 text-sm text-white/40"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.5 }}
-        >
-          Ride. Connect. Explore.
-        </motion.p>
-      )}
 
       {/* Loading spinner if init takes longer than animation */}
       {animationDone && loading && (
@@ -108,7 +88,7 @@ export default function SplashScreen({ isFirstLaunch, loading, onComplete }) {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/15 border-t-primary" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/15 border-t-[#ff6600]" />
         </motion.div>
       )}
     </motion.div>
