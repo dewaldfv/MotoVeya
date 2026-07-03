@@ -10,6 +10,9 @@ import SearchPanel from '@/components/SearchPanel';
 import CategoryMenu, { MAP_CATEGORIES } from '@/components/CategoryMenu';
 import LayersSheet from '@/components/LayersSheet';
 import { useMapLayer } from '@/lib/mapLayers';
+import { useQuery } from '@tanstack/react-query';
+import ServiceDetailSheet from '@/components/services/ServiceDetailSheet';
+import { useMapOverlays, POI_OVERLAY_MAP } from '@/lib/mapOverlays';
 
 const SA_CENTER = [-26.2041, 28.0473];
 const REMOTE_CATS = {
@@ -37,6 +40,13 @@ export default function Home() {
   const userPosRef = useRef(null);
   const [layer, setLayer] = useMapLayer();
   const [layersOpen, setLayersOpen] = useState(false);
+  const { overlays, toggle: toggleOverlay } = useMapOverlays();
+  const [selectedService, setSelectedService] = useState(null);
+
+  const { data: services = [] } = useQuery({
+    queryKey: ['services'],
+    queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || [],
+  });
 
   useEffect(() => {
     (async () => {
@@ -67,14 +77,18 @@ export default function Home() {
 
   const isRemoteCat = !!REMOTE_CATS[activeCat];
   const poisToShow = activeCat === 'all'
-    ? pois
+    ? pois.filter((p) => {
+        const overlayKey = POI_OVERLAY_MAP[p.category];
+        return !overlayKey || overlays[overlayKey];
+      })
     : isRemoteCat
       ? remotePois
       : activeCat === 'event' || activeCat === 'distress'
         ? []
         : pois.filter((p) => p.category === activeCat);
-  const eventsToShow = activeCat === 'all' || activeCat === 'event' ? events : [];
-  const distressToShow = activeCat === 'distress' ? distressAlerts : [];
+  const eventsToShow = (activeCat === 'all' ? overlays.events : activeCat === 'event') ? events : [];
+  const distressToShow = (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [];
+  const servicesToShow = overlays.services ? services : [];
   const isEvent = !!selected?.event_date;
   const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
 
@@ -139,6 +153,11 @@ export default function Home() {
     navigate('/ride/active', { state: { destination: dest } });
   };
 
+  const handleServiceNavigate = (service) => {
+    setSelectedService(null);
+    navigate('/ride/active', { state: { destination: { lat: service.lat, lng: service.lng, name: service.name } } });
+  };
+
   return (
     <div className="relative h-screen w-full overflow-hidden">
       <MapView
@@ -149,6 +168,10 @@ export default function Home() {
         pois={poisToShow}
         events={eventsToShow}
         distressAlerts={distressToShow}
+        services={servicesToShow}
+        showServices={overlays.services}
+        onServiceClick={setSelectedService}
+        userPos={userPos}
         riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
         followRider={false}
         onMarkerClick={setSelected}
@@ -216,7 +239,7 @@ export default function Home() {
         onSelect={handleSelectCategory}
       />
 
-      <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} />
+      <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} overlays={overlays} onToggleOverlay={toggleOverlay} />
 
       <button onClick={() => navigate('/ride/active')} className="fab flex flex-col items-center justify-center gap-0.5">
         <Navigation size={26} fill="white" />
@@ -283,6 +306,9 @@ export default function Home() {
           </div>
         )}
       </BottomSheet>
+
+      <ServiceDetailSheet service={selectedService} userPos={userPos}
+        isFavorite={false} onNavigate={handleServiceNavigate} onClose={() => setSelectedService(null)} />
     </div>
   );
 }

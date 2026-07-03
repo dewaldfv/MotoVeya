@@ -8,6 +8,7 @@ import Speedometer from '@/components/Speedometer';
 import NavActionButtons from '@/components/NavActionButtons';
 import LayersSheet from '@/components/LayersSheet';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
+import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
 import { toast } from 'sonner';
 
 const SA_CENTER = [-26.2041, 28.0473];
@@ -50,6 +51,9 @@ export default function ActiveRide() {
   const [rideStatus, setRideStatus] = useState('idle');
   const [layer, setLayer] = useState('standard');
   const [layersOpen, setLayersOpen] = useState(false);
+  const [services, setServices] = useState([]);
+  const [nearbyService, setNearbyService] = useState(null);
+  const [dismissedServiceIds, setDismissedServiceIds] = useState(new Set());
 
   const lastPosRef = useRef(null);
   const positionsRef = useRef([]);
@@ -153,6 +157,63 @@ export default function ActiveRide() {
       })();
     }
   }, [userPos, rideStatus, routeData, destination]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const svcData = await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200);
+        setServices(svcData || []);
+      } catch (e) { console.error(e); }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (rideStatus !== 'active' || !routeData || !services.length) { setNearbyService(null); return; }
+    const route = routeData.coordinates;
+    if (!route || route.length < 2) { setNearbyService(null); return; }
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (const svc of services) {
+      if (dismissedServiceIds.has(svc.id)) continue;
+      let minRouteDist = Infinity;
+      for (let i = 0; i < route.length; i += 5) {
+        const d = haversine(svc.lat, svc.lng, route[i][0], route[i][1]);
+        if (d < minRouteDist) minRouteDist = d;
+      }
+      if (minRouteDist <= 2) {
+        const distToRider = userPos ? haversine(svc.lat, svc.lng, userPos[0], userPos[1]) : Infinity;
+        if (distToRider > 0.15 && distToRider < nearestDist) {
+          nearestDist = distToRider;
+          nearest = svc;
+        }
+      }
+    }
+    setNearbyService(nearest);
+  }, [userPos, routeData, rideStatus, services, dismissedServiceIds]);
+
+  const handleAddStop = async (svc) => {
+    if (!userPos || !destination) return;
+    setRouteLoading(true);
+    try {
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${svc.lng},${svc.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true`);
+      const data = await res.json();
+      if (data.routes?.[0]) {
+        setRouteData(processRouteData(data));
+        setDismissedServiceIds(new Set([...dismissedServiceIds, svc.id]));
+        toast.success(`Added stop: ${svc.name}`);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not add stop');
+    } finally {
+      setRouteLoading(false);
+    }
+  };
+
+  const handleDismissService = () => {
+    if (nearbyService) setDismissedServiceIds(new Set([...dismissedServiceIds, nearbyService.id]));
+    setNearbyService(null);
+  };
 
   const fetchRoute = async (origin, dest) => {
     setRouteLoading(true);
@@ -288,6 +349,7 @@ export default function ActiveRide() {
       setDestInput('');
       setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
       setHeading(null); setAccuracy(null); setDistressActive(false);
+      setNearbyService(null); setDismissedServiceIds(new Set());
       positionsRef.current = []; lastPosRef.current = null;
       setRideStatus('idle');
       setEnding(false);
@@ -327,6 +389,21 @@ export default function ActiveRide() {
             <div className="absolute left-3 right-3 z-20 flex items-center gap-2 rounded-2xl bg-card/95 p-3 shadow-xl backdrop-blur-lg" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
               <Loader2 size={20} className="animate-spin text-primary" />
               <span className="text-sm font-medium">Calculating route...</span>
+            </div>
+          )}
+          {nearbyService && (
+            <div className="absolute left-3 right-3 z-[15]" style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }}>
+              <div className="mx-auto flex max-w-sm items-center gap-2 rounded-2xl bg-card/95 p-2.5 shadow-xl backdrop-blur-lg">
+                <span className="text-xl">{getServiceCategory(nearbyService.category).emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold">{nearbyService.name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {getServiceCategory(nearbyService.category).short} · {formatDistance(userPos ? haversine(nearbyService.lat, nearbyService.lng, userPos[0], userPos[1]) : null)} off route
+                  </p>
+                </div>
+                <button onClick={() => handleAddStop(nearbyService)} className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground">Add Stop</button>
+                <button onClick={handleDismissService} className="shrink-0"><X size={16} className="text-muted-foreground" /></button>
+              </div>
             </div>
           )}
         </>

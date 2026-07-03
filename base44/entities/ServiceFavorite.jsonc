@@ -1,0 +1,19 @@
+{
+  "name": "ServiceFavorite",
+  "type": "object",
+  "properties": {
+    "service_id": {
+      "type": "string"
+    },
+    "service_name": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "service_id",
+    "user_id"
+  ]
+}

@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { getEventMarkerUrl } from '@/lib/eventMarkers';
 import { MAP_LAYERS } from '@/lib/mapLayers';
 import RiderMarker from '@/components/RiderMarker';
+import ServiceMarkers from '@/components/ServiceMarkers';
 
 const CATEGORY_CONFIG = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -107,6 +108,10 @@ export default function MapView({
   layer = 'dark',
   followRider = false,
   onMarkerClick,
+  services = [],
+  showServices = false,
+  onServiceClick,
+  userPos = null,
   className = '',
 }) {
   return (
@@ -145,6 +150,9 @@ export default function MapView({
           zIndex={1200}
         />
       ))}
+      {showServices && (
+        <ServiceMarkers services={services} userPos={userPos} onMarkerClick={onServiceClick} />
+      )}
     </MapContainer>
   );
 }

@@ -1,0 +1,116 @@
+{
+  "name": "Service",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "maintenance_repair",
+        "tyres_wheels",
+        "batteries",
+        "oil_lubricants",
+        "spare_parts",
+        "dealerships",
+        "riding_gear",
+        "custom_paint",
+        "custom_builders",
+        "performance_tuning",
+        "electrical",
+        "suspension",
+        "chains_sprockets",
+        "detailing",
+        "transport",
+        "roadside_assist",
+        "training_schools",
+        "photography"
+      ],
+      "default": "maintenance_repair"
+    },
+    "description": {
+      "type": "string"
+    },
+    "logo_url": {
+      "type": "string"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "address": {
+      "type": "string"
+    },
+    "town": {
+      "type": "string"
+    },
+    "province": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "opening_hours": {
+      "type": "string"
+    },
+    "is_open_24h": {
+      "type": "boolean",
+      "default": false
+    },
+    "rating": {
+      "type": "number"
+    },
+    "review_count": {
+      "type": "number"
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_premium_partner": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false
+    },
+    "has_premium_discount": {
+      "type": "boolean",
+      "default": false
+    },
+    "premium_discount_description": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "approved"
+    }
+  },
+  "required": [
+    "name",
+    "category",
+    "lat",
+    "lng"
+  ]
+}
