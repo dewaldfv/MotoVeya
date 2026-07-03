@@ -2,12 +2,14 @@ import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import { TabHistoryProvider } from '@/lib/TabHistoryContext';
+import SplashScreen from '@/components/SplashScreen';
 // Add page imports here
 import AppLayout from '@/components/AppLayout';
 import Home from '@/pages/Home';
@@ -29,17 +31,31 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
+import Welcome from '@/pages/Welcome';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
+  const navigate = useNavigate();
+  const [introDone, setIntroDone] = useState(false);
+  const [isFirstLaunch] = useState(() => localStorage.getItem('motogo_has_seen_intro') !== 'true');
 
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+  const loading = isLoadingAuth || isLoadingPublicSettings;
+
+  const handleSplashComplete = useCallback(() => {
+    localStorage.setItem('motogo_has_seen_intro', 'true');
+    setIntroDone(true);
+    if (authError) return; // let the auth error handler below deal with it
+    const isGuest = localStorage.getItem('motogo_guest_mode') === 'true';
+    if (isFirstLaunch && !isAuthenticated && !isGuest) {
+      navigate('/welcome', { replace: true });
+    } else if (!isAuthenticated && !isGuest) {
+      navigate('/login', { replace: true });
+    }
+  }, [isFirstLaunch, isAuthenticated, navigate, authError]);
+
+  // Show splash screen during intro animation and/or initial loading
+  if (!introDone || loading) {
+    return <SplashScreen isFirstLaunch={isFirstLaunch} loading={loading} onComplete={handleSplashComplete} />;
   }
 
   // Handle authentication errors
@@ -61,6 +77,7 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/welcome" element={<Welcome />} />
       {/* Add your page Route elements here */}
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
