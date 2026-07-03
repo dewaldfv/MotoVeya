@@ -19,6 +19,9 @@ import Community from '@/pages/Community';
 import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
 import GoPremium from '@/pages/GoPremium';
+import Settings from '@/pages/Settings';
+import Legal from '@/pages/Legal';
+import { useTheme } from '@/hooks/useTheme';
 import ActiveRide from '@/pages/ActiveRide';
 import Onboarding from '@/pages/Onboarding';
 import Login from '@/pages/Login';
@@ -68,6 +71,8 @@ const AuthenticatedApp = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/premium" element={<GoPremium />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/legal/:doc" element={<Legal />} />
       </Route>
       <Route path="/ride/active" element={<ActiveRide />} />
       <Route path="/onboarding" element={<Onboarding />} />
@@ -78,6 +83,7 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+  useTheme();
 
   return (
     <AuthProvider>
