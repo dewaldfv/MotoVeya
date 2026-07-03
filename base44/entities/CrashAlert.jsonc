@@ -28,6 +28,15 @@
       ],
       "default": "active"
     },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "low"
+    },
     "notified_emergency_contact": {
       "type": "boolean",
       "default": false
@@ -56,6 +65,24 @@
     },
     "crash_indicators": {
       "type": "string"
+    },
+    "speed_at_impact": {
+      "type": "number"
+    },
+    "heading_at_impact": {
+      "type": "number"
+    },
+    "battery_level": {
+      "type": "number"
+    },
+    "bike_make": {
+      "type": "string"
+    },
+    "bike_model": {
+      "type": "string"
+    },
+    "bike_year": {
+      "type": "number"
     }
   },
   "required": [

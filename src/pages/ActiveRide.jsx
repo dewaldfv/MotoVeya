@@ -8,6 +8,8 @@ import Speedometer from '@/components/Speedometer';
 import NavActionButtons from '@/components/NavActionButtons';
 import EmergencyOverlay from '@/components/EmergencyOverlay';
 import { useCrashDetection, requestMotionPermission } from '@/hooks/useCrashDetection';
+import { useEmergencyBeacon } from '@/hooks/useEmergencyBeacon';
+import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '@/lib/emergencyCache';
 import LayersSheet from '@/components/LayersSheet';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
 import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
@@ -53,6 +55,8 @@ export default function ActiveRide() {
   const [emergencyContactsNotified, setEmergencyContactsNotified] = useState(false);
   const [nearbyRidersNotified, setNearbyRidersNotified] = useState(false);
   const [crashIndicators, setCrashIndicators] = useState(null);
+  const [severity, setSeverity] = useState('medium');
+  const [batteryLevel, setBatteryLevel] = useState(null);
   const [ending, setEnding] = useState(false);
   const [heading, setHeading] = useState(null);
   const [accuracy, setAccuracy] = useState(null);
@@ -69,6 +73,7 @@ export default function ActiveRide() {
   const watchIdRef = useRef(null);
   const timerRef = useRef(null);
   const lastRecalcRef = useRef(0);
+  const beacon = useEmergencyBeacon();
 
   useEffect(() => {
     (async () => {
@@ -129,6 +134,16 @@ export default function ActiveRide() {
   }, [rideStatus]);
 
   useEffect(() => {
+    if (navigator.getBattery) {
+      navigator.getBattery().then((b) => {
+        setBatteryLevel(Math.round(b.level * 100));
+        const update = () => setBatteryLevel(Math.round(b.level * 100));
+        b.addEventListener('levelchange', update);
+      }).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
     const consumption = fuelProfile?.adaptive_l_per_100km || bike?.fuel_consumption_l_per_100km;
     if (bike && bike.tank_capacity_l && consumption) {
       const consumed = distance * (consumption / 100);
@@ -147,12 +162,17 @@ export default function ActiveRide() {
   }, [crashCountdown]);
 
   useCrashDetection({
-    enabled: isActive,
+    enabled: rideStatus === 'active',
     speed,
     onCrashDetected: (data) => {
       setCrashIndicators(data.indicators);
-      setCrashCountdown(30);
-      setCrashPhase('countdown');
+      setSeverity(data.severity);
+      if (data.severity === 'high') {
+        handleCrashConfirmed(data.severity);
+      } else {
+        setCrashCountdown(data.severity === 'medium' ? 15 : 30);
+        setCrashPhase('countdown');
+      }
     },
   });
 
@@ -169,6 +189,29 @@ export default function ActiveRide() {
     }, 10000);
     return () => clearInterval(interval);
   }, [crashPhase, crashAlertId, userPos]);
+
+  useEffect(() => {
+    const handleOnline = async () => {
+      const cached = getPendingEmergency();
+      if (!cached) return;
+      for (let i = 0; i < 3; i++) {
+        try {
+          const res = await base44.functions.invoke('trigger-emergency-response', cached);
+          if (res.data?.alert?.id) {
+            clearPendingEmergency();
+            setCrashAlertId(res.data.alert.id);
+            setEmergencyContactsNotified(res.data?.contact_notified || false);
+            setNearbyRidersNotified(res.data?.nearby_notified > 0 || false);
+            break;
+          }
+        } catch (e) {
+          if (i < 2) await new Promise((r) => setTimeout(r, 5000 * (i + 1)));
+        }
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
 
   const navProgress = useMemo(() => {
     if (!routeData || !userPos) return null;
@@ -300,47 +343,70 @@ export default function ActiveRide() {
     }
   };
 
-  const handleSimulateCrash = () => { setCrashCountdown(30); setCrashPhase('countdown'); };
+  const handleSimulateCrash = () => {
+    setCrashIndicators({ highGForce: true, suddenDecel: true });
+    setSeverity('medium');
+    setCrashCountdown(15);
+    setCrashPhase('countdown');
+  };
   const handleCancelCrash = () => {
     setCrashCountdown(null);
     setCrashPhase(null);
+    setSeverity('medium');
+    beacon.stop();
     if (userPos) {
       base44.entities.CrashAlert.create({
         rider_id: user?.id, rider_name: user?.nickname || user?.full_name || 'Rider',
         lat: userPos[0], lng: userPos[1], timestamp: new Date().toISOString(),
-        status: 'false_alarm', crash_indicators: crashIndicators ? JSON.stringify(crashIndicators) : 'manual',
+        status: 'false_alarm', severity, crash_indicators: crashIndicators ? JSON.stringify(crashIndicators) : 'manual',
       }).catch(() => {});
     }
     setCrashIndicators(null);
   };
 
-  const handleCrashConfirmed = async () => {
+  const handleCrashConfirmed = async (overrideSeverity) => {
+    const sev = overrideSeverity || severity;
     setCrashCountdown(null);
     setCrashPhase('active');
+    beacon.start();
     const pos = userPos || SA_CENTER;
-    try {
-      const res = await base44.functions.invoke('trigger-emergency-response', {
-        lat: pos[0], lng: pos[1],
-        rider_name: user?.nickname || user?.full_name || 'Rider',
-        is_premium: user?.subscription_tier === 'premium',
-        indicators: crashIndicators,
-      });
-      const data = res.data;
-      if (data?.alert?.id) setCrashAlertId(data.alert.id);
-      setEmergencyContactsNotified(data?.contact_notified || false);
-      setNearbyRidersNotified(data?.nearby_notified > 0 || false);
-      setDistressActive(true);
-    } catch (e) {
-      console.error(e);
-      await base44.entities.CrashAlert.create({
-        rider_id: user?.id, rider_name: user?.nickname || user?.full_name || 'Rider',
-        lat: pos[0], lng: pos[1], timestamp: new Date().toISOString(),
-        status: 'active', is_premium: user?.subscription_tier === 'premium',
-      }).catch(() => {});
+    const emergencyData = {
+      lat: pos[0], lng: pos[1],
+      rider_name: user?.nickname || user?.full_name || 'Rider',
+      is_premium: user?.subscription_tier === 'premium',
+      indicators: crashIndicators,
+      severity: sev,
+      speed_at_impact: speed,
+      heading_at_impact: heading,
+      battery_level: batteryLevel,
+      bike_make: bike?.make,
+      bike_model: bike?.model,
+      bike_year: bike?.year,
+    };
+    cacheEmergencyData(emergencyData);
+    for (let i = 0; i < 5; i++) {
+      try {
+        const res = await base44.functions.invoke('trigger-emergency-response', emergencyData);
+        const data = res.data;
+        if (data?.alert?.id) {
+          setCrashAlertId(data.alert.id);
+          setEmergencyContactsNotified(data?.contact_notified || false);
+          setNearbyRidersNotified(data?.nearby_notified > 0 || false);
+          clearPendingEmergency();
+          setDistressActive(true);
+          return;
+        }
+      } catch (e) {
+        console.error('Emergency send attempt ' + (i + 1) + ' failed:', e);
+        if (i < 4) await new Promise((r) => setTimeout(r, 5000 * (i + 1)));
+      }
     }
+    toast.error('Could not reach emergency services. Will retry when connected.');
+    setDistressActive(true);
   };
 
   const handleResolveEmergency = async () => {
+    beacon.stop();
     if (crashAlertId) {
       try { await base44.entities.CrashAlert.update(crashAlertId, { status: 'resolved' }); } catch (e) { console.error(e); }
     }
@@ -350,6 +416,7 @@ export default function ActiveRide() {
     setEmergencyContactsNotified(false);
     setNearbyRidersNotified(false);
     setCrashIndicators(null);
+    setSeverity('medium');
   };
 
   const handleDistress = async () => {
@@ -386,6 +453,7 @@ export default function ActiveRide() {
 
   const handleEndRide = async () => {
     setEnding(true);
+    beacon.stop();
     if (crashAlertId) {
       try { await base44.entities.CrashAlert.update(crashAlertId, { status: 'resolved' }); } catch (e) { console.error(e); }
     }
@@ -423,6 +491,7 @@ export default function ActiveRide() {
       setHeading(null); setAccuracy(null); setDistressActive(false);
       setCrashPhase(null); setCrashAlertId(null);
       setEmergencyContactsNotified(false); setNearbyRidersNotified(false); setCrashIndicators(null);
+      setSeverity('medium');
       setNearbyService(null); setDismissedServiceIds(new Set());
       positionsRef.current = []; lastPosRef.current = null;
       setRideStatus('idle');
@@ -552,6 +621,7 @@ export default function ActiveRide() {
 
       <EmergencyOverlay
         phase={crashPhase}
+        severity={severity}
         countdown={crashCountdown}
         onCancel={handleCancelCrash}
         onResolve={handleResolveEmergency}
@@ -560,6 +630,17 @@ export default function ActiveRide() {
         nearbyNotified={nearbyRidersNotified}
         riderName={user?.nickname || user?.full_name}
         location={userPos}
+        incidentInfo={{
+          speed,
+          heading,
+          batteryLevel,
+          bikeMake: bike?.make,
+          bikeModel: bike?.model,
+          bikeYear: bike?.year,
+        }}
+        beaconActive={beacon.isActive}
+        audioEnabled={beacon.audioEnabled}
+        onToggleAudio={beacon.toggleAudio}
       />
     </div>
   );

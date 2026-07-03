@@ -12,11 +12,19 @@ Deno.serve(async (req) => {
     const riderName = body.rider_name || user.full_name || 'Rider';
     const isPremium = body.is_premium || user.subscription_tier === 'premium';
     const indicators = body.indicators;
+    const severity = body.severity || 'low';
+    const speedAtImpact = body.speed_at_impact;
+    const headingAtImpact = body.heading_at_impact;
+    const batteryLevel = body.battery_level;
+    const bikeMake = body.bike_make;
+    const bikeModel = body.bike_model;
+    const bikeYear = body.bike_year;
 
     if (lat == null || lng == null) return Response.json({ error: 'Location required' }, { status: 400 });
 
     const timestamp = new Date().toISOString();
     const trackingLink = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`;
+    const localTime = new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' });
 
     const alert = await base44.entities.CrashAlert.create({
       rider_id: user.id,
@@ -24,6 +32,7 @@ Deno.serve(async (req) => {
       lat, lng,
       timestamp,
       status: 'active',
+      severity,
       is_premium: isPremium,
       notified_emergency_contact: false,
       notified_emergency_services: false,
@@ -32,6 +41,12 @@ Deno.serve(async (req) => {
       last_lng: lng,
       last_updated: timestamp,
       crash_indicators: indicators ? JSON.stringify(indicators) : 'manual',
+      speed_at_impact: speedAtImpact,
+      heading_at_impact: headingAtImpact,
+      battery_level: batteryLevel,
+      bike_make: bikeMake,
+      bike_model: bikeModel,
+      bike_year: bikeYear,
     });
 
     let contactNotified = false;
@@ -40,17 +55,26 @@ Deno.serve(async (req) => {
       try {
         await base44.integrations.Core.SendEmail({
           to: contactEmail,
-          subject: `EMERGENCY: MotoGo Crash Alert — ${riderName}`,
+          subject: `EMERGENCY (${severity.toUpperCase()}): MotoGo Crash Alert — ${riderName}`,
           body: `EMERGENCY ALERT — MotoGo Rider in Distress
 
 Rider: ${riderName}
-Time: ${new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' })}
+Severity: ${severity.toUpperCase()}
+Time: ${localTime}
+Motorcycle: ${bikeMake || ''} ${bikeModel || ''} ${bikeYear || ''}
+
 Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}
 Live tracking: ${trackingLink}
 
+Last known speed: ${speedAtImpact != null ? speedAtImpact + ' km/h' : 'Unknown'}
+Last known heading: ${headingAtImpact != null ? Math.round(headingAtImpact) + '°' : 'Unknown'}
+Battery level: ${batteryLevel != null ? batteryLevel + '%' : 'Unknown'}
+
+Crash indicators: ${indicators ? JSON.stringify(indicators) : 'Manual trigger'}
+
 MotoGo has detected a potential motorcycle crash. The rider's live GPS location is being transmitted and updated continuously.
 
-Please attempt to contact the rider immediately. If you cannot reach them, please contact emergency services (112 in South Africa) and provide the location coordinates above.
+Please attempt to contact the rider immediately. If you cannot reach them, contact emergency services (112 in South Africa) and provide the location coordinates above.
 
 This is an automated emergency alert from MotoGo.`,
         });
@@ -65,7 +89,7 @@ This is an automated emergency alert from MotoGo.`,
         lat, lng,
         timestamp,
         status: 'active',
-        reason: 'Crash detected — emergency response activated',
+        reason: `Crash detected (${severity} severity) — emergency response activated`,
         last_lat: lat,
         last_lng: lng,
         last_updated: timestamp,
@@ -88,7 +112,7 @@ This is an automated emergency alert from MotoGo.`,
                 await base44.asServiceRole.entities.Notification.create({
                   type: 'crash_alert',
                   title: 'Rider in Distress',
-                  body: `${riderName} may need help nearby. Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                  body: `${riderName} may need help nearby (${severity} severity). Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
                   is_read: false,
                   recipient_id: recipientId,
                   action_url: trackingLink,

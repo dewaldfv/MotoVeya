@@ -1,5 +1,22 @@
 import { useRef, useEffect } from 'react';
 
+const G_FORCE_MODERATE = 3.5;
+const G_FORCE_MEDIUM = 5;
+const G_FORCE_HIGH = 8;
+const ROTATION_HIGH = 300;
+const DECEL_MODERATE = 30;
+const DECEL_HIGH = 50;
+
+function calculateSeverity(activeCount, gForce, decel, speed) {
+  if (gForce > G_FORCE_HIGH || (activeCount >= 3 && gForce > G_FORCE_MEDIUM) || decel > DECEL_HIGH) {
+    return 'high';
+  }
+  if (gForce > G_FORCE_MEDIUM || decel > DECEL_MODERATE || (activeCount >= 2 && speed > 40)) {
+    return 'medium';
+  }
+  return 'low';
+}
+
 export function useCrashDetection({ enabled, speed, onCrashDetected }) {
   const indicatorsRef = useRef({ highGForce: false, highRotation: false, suddenDecel: false });
   const recentSpeedsRef = useRef([]);
@@ -10,11 +27,32 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { onCrashRef.current = onCrashDetected; }, [onCrashDetected]);
 
-  const checkTrigger = useRef(() => {
+  const checkTrigger = useRef((gForce, decel) => {
     const activeCount = Object.values(indicatorsRef.current).filter(Boolean).length;
-    if (activeCount >= 2 && Date.now() > cooldownRef.current) {
-      cooldownRef.current = Date.now() + 60000;
-      onCrashRef.current?.({ indicators: { ...indicatorsRef.current } });
+    const now = Date.now();
+    if (now <= cooldownRef.current) return;
+
+    if (gForce > G_FORCE_HIGH && activeCount >= 1) {
+      cooldownRef.current = now + 60000;
+      onCrashRef.current?.({
+        indicators: { ...indicatorsRef.current },
+        severity: 'high',
+        gForce,
+        decel,
+      });
+      indicatorsRef.current = { highGForce: false, highRotation: false, suddenDecel: false };
+      return;
+    }
+
+    if (activeCount >= 2) {
+      cooldownRef.current = now + 60000;
+      const severity = calculateSeverity(activeCount, gForce, decel, speedRef.current);
+      onCrashRef.current?.({
+        indicators: { ...indicatorsRef.current },
+        severity,
+        gForce,
+        decel,
+      });
       indicatorsRef.current = { highGForce: false, highRotation: false, suddenDecel: false };
     }
   }).current;
@@ -34,29 +72,31 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
         if (drop > 30 && oldest.speed > 20) {
           indicatorsRef.current.suddenDecel = true;
           setTimeout(() => { indicatorsRef.current.suddenDecel = false; }, 2000);
-          checkTrigger();
+          checkTrigger(0, drop);
         }
       }
     }, 500);
 
     const handleMotion = (e) => {
       const acc = e.accelerationIncludingGravity;
+      let gForce = 0;
       if (acc) {
         const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
-        if (mag > 35) {
+        gForce = mag / 9.81;
+        if (gForce > G_FORCE_MODERATE) {
           indicatorsRef.current.highGForce = true;
           setTimeout(() => { indicatorsRef.current.highGForce = false; }, 2000);
-          checkTrigger();
+          checkTrigger(gForce, 0);
         }
       }
 
       const rot = e.rotationRate;
       if (rot) {
         const rotMag = Math.sqrt((rot.alpha || 0) ** 2 + (rot.beta || 0) ** 2 + (rot.gamma || 0) ** 2);
-        if (rotMag > 300) {
+        if (rotMag > ROTATION_HIGH) {
           indicatorsRef.current.highRotation = true;
           setTimeout(() => { indicatorsRef.current.highRotation = false; }, 2000);
-          checkTrigger();
+          checkTrigger(gForce, 0);
         }
       }
     };
