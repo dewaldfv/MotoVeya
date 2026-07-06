@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bike as BikeIcon, Plus, Crown, Phone, Settings, Route, TrendingUp, Pencil, Trash2, Copy, Check, Fuel, ChevronRight } from 'lucide-react';
+import { Bike as BikeIcon, Plus, Crown, Phone, Settings, Route, TrendingUp, Pencil, Trash2, Copy, Check, Share2, Fuel, ChevronRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
+import ShareCodeSheet from '@/components/ShareCodeSheet';
 import { toast } from 'sonner';
 
 const coerceBike = (form) => ({
@@ -27,6 +28,7 @@ export default function Profile() {
   const [bikeDialog, setBikeDialog] = useState(false);
   const [editingBike, setEditingBike] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [bikeForm, setBikeForm] = useState({ make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '', color: '', nickname: '', is_primary: false });
 
   useEffect(() => {
@@ -131,6 +133,9 @@ export default function Profile() {
           </Badge>
           <Button variant="ghost" size="sm" onClick={copyCode} className="h-7 gap-1 text-xs">
             {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Code'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShareOpen(true)} className="h-7 gap-1 text-xs">
+            <Share2 size={12} /> Share
           </Button>
         </div>
       </div>
@@ -244,6 +249,8 @@ export default function Profile() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} title="My MotoGo Code" code={user.id} qrData={`motogo://friend?code=${user.id}`} description="Share to add as friend" />
 
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Ticket, LogOut, Siren } from 'lucide-react';
+import { Users, UserPlus, Ticket, LogOut, Siren, QrCode as QrIcon, Share2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import LoginPrompt from '@/components/LoginPrompt';
 import PullToRefresh from '@/components/PullToRefresh';
 import ServicesTab from '@/components/services/ServicesTab';
+import QrScanner from '@/components/QrScanner';
+import ShareCodeSheet from '@/components/ShareCodeSheet';
 import { toast } from 'sonner';
 
 function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
@@ -25,6 +27,9 @@ export default function Community() {
   const [newGroupName, setNewGroupName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [friendCode, setFriendCode] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerMode, setScannerMode] = useState('auto');
+  const [share, setShare] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['community'],
@@ -97,19 +102,27 @@ export default function Community() {
     } catch (e) { console.error(e); }
   };
 
-  const handleJoinGroup = async () => {
-    if (!joinCode.trim()) return;
+  const joinGroupByCode = async (rawCode) => {
+    const code = rawCode.trim().toUpperCase();
+    if (!code) return false;
     try {
-      const found = await base44.entities.Group.filter({ invite_code: joinCode.trim().toUpperCase() });
-      if (found.length === 0) { toast.error('Invalid invite code'); return; }
+      const found = await base44.entities.Group.filter({ invite_code: code });
+      if (found.length === 0) { toast.error('Invalid invite code'); return false; }
       const grp = found[0];
       const existing = memberships.find((m) => m.group_id === grp.id);
-      if (existing) { setJoinOpen(false); setJoinCode(''); return; }
+      if (existing) { toast.info('Already a member'); return true; }
       const members = await base44.entities.GroupMember.filter({ group_id: grp.id, status: 'active' });
-      if (members.length >= grp.max_members) { toast.error('Group is full'); return; }
-      setJoinOpen(false); setJoinCode('');
+      if (members.length >= grp.max_members) { toast.error('Group is full'); return false; }
       await joinGroupMutation.mutateAsync({ group: grp, user });
-    } catch (e) { console.error(e); }
+      toast.success(`Joined ${grp.name}`);
+      return true;
+    } catch (e) { console.error(e); toast.error('Could not join group'); return false; }
+  };
+
+  const handleJoinGroup = async () => {
+    if (!joinCode.trim()) return;
+    await joinGroupByCode(joinCode);
+    setJoinOpen(false); setJoinCode('');
   };
 
   const handleLeaveGroup = async (groupId) => {
@@ -120,12 +133,34 @@ export default function Community() {
     } catch (e) { console.error(e); }
   };
 
+  const addFriendByCode = async (rawCode) => {
+    const code = rawCode.trim();
+    if (!code) return false;
+    if (code === user.id) { toast.error("You can't add yourself"); return false; }
+    try {
+      await base44.entities.Friend.create({ requester_id: user.id, requester_name: user.nickname || user.full_name, recipient_id: code, recipient_name: 'Pending', status: 'pending' });
+      toast.success('Friend request sent');
+      return true;
+    } catch (e) { console.error(e); toast.error('Could not send request'); return false; }
+  };
+
   const handleAddFriend = async () => {
     if (!friendCode.trim()) return;
-    try {
-      await base44.entities.Friend.create({ requester_id: user.id, requester_name: user.nickname || user.full_name, recipient_id: friendCode.trim(), recipient_name: 'Pending', status: 'pending' });
-      setAddFriendOpen(false); setFriendCode('');
-    } catch (e) { console.error(e); }
+    const ok = await addFriendByCode(friendCode);
+    if (ok) { setAddFriendOpen(false); setFriendCode(''); }
+  };
+
+  const handleScan = async (text, scanMode) => {
+    const t = (text || '').trim();
+    const m = t.match(/^motogo:\/\/(friend|group)\?code=(.+)$/);
+    if (m) {
+      const code = decodeURIComponent(m[2]);
+      return m[1] === 'group' ? await joinGroupByCode(code) : await addFriendByCode(code);
+    }
+    if (scanMode === 'group' && t) return await joinGroupByCode(t);
+    if (scanMode === 'friend' && t) return await addFriendByCode(t);
+    toast.error('Not a MotoGo QR code');
+    return false;
   };
 
   const handleAcceptFriend = async (req) => {
@@ -169,6 +204,7 @@ export default function Community() {
             <div className="flex gap-2">
               <Button className="min-h-[48px] flex-1" onClick={() => setCreateOpen(true)}><Users size={18} className="mr-2" /> Create</Button>
               <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setJoinOpen(true)}><Ticket size={18} className="mr-2" /> Join</Button>
+              <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => { setScannerMode('group'); setScannerOpen(true); }}><QrIcon size={18} className="mr-2" /> Scan</Button>
             </div>
             {!isPremium && <p className="text-xs text-muted-foreground">Free tier: max 2 riders per group. Upgrade to Premium for 32 riders.</p>}
             {myGroups.length === 0 ? (
@@ -188,9 +224,14 @@ export default function Community() {
                       </div>
                       <Badge variant="outline">{g.invite_code}</Badge>
                     </div>
-                    <Button variant="ghost" size="sm" className="mt-2 text-destructive" onClick={() => handleLeaveGroup(g.id)}>
-                      <LogOut size={14} className="mr-1" /> Leave
-                    </Button>
+                    <div className="mt-2 flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setShare({ title: g.name, code: g.invite_code, qrData: `motogo://group?code=${g.invite_code}`, description: 'Group invite code' })}>
+                        <Share2 size={14} className="mr-1" /> Share
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleLeaveGroup(g.id)}>
+                        <LogOut size={14} className="mr-1" /> Leave
+                      </Button>
+                    </div>
                   </div>
                 );
               })
@@ -234,7 +275,11 @@ export default function Community() {
               </div>
             )}
             {isPremium && (
-              <Button className="min-h-[48px] w-full" onClick={() => setAddFriendOpen(true)}><UserPlus size={18} className="mr-2" /> Add Friend</Button>
+              <div className="flex gap-2">
+                <Button className="min-h-[48px] flex-1" onClick={() => setAddFriendOpen(true)}><UserPlus size={18} className="mr-2" /> Add</Button>
+                <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => { setScannerMode('friend'); setScannerOpen(true); }}><QrIcon size={18} className="mr-2" /> Scan</Button>
+                <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setShare({ title: 'My MotoGo Code', code: user.id, qrData: `motogo://friend?code=${user.id}`, description: 'Share to add as friend' })}><Share2 size={18} className="mr-2" /> My Code</Button>
+              </div>
             )}
             {friends.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-16 text-center">
@@ -301,6 +346,9 @@ export default function Community() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <QrScanner open={scannerOpen} mode={scannerMode} onClose={() => setScannerOpen(false)} onScan={handleScan} />
+        <ShareCodeSheet open={!!share} onClose={() => setShare(null)} title={share?.title} code={share?.code} qrData={share?.qrData} description={share?.description} />
       </div>
     </PullToRefresh>
   );
