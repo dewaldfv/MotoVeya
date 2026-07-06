@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import ImportFromGoogleMapsButton from '@/components/ImportFromGoogleMapsButton';
 
 const DEFAULT_CENTER = [-26.2041, 28.0473];
 
@@ -15,7 +16,7 @@ const pinIcon = L.divIcon({
 function Recenter({ center }) {
   const map = useMap();
   useEffect(() => {
-    if (center) map.flyTo(center);
+    if (center) map.flyTo(center, Math.max(map.getZoom(), 14));
   }, [center?.[0], center?.[1], map]);
   return null;
 }
@@ -29,31 +30,41 @@ function ClickHandler({ onPick }) {
   return null;
 }
 
-export default function LocationPickerMap({ value, onChange }) {
+export default function LocationPickerMap({ value, onChange, onImportInfo }) {
   const position = value ? [value.lat, value.lng] : null;
   const center = position || DEFAULT_CENTER;
 
   return (
-    <MapContainer center={center} zoom={12} className="h-56 w-full rounded-lg border border-border" zoomControl={false} scrollWheelZoom={false}>
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; OpenStreetMap &copy; CARTO'
-      />
-      <Recenter center={center} />
-      <ClickHandler onPick={onChange} />
-      {position && (
-        <Marker
-          position={position}
-          icon={pinIcon}
-          draggable
-          eventHandlers={{
-            dragend: (e) => {
-              const { lat, lng } = e.target.getLatLng();
-              onChange(lat, lng);
-            },
+    <div>
+      <div className="mb-2">
+        <ImportFromGoogleMapsButton
+          onImport={(res) => {
+            onChange(res.lat, res.lng);
+            onImportInfo?.(res);
           }}
         />
-      )}
-    </MapContainer>
+      </div>
+      <MapContainer center={center} zoom={12} className="h-56 w-full rounded-lg border border-border" zoomControl={false} scrollWheelZoom={false}>
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; OpenStreetMap &copy; CARTO'
+        />
+        <Recenter center={center} />
+        <ClickHandler onPick={onChange} />
+        {position && (
+          <Marker
+            position={position}
+            icon={pinIcon}
+            draggable
+            eventHandlers={{
+              dragend: (e) => {
+                const { lat, lng } = e.target.getLatLng();
+                onChange(lat, lng);
+              },
+            }}
+          />
+        )}
+      </MapContainer>
+    </div>
   );
 }

@@ -128,11 +128,12 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
             <LocationPickerMap
               value={form.lat && form.lng ? { lat: Number(form.lat), lng: Number(form.lng) } : null}
               onChange={(lat, lng) => { set('lat', String(lat)); set('lng', String(lng)); }}
+              onImportInfo={(info) => { if (!form.venue_name && (info.name || info.address)) set('venue_name', info.name || info.address); }}
             />
             {form.lat && form.lng ? (
               <p className="mt-1 text-xs text-muted-foreground">{Number(form.lat).toFixed(4)}, {Number(form.lng).toFixed(4)}</p>
             ) : (
-              <p className="mt-1 text-xs text-muted-foreground">Tap the map to set the event location.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Import from Google Maps or tap the map to set the location.</p>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
