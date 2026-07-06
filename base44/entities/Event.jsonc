@@ -63,6 +63,7 @@
         "charity_ride",
         "bike_night",
         "scenic_ride",
+        "day_jol",
         "other"
       ],
       "default": "rally"

@@ -8,6 +8,7 @@ export const EVENT_CATEGORIES = [
   { value: 'charity_ride', label: 'Charity Ride', markerUrl: 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/496731c2c_generated_image.png' },
   { value: 'bike_night', label: 'Bike Night', markerUrl: 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/a7e3c5f9d_generated_image.png' },
   { value: 'scenic_ride', label: 'Scenic Ride', markerUrl: 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/6da303f0b_generated_image.png' },
+  { value: 'day_jol', label: 'Day Jol', markerUrl: 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/554d8eebe_generated_image.png' },
   { value: 'other', label: 'Other', markerUrl: 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/71a2b2f1e_generated_image.png' },
 ];
 

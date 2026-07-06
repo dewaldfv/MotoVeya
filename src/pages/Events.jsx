@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
 import PullToRefresh from '@/components/PullToRefresh';
 
-const CATS = ['all', 'rally', 'breakfast_run', 'pub_ride', 'birthday_bash', 'camping', 'track_day', 'charity_ride', 'bike_night', 'scenic_ride', 'other'];
+const CATS = ['all', 'rally', 'breakfast_run', 'pub_ride', 'birthday_bash', 'camping', 'track_day', 'charity_ride', 'bike_night', 'scenic_ride', 'day_jol', 'other'];
 
 export default function Events() {
   const queryClient = useQueryClient();
