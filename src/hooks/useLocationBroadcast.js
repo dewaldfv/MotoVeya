@@ -1,21 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { getActiveRide } from '@/lib/rideCache';
 import {
   DEFAULT_GPS_INTERVAL_SEC,
-  STATIONARY_TIMEOUT_MS,
   STATIONARY_SPEED_KMH,
-  POST_RIDE_DURATIONS,
 } from '@/lib/locationConfig';
 
 const SETTINGS_POLL_MS = 30000;
 const TICK_MS = 3000;
-const ACTIVE_RIDE_MAX_AGE_MS = 4 * 60 * 60 * 1000;
-
-function postRideMs(key) {
-  const opt = POST_RIDE_DURATIONS.find((o) => o.key === key);
-  return opt ? opt.ms : 0;
-}
 
 const STATIONARY_INTERVAL_MS = 2 * 60 * 1000;
 
@@ -47,8 +38,6 @@ export function useLocationBroadcast() {
     post_ride_share_duration: 'immediate',
     gps_update_interval_sec: DEFAULT_GPS_INTERVAL_SEC,
   });
-  const hadActiveRideRef = useRef(false);
-  const rideEndedAtRef = useRef(null);
   const stationarySinceRef = useRef(null);
   const lastSpeedRef = useRef(0);
   const batteryRef = useRef(null);
@@ -82,7 +71,7 @@ export function useLocationBroadcast() {
       try {
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('MotoGo location sharing active', {
-            body: 'Your live location is being shared while riding.',
+            body: 'Your live location is being shared with friends.',
           });
         }
       } catch (e) {}
@@ -99,27 +88,11 @@ export function useLocationBroadcast() {
     const broadcast = async () => {
       if (!authedRef.current || destroyed) return;
       const s = settingsRef.current;
-      const bgEnabled = s.background_sharing_enabled === true;
-      const audience = s.location_audience || 'friends';
-      if (!bgEnabled || audience === 'nobody') {
-        if (trackingRef.current) await endSession();
-        return;
-      }
-
-      const ride = getActiveRide();
-      const hasActiveRide = !!ride && Date.now() - ride.savedAt < ACTIVE_RIDE_MAX_AGE_MS;
-      if (hasActiveRide && !hadActiveRideRef.current) rideEndedAtRef.current = null;
-      if (!hasActiveRide && hadActiveRideRef.current) rideEndedAtRef.current = Date.now();
-      hadActiveRideRef.current = hasActiveRide;
-
-      // Post-ride sharing window.
-      let inWindow = false;
-      if (!hasActiveRide && rideEndedAtRef.current) {
-        const ms = postRideMs(s.post_ride_share_duration);
-        if (ms === -1) inWindow = true;
-        else if (ms > 0 && Date.now() - rideEndedAtRef.current < ms) inWindow = true;
-      }
-      if (!(hasActiveRide || inWindow)) {
+      // Consent: "Share live location with friends" OR "Background sharing" enables broadcasts.
+      const consentOn = s.share_live_location === true || s.background_sharing_enabled === true;
+      const audience = s.location_audience
+        || (s.location_group_rides_only ? 'group_rides' : 'friends');
+      if (!consentOn || audience === 'nobody') {
         if (trackingRef.current) await endSession();
         return;
       }
@@ -129,13 +102,9 @@ export function useLocationBroadcast() {
       const speed = pos.speed ?? lastSpeedRef.current;
       lastSpeedRef.current = speed;
 
-      // Stationary detection — pause after a while if off-ride and not moving.
+      // Track stationary state so the adaptive interval can slow down (2-min) without ending the session.
       if (speed < STATIONARY_SPEED_KMH) {
         if (!stationarySinceRef.current) stationarySinceRef.current = Date.now();
-        if (Date.now() - stationarySinceRef.current > STATIONARY_TIMEOUT_MS && !hasActiveRide) {
-          if (trackingRef.current) await endSession();
-          return;
-        }
       } else {
         stationarySinceRef.current = null;
       }
@@ -153,7 +122,7 @@ export function useLocationBroadcast() {
       try {
         const res = await base44.functions.invoke('update-my-location', {
           lat: pos.lat, lng: pos.lng, speed_kmh: speed, heading: pos.heading,
-          battery_level: batteryRef.current, source: hasActiveRide ? 'navigation' : 'manual',
+          battery_level: batteryRef.current, source: 'manual',
         });
         if (res.data && res.data.sharing === false) await endSession();
       } catch (e) { /* retry next tick */ }

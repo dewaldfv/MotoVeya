@@ -25,13 +25,10 @@ Deno.serve(async (req) => {
       if (ps && ps[0]) privacy = { ...privacy, ...ps[0] };
     } catch (e) { /* no settings = defaults */ }
 
-    // Effective consent: explicit background sharing enabled AND audience is not "nobody".
-    const bgEnabled = privacy.background_sharing_enabled != null
-      ? privacy.background_sharing_enabled
-      : privacy.share_live_location;
+    // Consent: "Share live location with friends" OR "Background sharing" enables broadcasts.
     const audience = privacy.location_audience
       || (privacy.location_group_rides_only ? 'group_rides' : (privacy.share_live_location ? 'friends' : 'nobody'));
-    const consent = bgEnabled === true && audience !== 'nobody';
+    const consent = (privacy.share_live_location === true || privacy.background_sharing_enabled === true) && audience !== 'nobody';
 
     // Helper: expire any active sessions for this user.
     const expireActiveSessions = async () => {
