@@ -6,6 +6,9 @@ import NavMapView from '@/components/NavMapView';
 import NavigationCard from '@/components/NavigationCard';
 import Speedometer from '@/components/Speedometer';
 import NavActionButtons from '@/components/NavActionButtons';
+import NavControls from '@/components/NavControls';
+import SpeedLimitBadge from '@/components/SpeedLimitBadge';
+import { useSpeedLimit } from '@/hooks/useSpeedLimit';
 import EmergencyOverlay from '@/components/EmergencyOverlay';
 import { useCrashDetection, requestMotionPermission } from '@/hooks/useCrashDetection';
 import { useEmergencyBeacon } from '@/hooks/useEmergencyBeacon';
@@ -69,6 +72,9 @@ export default function ActiveRide() {
   const [rideStatus, setRideStatus] = useState('idle');
   const [layer, setLayer] = useState('standard');
   const [layersOpen, setLayersOpen] = useState(false);
+  const [headingUp, setHeadingUp] = useState(true);
+  const [recenterToken, setRecenterToken] = useState(0);
+  const speedLimit = useSpeedLimit(userPos);
   const [services, setServices] = useState([]);
   const [nearbyService, setNearbyService] = useState(null);
   const [dismissedServiceIds, setDismissedServiceIds] = useState(new Set());
@@ -640,6 +646,7 @@ export default function ActiveRide() {
 
   const lowFuel = fuelRange !== null && fuelRange < 50;
   const isActive = rideStatus === 'active';
+  const rideMode = isActive && speed > 15;
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-background">
@@ -654,6 +661,8 @@ export default function ActiveRide() {
         completedRoute={navProgress?.completedRoute || []}
         destination={destination}
         layer={layer}
+        headingUp={headingUp}
+        recenterToken={recenterToken}
       />
 
       {isActive ? (
@@ -661,10 +670,12 @@ export default function ActiveRide() {
           {navProgress?.nextStep && (
             <NavigationCard
               step={navProgress.nextStep}
+              followingStep={navProgress.followingStep}
               distanceToManeuver={navProgress.distanceToManeuver}
               remainingDistance={navProgress.remainingDistance}
               remainingDuration={navProgress.remainingDuration}
               destinationName={destination?.name}
+              rideMode={rideMode}
             />
           )}
           {routeLoading && !navProgress?.nextStep && (
@@ -714,20 +725,24 @@ export default function ActiveRide() {
         </div>
       )}
 
-      <button
-        onClick={() => setLayersOpen(true)}
-        className="glove-target absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        style={{ top: isActive ? 'calc(0.75rem + env(safe-area-inset-top))' : 'calc(4.5rem + env(safe-area-inset-top))' }}
-        aria-label="Map Layers"
-      >
-        <Layers size={20} className="text-foreground" />
-      </button>
+      {!rideMode && (
+        <NavControls
+          active={isActive}
+          headingUp={headingUp}
+          onLayers={() => setLayersOpen(true)}
+          onToggleHeading={() => setHeadingUp((v) => !v)}
+          onRecenter={() => setRecenterToken((t) => t + 1)}
+        />
+      )}
 
       <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} />
 
       {isActive && (
         <div className="absolute bottom-5 hud-left z-10 flex flex-col items-center gap-1.5">
-          <Speedometer speed={speed} />
+          <div className="flex items-end gap-2">
+            <Speedometer speed={speed} limit={speedLimit} />
+            <SpeedLimitBadge limit={speedLimit} speed={speed} />
+          </div>
           {gpsWeak && (
             <div className="flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-xs font-bold text-white shadow-lg">
               GPS Weak

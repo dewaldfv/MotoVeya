@@ -4,9 +4,10 @@ import L from 'leaflet';
 import RiderMarker from './RiderMarker';
 import { MAP_LAYERS, getLayerBackground } from '@/lib/mapLayers';
 
-function destinationIcon() {
+function destinationIcon(rot = null) {
+  const angle = rot != null ? -45 + rot : -45;
   return L.divIcon({
-    html: `<div style="width:28px;height:28px;background:#4285F4;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
+    html: `<div style="width:28px;height:28px;background:#4285F4;border-radius:50% 50% 50% 0;transform:rotate(${angle}deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
     className: 'custom-marker',
     iconSize: [28, 28],
     iconAnchor: [14, 26],
@@ -32,7 +33,7 @@ function MapResizer() {
   return null;
 }
 
-function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, route }) {
+function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, route, recenterToken }) {
   const map = useMap();
   const failCountRef = useRef(0);
 
@@ -66,7 +67,7 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
         const headingRad = (heading * Math.PI) / 180;
         const size = map.getSize();
         if (!size.x || !size.y) throw new Error('Map has no size');
-        const offsetPx = size.y * 0.22;
+        const offsetPx = size.y * 0.30;
         const riderPoint = map.project(userPos, targetZoom);
         const dx = offsetPx * Math.sin(headingRad);
         const dy = -offsetPx * Math.cos(headingRad);
@@ -87,7 +88,7 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
         failCountRef.current = 0;
       }
     }
-  }, [userPos, heading, active, targetZoom, route, map]);
+  }, [userPos, heading, active, targetZoom, route, map, recenterToken]);
 
   return null;
 }
@@ -103,43 +104,59 @@ export default function NavMapView({
   completedRoute = null,
   destination = null,
   layer = 'standard',
+  headingUp = true,
+  recenterToken = 0,
 }) {
   const layerConfig = MAP_LAYERS.find((l) => l.key === layer) || MAP_LAYERS[0];
   const bgColor = getLayerBackground(layer);
+  const rotating = active && heading != null && !isNaN(heading) && headingUp;
+  const navRot = rotating ? `${-heading}deg` : '0deg';
 
   return (
-    <MapContainer
-      center={userPos || [-26.2041, 28.0473]}
-      zoom={14}
-      zoomControl={false}
-      scrollWheelZoom={false}
-      className="absolute inset-0 z-0 h-full w-full"
-      style={{ background: bgColor }}
+    <div
+      className={`absolute inset-0 z-0 ${rotating ? 'nav-map-heading-up' : ''}`}
+      style={{ background: bgColor, '--nav-rot': navRot }}
     >
-      {layerConfig.tiles.map((t, i) => (
-        <TileLayer key={`tile-${layer}-${i}`} url={t.url} attribution={t.attribution} />
-      ))}
-      <MapResizer />
-      <NavCamera
-        userPos={userPos}
-        heading={heading}
-        active={active}
-        speed={speed}
-        nextManeuverDistance={nextManeuverDistance}
-        route={remainingRoute}
-      />
-      {completedRoute && completedRoute.length > 1 && (
-        <Polyline positions={completedRoute} pathOptions={{ color: '#9aa0a6', weight: 7, opacity: 0.7, lineCap: 'round' }} />
-      )}
-      {remainingRoute && remainingRoute.length > 1 && (
-        <Polyline positions={remainingRoute} pathOptions={{ color: '#4285F4', weight: 7, opacity: 1, lineCap: 'round' }} />
-      )}
-      {destination && (
-        <Marker position={[destination.lat, destination.lng]} icon={destinationIcon()} />
-      )}
-      {userPos && (
-        <RiderMarker position={userPos} heading={heading} accuracy={accuracy} />
-      )}
-    </MapContainer>
+      <MapContainer
+        center={userPos || [-26.2041, 28.0473]}
+        zoom={14}
+        zoomControl={false}
+        scrollWheelZoom={false}
+        className="absolute inset-0 h-full w-full"
+        style={{ background: bgColor }}
+      >
+        {layerConfig.tiles.map((t, i) => (
+          <TileLayer key={`tile-${layer}-${i}`} url={t.url} attribution={t.attribution} />
+        ))}
+        <MapResizer />
+        <NavCamera
+          userPos={userPos}
+          heading={heading}
+          active={active}
+          speed={speed}
+          nextManeuverDistance={nextManeuverDistance}
+          route={remainingRoute}
+          recenterToken={recenterToken}
+        />
+        {completedRoute && completedRoute.length > 1 && (
+          <>
+            <Polyline positions={completedRoute} pathOptions={{ color: '#ffffff', weight: 11, opacity: 0.9, lineCap: 'round' }} />
+            <Polyline positions={completedRoute} pathOptions={{ color: '#9aa0a6', weight: 7, opacity: 0.7, lineCap: 'round' }} />
+          </>
+        )}
+        {remainingRoute && remainingRoute.length > 1 && (
+          <>
+            <Polyline positions={remainingRoute} pathOptions={{ color: '#ffffff', weight: 11, opacity: 1, lineCap: 'round' }} />
+            <Polyline positions={remainingRoute} pathOptions={{ color: '#2D7FF9', weight: 7, opacity: 1, lineCap: 'round' }} />
+          </>
+        )}
+        {destination && (
+          <Marker position={[destination.lat, destination.lng]} icon={destinationIcon(rotating ? heading : null)} />
+        )}
+        {userPos && (
+          <RiderMarker position={userPos} heading={heading} accuracy={accuracy} />
+        )}
+      </MapContainer>
+    </div>
   );
 }
