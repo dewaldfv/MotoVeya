@@ -5,15 +5,15 @@ const STORAGE_KEY = 'motogo_map_layer';
 export const MAP_LAYERS = [
   {
     key: 'standard',
-    label: 'Standard',
-    description: 'Default road map',
-    preview: 'linear-gradient(135deg, #eef2f7 0%, #dce8d0 50%, #c9dcc4 100%)',
-    tiles: [{ url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; OpenStreetMap contributors' }],
+    label: 'Default',
+    description: 'Clean road map',
+    preview: 'linear-gradient(135deg, #f4f6f9 0%, #e6edf3 45%, #dce4ec 100%)',
+    tiles: [{ url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attribution: '&copy; OpenStreetMap &copy; CARTO' }],
   },
   {
     key: 'satellite',
     label: 'Satellite',
-    description: 'High-resolution imagery',
+    description: 'Aerial imagery',
     preview: 'linear-gradient(135deg, #1f2a14 0%, #3b4a22 45%, #5d6e34 100%)',
     tiles: [{ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri, Maxar, Earthstar Geographics' }],
   },
@@ -37,14 +37,26 @@ export const MAP_LAYERS = [
   },
   {
     key: 'dark',
-    label: 'Dark Mode',
-    description: 'Optimized for night riding',
+    label: 'Dark',
+    description: 'Night riding',
     preview: 'linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 50%, #2a2a2a 100%)',
     tiles: [{ url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: '&copy; OpenStreetMap &copy; CARTO' }],
   },
 ];
 
 export const DEFAULT_LAYER = 'dark';
+
+const LAYER_BG = {
+  standard: '#e8eaed',
+  satellite: '#1a1a1a',
+  terrain: '#d8c9a0',
+  hybrid: '#1a1a1a',
+  dark: '#0a0a0a',
+};
+
+export function getLayerBackground(key) {
+  return LAYER_BG[key] || '#e8eaed';
+}
 
 export function useMapLayer() {
   const [layer, setLayerState] = useState(() => {

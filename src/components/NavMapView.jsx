@@ -2,11 +2,7 @@ import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet
 import { useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
 import RiderMarker from './RiderMarker';
-
-const VOYAGER_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-const DARK_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-const SATELLITE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-const ATTR = '&copy; OpenStreetMap &copy; CARTO';
+import { MAP_LAYERS, getLayerBackground } from '@/lib/mapLayers';
 
 function destinationIcon() {
   return L.divIcon({
@@ -108,9 +104,8 @@ export default function NavMapView({
   destination = null,
   layer = 'standard',
 }) {
-  const tileUrl = layer === 'satellite' ? SATELLITE_URL : layer === 'dark' ? DARK_URL : VOYAGER_URL;
-  const tileAttr = layer === 'satellite' ? '&copy; Esri' : ATTR;
-  const bgColor = layer === 'satellite' ? '#1a1a1a' : layer === 'dark' ? '#0a0a0a' : '#e8eaed';
+  const layerConfig = MAP_LAYERS.find((l) => l.key === layer) || MAP_LAYERS[0];
+  const bgColor = getLayerBackground(layer);
 
   return (
     <MapContainer
@@ -121,7 +116,9 @@ export default function NavMapView({
       className="absolute inset-0 z-0 h-full w-full"
       style={{ background: bgColor }}
     >
-      <TileLayer url={tileUrl} attribution={tileAttr} />
+      {layerConfig.tiles.map((t, i) => (
+        <TileLayer key={`tile-${layer}-${i}`} url={t.url} attribution={t.attribution} />
+      ))}
       <MapResizer />
       <NavCamera
         userPos={userPos}

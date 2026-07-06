@@ -5,27 +5,29 @@ import { MAP_OVERLAYS } from '@/lib/mapOverlays';
 
 export default function LayersSheet({ open, onClose, layer, onSelect, overlays, onToggleOverlay }) {
   return (
-    <BottomSheet open={open} onClose={onClose} title="Map Layers">
-      <div className="grid grid-cols-2 gap-3">
+    <BottomSheet open={open} onClose={onClose} title="Map Type">
+      <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 no-scrollbar">
         {MAP_LAYERS.map((l) => {
           const isActive = layer === l.key;
           return (
             <button
               key={l.key}
               onClick={() => { onSelect(l.key); onClose(); }}
-              className={`overflow-hidden rounded-2xl border-2 text-left transition-colors ${isActive ? 'border-primary' : 'border-transparent'}`}
+              className="flex shrink-0 flex-col items-center gap-1.5"
             >
-              <div className="relative h-20 w-full" style={{ background: l.preview }}>
+              <div
+                className={`relative h-16 w-16 overflow-hidden rounded-2xl border-2 transition-colors ${isActive ? 'border-primary' : 'border-transparent'}`}
+                style={{ background: l.preview }}
+              >
                 {isActive && (
-                  <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <Check size={14} />
+                  <span className="absolute inset-0 flex items-center justify-center bg-primary/25">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+                      <Check size={16} strokeWidth={3} />
+                    </span>
                   </span>
                 )}
               </div>
-              <div className="bg-card p-2.5">
-                <p className={`text-sm font-bold ${isActive ? 'text-primary' : ''}`}>{l.label}</p>
-                <p className="text-[11px] text-muted-foreground">{l.description}</p>
-              </div>
+              <span className={`text-xs font-semibold ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>{l.label}</span>
             </button>
           );
         })}
@@ -33,7 +35,7 @@ export default function LayersSheet({ open, onClose, layer, onSelect, overlays, 
 
       {overlays && (
         <>
-          <p className="mb-2 mt-5 text-sm font-bold">Content Layers</p>
+          <p className="mb-2 mt-4 text-sm font-bold">Content Layers</p>
           <div className="grid grid-cols-2 gap-2">
             {MAP_OVERLAYS.map((o) => {
               const isActive = overlays[o.key];
