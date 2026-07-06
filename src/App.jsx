@@ -22,6 +22,7 @@ import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
 import GoPremium from '@/pages/GoPremium';
 import Settings from '@/pages/Settings';
+import PrivacySettings from '@/pages/PrivacySettings';
 import Legal from '@/pages/Legal';
 import FuelTracker from '@/pages/FuelTracker';
 import RiderProfile from '@/pages/RiderProfile';
@@ -92,6 +93,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin" element={<Admin />} />
         <Route path="/premium" element={<GoPremium />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/privacy" element={<PrivacySettings />} />
         <Route path="/legal/:doc" element={<Legal />} />
         <Route path="/fuel-tracker" element={<FuelTracker />} />
         <Route path="/rider/:id" element={<RiderProfile />} />

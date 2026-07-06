@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Crown, Shield, Megaphone, Settings2, Loader2 } from 'lucide-react';
+import { ChevronLeft, Crown, Shield, ShieldOff, Megaphone, Settings2, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import RideMapView from '@/components/grouprides/RideMapView';
 import RiderStatusCard from '@/components/grouprides/RiderStatusCard';
@@ -28,6 +28,7 @@ export default function ActiveGroupRide() {
   const [hazards, setHazards] = useState([]);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(null);
   const [leaderOpen, setLeaderOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
 
@@ -43,10 +44,15 @@ export default function ActiveGroupRide() {
       try {
         const me = await base44.auth.me();
         setUser(me);
-        const r = await base44.entities.GroupRide.get(id);
+        const res = await base44.functions.invoke('get-group-ride-secure', { id });
+        if (res.data?.access_denied) {
+          setAccessDenied(res.data.reason || 'You are not a member of this group ride');
+          return;
+        }
+        const r = res.data.ride;
+        const parts = res.data.participants || [];
         setRide(r);
-        const parts = await base44.entities.RideParticipant.filter({ group_ride_id: id }, '-last_updated', 100);
-        setParticipants(parts || []);
+        setParticipants(parts);
         if (r?.status === 'finished') setSummaryOpen(true);
         if (r?.destination_lat != null) {
           getWeather(r.destination_lat, r.destination_lng).then(setWeather);
@@ -269,6 +275,14 @@ export default function ActiveGroupRide() {
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (accessDenied) return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">
+      <ShieldOff size={40} className="text-muted-foreground" />
+      <h2 className="text-lg font-bold">Access Denied</h2>
+      <p className="text-sm text-muted-foreground">{accessDenied}</p>
+      <button onClick={() => navigate(-1)} className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground">Go Back</button>
+    </div>
+  );
   if (!ride) return <div className="p-6 text-center text-muted-foreground">Ride not found.</div>;
 
   const sortedParticipants = [...participants].sort((a, b) => {

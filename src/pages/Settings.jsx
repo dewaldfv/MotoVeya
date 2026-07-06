@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, User, KeyRound, LogOut, Trash2, Shield, FileText, ScrollText, Check, Bike } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, User, KeyRound, LogOut, Trash2, Shield, Eye, FileText, ScrollText, Check, Bike } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useTheme } from '@/hooks/useTheme';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -158,7 +158,8 @@ export default function Settings() {
         </Section>
 
         <Section title="🔒 Privacy & Security">
-          <Row icon={Shield} label="Privacy Policy" onClick={() => goLegal('privacy')} />
+          <Row icon={Eye} label="Privacy Settings" onClick={() => navigate('/privacy')} />
+          <Row icon={Shield} label="Privacy Policy" onClick={() => goLegal('privacy')} last />
         </Section>
 
         <Section title="📄 Legal">

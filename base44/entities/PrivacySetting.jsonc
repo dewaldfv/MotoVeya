@@ -1,0 +1,43 @@
+{
+  "name": "PrivacySetting",
+  "type": "object",
+  "properties": {
+    "show_motorcycle": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_weekly_stats": {
+      "type": "boolean",
+      "default": true
+    },
+    "share_live_location": {
+      "type": "boolean",
+      "default": true
+    },
+    "location_group_rides_only": {
+      "type": "boolean",
+      "default": false
+    },
+    "show_completed_rides": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_events": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_achievements": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_fuel_stats": {
+      "type": "boolean",
+      "default": false
+    },
+    "show_photos": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": []
+}

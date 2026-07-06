@@ -38,6 +38,19 @@ Deno.serve(async (req) => {
     if (participant) {
       participant = await svc.entities.RideParticipant.update(participant.id, update);
     } else {
+      // Access control: only members of the group, or the assigned leader/sweep, may join a ride.
+      const isLeader = ride?.leader_id === me.id;
+      const isSweep = ride?.sweep_id === me.id;
+      let groupMember = false;
+      if (ride?.group_id) {
+        try {
+          const gm = await svc.entities.GroupMember.filter({ group_id: ride.group_id, user_id: me.id, status: 'active' });
+          groupMember = !!(gm && gm.length > 0);
+        } catch (e) {}
+      }
+      if (!isLeader && !isSweep && !groupMember) {
+        return Response.json({ access_denied: true, reason: 'You are not a member of this group ride' }, { status: 403 });
+      }
       let bike = null;
       try { const bikes = await svc.entities.Bike.filter({ created_by_id: me.id, is_primary: true }, '-created_date', 1); bike = bikes[0]; } catch (e) {}
       participant = await svc.entities.RideParticipant.create({

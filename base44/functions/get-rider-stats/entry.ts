@@ -1,5 +1,17 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+const DEFAULT_PRIVACY = {
+  show_motorcycle: true,
+  show_weekly_stats: true,
+  share_live_location: true,
+  location_group_rides_only: false,
+  show_completed_rides: true,
+  show_events: true,
+  show_achievements: true,
+  show_fuel_stats: false,
+  show_photos: true,
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -12,7 +24,7 @@ Deno.serve(async (req) => {
       : body?.user_id ? [body.user_id] : [];
     if (ids.length === 0) return Response.json({ riders: [] });
 
-    // Privacy: only return stats for riders who are accepted friends of the requester.
+    // Access control: only return data for riders who are accepted friends of the requester.
     const [asReq, asRec] = await Promise.all([
       base44.entities.Friend.filter({ requester_id: me.id, status: 'accepted' }, '-created_date', 200),
       base44.entities.Friend.filter({ recipient_id: me.id, status: 'accepted' }, '-created_date', 200),
@@ -21,6 +33,7 @@ Deno.serve(async (req) => {
     for (const f of [...(asReq || []), ...(asRec || [])]) {
       allowed.add(f.requester_id === me.id ? f.recipient_id : f.requester_id);
     }
+    const denied = ids.filter((id) => !allowed.has(id));
     const targets = ids.filter((id) => allowed.has(id));
 
     const svc = base44.asServiceRole;
@@ -35,24 +48,43 @@ Deno.serve(async (req) => {
       let profile = null;
       try { profile = await svc.entities.User.get(uid); } catch (e) { /* private user */ }
 
+      // Load the target user's privacy settings — they control what gets shared.
+      let privacy = { ...DEFAULT_PRIVACY };
+      try {
+        const ps = await svc.entities.PrivacySetting.filter({ created_by_id: uid }, '-created_date', 1);
+        if (ps && ps[0]) privacy = { ...privacy, ...ps[0] };
+      } catch (e) { /* no settings = defaults */ }
+
+      // Only load rides if at least one dependent section is visible.
+      const needsRides = privacy.show_weekly_stats || privacy.show_completed_rides || privacy.show_fuel_stats || privacy.show_events || privacy.show_photos;
       let rides = [];
-      try { rides = await svc.entities.Ride.filter({ created_by_id: uid }, '-ride_date', 100); } catch (e) {}
+      if (needsRides) {
+        try { rides = await svc.entities.Ride.filter({ created_by_id: uid }, '-ride_date', 100); } catch (e) {}
+      }
 
       let bike = null;
-      try {
-        const bikes = await svc.entities.Bike.filter({ created_by_id: uid, is_primary: true }, '-created_date', 1);
-        bike = bikes[0] || null;
-        if (!bike) { const all = await svc.entities.Bike.filter({ created_by_id: uid }, '-created_date', 1); bike = all[0] || null; }
-      } catch (e) {}
+      if (privacy.show_motorcycle) {
+        try {
+          const bikes = await svc.entities.Bike.filter({ created_by_id: uid, is_primary: true }, '-created_date', 1);
+          bike = bikes[0] || null;
+          if (!bike) { const all = await svc.entities.Bike.filter({ created_by_id: uid }, '-created_date', 1); bike = all[0] || null; }
+        } catch (e) {}
+      }
 
       let refills = [];
-      try { refills = await svc.entities.FuelRefill.filter({ created_by_id: uid }, '-refill_date', 50); } catch (e) {}
+      if (privacy.show_fuel_stats) {
+        try { refills = await svc.entities.FuelRefill.filter({ created_by_id: uid }, '-refill_date', 50); } catch (e) {}
+      }
 
       let fuelProfile = null;
-      try { if (bike) { const fps = await svc.entities.FuelProfile.filter({ bike_id: bike.id }, '-last_calculated', 1); fuelProfile = fps[0] || null; } } catch (e) {}
+      if (privacy.show_fuel_stats && bike) {
+        try { const fps = await svc.entities.FuelProfile.filter({ bike_id: bike.id }, '-last_calculated', 1); fuelProfile = fps[0] || null; } catch (e) {}
+      }
 
       let eventsCount = 0;
-      try { const ev = await svc.entities.Event.filter({ created_by_id: uid }, '-created_date', 100); eventsCount = ev.length; } catch (e) {}
+      if (privacy.show_events) {
+        try { const ev = await svc.entities.Event.filter({ created_by_id: uid }, '-created_date', 100); eventsCount = ev.length; } catch (e) {}
+      }
 
       const weekRides = rides.filter((r) => rideDate(r) >= weekAgo);
       const monthRides = rides.filter((r) => rideDate(r) >= monthAgo);
@@ -83,12 +115,12 @@ Deno.serve(async (req) => {
 
       const lastRide = rides[0];
       const lastRideDate = lastRide ? (lastRide.ride_date || lastRide.created_date) : null;
-      const photos = rides.flatMap((r) => r.photo_urls || []).slice(0, 12);
-      const history = rides.slice(0, 10).map((r) => ({
+      const photos = privacy.show_photos ? rides.flatMap((r) => r.photo_urls || []).slice(0, 12) : [];
+      const history = privacy.show_completed_rides ? rides.slice(0, 10).map((r) => ({
         id: r.id, title: r.title, distance_km: r.distance_km, duration_minutes: r.duration_minutes,
         ride_date: r.ride_date || r.created_date, max_speed_kmh: r.max_speed_kmh,
         start_location_name: r.start_location_name, end_location_name: r.end_location_name,
-      }));
+      })) : [];
 
       const avgConsumption = totalDist > 0
         ? Math.round((totalFuel / totalDist) * 100 * 10) / 10
@@ -100,24 +132,25 @@ Deno.serve(async (req) => {
         full_name: profile?.full_name || null,
         avatar_url: profile?.avatar_url || null,
         bio: profile?.bio || null,
-        phone: profile?.phone || null,
+        phone: null, // always private
         motorcycle_club: profile?.motorcycle_club || null,
-        bike_make: bike?.make || null,
-        bike_model: bike?.model || null,
-        bike_nickname: bike?.nickname || null,
-        weekly: { distance_km: Math.round(weeklyDistance * 10) / 10, ride_time_min: weeklyTime, ride_count: weekRides.length, last_ride_date: lastRideDate, activity },
-        streak,
-        monthly: { distance_km: Math.round(monthlyDistance * 10) / 10, ride_time_min: monthlyTime, ride_count: monthRides.length, fuel_l: Math.round(monthlyFuel * 10) / 10 },
-        fuel: { avg_consumption_l_per_100km: avgConsumption, refill_count: refills.length, km_per_litre: fuelProfile?.km_per_litre || null, estimated_range_km: fuelProfile?.estimated_range_km || null },
-        events_count: eventsCount,
-        rides_completed: rides.length,
+        bike_make: privacy.show_motorcycle ? (bike?.make || null) : null,
+        bike_model: privacy.show_motorcycle ? (bike?.model || null) : null,
+        bike_nickname: privacy.show_motorcycle ? (bike?.nickname || null) : null,
+        weekly: privacy.show_weekly_stats ? { distance_km: Math.round(weeklyDistance * 10) / 10, ride_time_min: weeklyTime, ride_count: weekRides.length, last_ride_date: lastRideDate, activity } : null,
+        streak: privacy.show_weekly_stats ? streak : null,
+        monthly: privacy.show_weekly_stats ? { distance_km: Math.round(monthlyDistance * 10) / 10, ride_time_min: monthlyTime, ride_count: monthRides.length, fuel_l: Math.round(monthlyFuel * 10) / 10 } : null,
+        fuel: privacy.show_fuel_stats ? { avg_consumption_l_per_100km: avgConsumption, refill_count: refills.length, km_per_litre: fuelProfile?.km_per_litre || null, estimated_range_km: fuelProfile?.estimated_range_km || null } : null,
+        events_count: privacy.show_events ? eventsCount : null,
+        rides_completed: privacy.show_completed_rides ? rides.length : null,
         photos,
         history,
-        total_distance_km: Math.round(totalDist),
+        total_distance_km: privacy.show_weekly_stats ? Math.round(totalDist) : null,
+        privacy,
       });
     }
 
-    return Response.json({ riders });
+    return Response.json({ riders, access_denied: denied.length > 0 ? denied : undefined });
   } catch (error) {
     console.error('get-rider-stats error', error);
     return Response.json({ error: error.message }, { status: 500 });
