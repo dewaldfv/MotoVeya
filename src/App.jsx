@@ -25,7 +25,6 @@ import Settings from '@/pages/Settings';
 import Legal from '@/pages/Legal';
 import FuelTracker from '@/pages/FuelTracker';
 import { useTheme } from '@/hooks/useTheme';
-import { useOrientation } from '@/hooks/useOrientation';
 import ActiveRide from '@/pages/ActiveRide';
 import Onboarding from '@/pages/Onboarding';
 import Login from '@/pages/Login';
@@ -104,7 +103,6 @@ const AuthenticatedApp = () => {
 
 function App() {
   useTheme();
-  useOrientation();
 
   return (
     <AuthProvider>
