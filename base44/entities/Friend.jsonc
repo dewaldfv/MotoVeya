@@ -24,6 +24,10 @@
       ],
       "default": "pending"
     },
+    "is_favorite": {
+      "type": "boolean",
+      "default": false
+    },
     "last_lat": {
       "type": "number"
     },

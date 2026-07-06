@@ -18,6 +18,35 @@
       "type": "boolean",
       "default": false
     },
+    "background_sharing_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "location_audience": {
+      "type": "string",
+      "enum": [
+        "nobody",
+        "friends",
+        "group_rides",
+        "favorite_friends",
+        "emergency_contacts"
+      ],
+      "default": "friends"
+    },
+    "post_ride_share_duration": {
+      "type": "string",
+      "enum": [
+        "immediate",
+        "15min",
+        "1hour",
+        "until_stopped"
+      ],
+      "default": "immediate"
+    },
+    "gps_update_interval_sec": {
+      "type": "number",
+      "default": 10
+    },
     "show_completed_rides": {
       "type": "boolean",
       "default": true

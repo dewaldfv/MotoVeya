@@ -1,49 +1,209 @@
 import { useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
+import { getActiveRide } from '@/lib/rideCache';
+import {
+  DEFAULT_GPS_INTERVAL_SEC,
+  STATIONARY_TIMEOUT_MS,
+  STATIONARY_SPEED_KMH,
+  POST_RIDE_DURATIONS,
+} from '@/lib/locationConfig';
 
-const BROADCAST_INTERVAL_MS = 10000;
+const SETTINGS_POLL_MS = 30000;
+const TICK_MS = 3000;
+const ACTIVE_RIDE_MAX_AGE_MS = 4 * 60 * 60 * 1000;
+
+function postRideMs(key) {
+  const opt = POST_RIDE_DURATIONS.find((o) => o.key === key);
+  return opt ? opt.ms : 0;
+}
+
+// Adaptive throttle around the user's chosen base interval: faster when moving, slower when stationary.
+function adaptiveIntervalMs(speed, baseSec) {
+  const base = (baseSec || DEFAULT_GPS_INTERVAL_SEC) * 1000;
+  if (speed >= 25) return Math.max(3000, Math.round(base / 2));
+  if (speed < STATIONARY_SPEED_KMH) return base * 2;
+  return base;
+}
 
 /**
- * Broadcasts the current user's live GPS position to the backend so friends
- * can see their movement on the map. Respects the user's privacy setting
- * (share_live_location) — the backend clears location if sharing is off.
+ * Background live-location broadcast engine.
+ *
+ * - Only transmits while a ride is active, or during the configured post-ride window.
+ * - Respects the user's privacy consent (background_sharing_enabled + audience) — re-checked every tick
+ *   and again server-side. Stops immediately if consent is revoked or location permission is lost.
+ * - Adaptive GPS frequency based on movement; pauses after being stationary off-ride for a while.
+ * - Holds a screen wake lock while tracking so GPS stays alive on a locked screen (best-effort on web).
+ * - Posts a device notification when a sharing session starts.
  */
 export function useLocationBroadcast() {
-  const lastBroadcastRef = useRef(0);
   const latestPosRef = useRef(null);
+  const lastBroadcastRef = useRef(0);
   const authedRef = useRef(false);
+  const settingsRef = useRef({
+    background_sharing_enabled: false,
+    location_audience: 'friends',
+    post_ride_share_duration: 'immediate',
+    gps_update_interval_sec: DEFAULT_GPS_INTERVAL_SEC,
+  });
+  const hadActiveRideRef = useRef(false);
+  const rideEndedAtRef = useRef(null);
+  const stationarySinceRef = useRef(null);
+  const lastSpeedRef = useRef(0);
+  const wakeLockRef = useRef(null);
+  const trackingRef = useRef(false);
+  const notifiedRef = useRef(false);
 
   useEffect(() => {
     let watchId = null;
     let intervalId = null;
+    let settingsPollId = null;
+    let destroyed = false;
 
-    base44.auth.isAuthenticated().then((ok) => { authedRef.current = ok; });
-
-    const broadcast = async () => {
-      if (!authedRef.current) return;
-      const pos = latestPosRef.current;
-      if (!pos) return;
-      const now = Date.now();
-      if (now - lastBroadcastRef.current < BROADCAST_INTERVAL_MS) return;
-      lastBroadcastRef.current = now;
+    const acquireWakeLock = async () => {
       try {
-        await base44.functions.invoke('update-my-location', { lat: pos.lat, lng: pos.lng });
-      } catch (e) { /* silent — will retry next interval */ }
+        if ('wakeLock' in navigator && !wakeLockRef.current) {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+        }
+      } catch (e) { /* not supported / denied */ }
+    };
+    const releaseWakeLock = () => {
+      try {
+        if (wakeLockRef.current) { wakeLockRef.current.release?.(); wakeLockRef.current = null; }
+      } catch (e) {}
     };
 
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => { latestPosRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
-        () => {},
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-      );
-    }
+    const notifyStart = () => {
+      if (notifiedRef.current) return;
+      notifiedRef.current = true;
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('MotoGo location sharing active', {
+            body: 'Your live location is being shared while riding.',
+          });
+        }
+      } catch (e) {}
+    };
 
-    intervalId = setInterval(broadcast, BROADCAST_INTERVAL_MS);
+    const endSession = async () => {
+      if (!trackingRef.current) return;
+      trackingRef.current = false;
+      notifiedRef.current = false;
+      releaseWakeLock();
+      try { await base44.functions.invoke('update-my-location', { end_session: true }); } catch (e) {}
+    };
+
+    const broadcast = async () => {
+      if (!authedRef.current || destroyed) return;
+      const s = settingsRef.current;
+      const bgEnabled = s.background_sharing_enabled === true;
+      const audience = s.location_audience || 'friends';
+      if (!bgEnabled || audience === 'nobody') {
+        if (trackingRef.current) await endSession();
+        return;
+      }
+
+      const ride = getActiveRide();
+      const hasActiveRide = !!ride && Date.now() - ride.savedAt < ACTIVE_RIDE_MAX_AGE_MS;
+      if (hasActiveRide && !hadActiveRideRef.current) rideEndedAtRef.current = null;
+      if (!hasActiveRide && hadActiveRideRef.current) rideEndedAtRef.current = Date.now();
+      hadActiveRideRef.current = hasActiveRide;
+
+      // Post-ride sharing window.
+      let inWindow = false;
+      if (!hasActiveRide && rideEndedAtRef.current) {
+        const ms = postRideMs(s.post_ride_share_duration);
+        if (ms === -1) inWindow = true;
+        else if (ms > 0 && Date.now() - rideEndedAtRef.current < ms) inWindow = true;
+      }
+      if (!(hasActiveRide || inWindow)) {
+        if (trackingRef.current) await endSession();
+        return;
+      }
+
+      const pos = latestPosRef.current;
+      if (!pos) return;
+      const speed = pos.speed ?? lastSpeedRef.current;
+      lastSpeedRef.current = speed;
+
+      // Stationary detection — pause after a while if off-ride and not moving.
+      if (speed < STATIONARY_SPEED_KMH) {
+        if (!stationarySinceRef.current) stationarySinceRef.current = Date.now();
+        if (Date.now() - stationarySinceRef.current > STATIONARY_TIMEOUT_MS && !hasActiveRide) {
+          if (trackingRef.current) await endSession();
+          return;
+        }
+      } else {
+        stationarySinceRef.current = null;
+      }
+
+      const now = Date.now();
+      if (now - lastBroadcastRef.current < adaptiveIntervalMs(speed, s.gps_update_interval_sec)) return;
+      lastBroadcastRef.current = now;
+
+      if (!trackingRef.current) {
+        trackingRef.current = true;
+        acquireWakeLock();
+        notifyStart();
+      }
+
+      try {
+        const res = await base44.functions.invoke('update-my-location', {
+          lat: pos.lat, lng: pos.lng, speed_kmh: speed,
+          source: hasActiveRide ? 'navigation' : 'manual',
+        });
+        if (res.data && res.data.sharing === false) await endSession();
+      } catch (e) { /* retry next tick */ }
+    };
+
+    const onPos = (pos) => {
+      const c = pos.coords;
+      const speed = c.speed != null && !Number.isNaN(c.speed) ? c.speed * 3.6 : lastSpeedRef.current;
+      latestPosRef.current = { lat: c.latitude, lng: c.longitude, speed };
+    };
+    const onPosError = (err) => {
+      if (err && err.code === err.PERMISSION_DENIED && trackingRef.current) endSession();
+    };
+    const onVis = () => {
+      if (document.visibilityState === 'visible') {
+        lastBroadcastRef.current = 0;
+        if (trackingRef.current) acquireWakeLock();
+        broadcast();
+      }
+    };
+
+    const loadSettings = async () => {
+      try {
+        const ps = await base44.entities.PrivacySetting.filter({}, '-created_date', 1);
+        if (ps && ps[0]) settingsRef.current = { ...settingsRef.current, ...ps[0] };
+      } catch (e) {}
+    };
+
+    const init = async () => {
+      authedRef.current = await base44.auth.isAuthenticated();
+      if (!authedRef.current || destroyed) return;
+      await loadSettings();
+      settingsPollId = setInterval(loadSettings, SETTINGS_POLL_MS);
+      if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(onPos, onPosError, {
+          enableHighAccuracy: true, maximumAge: 5000, timeout: 15000,
+        });
+      }
+      intervalId = setInterval(broadcast, TICK_MS);
+      document.addEventListener('visibilitychange', onVis);
+      broadcast();
+    };
+    init();
 
     return () => {
+      destroyed = true;
       if (watchId) navigator.geolocation.clearWatch(watchId);
       if (intervalId) clearInterval(intervalId);
+      if (settingsPollId) clearInterval(settingsPollId);
+      document.removeEventListener('visibilitychange', onVis);
+      releaseWakeLock();
+      if (trackingRef.current) {
+        try { base44.functions.invoke('update-my-location', { end_session: true }); } catch (e) {}
+      }
     };
   }, []);
 }

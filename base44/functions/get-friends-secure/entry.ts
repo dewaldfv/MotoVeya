@@ -5,6 +5,9 @@ const DEFAULT_PRIVACY = {
   show_weekly_stats: true,
   share_live_location: true,
   location_group_rides_only: false,
+  background_sharing_enabled: false,
+  location_audience: 'friends',
+  post_ride_share_duration: 'immediate',
   show_completed_rides: true,
   show_events: true,
   show_achievements: true,
@@ -72,31 +75,36 @@ Deno.serve(async (req) => {
         } catch (e) {}
       }
 
-      // Live location — read from the friend's own User profile, gated by their privacy.
+      // Live location — read from the friend's own User profile, gated by their audience choice.
       const fLat = profile?.last_lat;
       const fLng = profile?.last_lng;
+      const fUpdated = profile?.last_location_updated;
+      const locFresh = fUpdated && (Date.now() - new Date(fUpdated).getTime() < 10 * 60 * 1000);
+      const audience = privacy.location_audience
+        || (privacy.location_group_rides_only ? 'group_rides' : (privacy.share_live_location ? 'friends' : 'nobody'));
       let lat = null;
       let lng = null;
       let location_shared = false;
-      if (privacy.share_live_location && fLat != null && fLng != null) {
-        location_shared = true;
-        if (privacy.location_group_rides_only) {
-          // Only reveal location if both riders are in an active group ride together.
-          let inSharedRide = false;
+      if (audience !== 'nobody' && fLat != null && fLng != null && locFresh) {
+        let reveal = false;
+        if (audience === 'friends') {
+          reveal = true;
+        } else if (audience === 'group_rides') {
+          // Only reveal if both riders are in an active group ride together.
           if (activeRideIds.length > 0) {
             for (const rid of activeRideIds) {
               try {
                 const fp = await svc.entities.RideParticipant.filter({ group_ride_id: rid, user_id: friendUid });
-                if (fp && fp.length > 0) { inSharedRide = true; break; }
+                if (fp && fp.length > 0) { reveal = true; break; }
               } catch (e) {}
             }
           }
-          if (inSharedRide) { lat = fLat; lng = fLng; }
-          else { location_shared = false; }
-        } else {
-          lat = fLat;
-          lng = fLng;
+        } else if (audience === 'favorite_friends') {
+          reveal = !!f.is_favorite;
+        } else if (audience === 'emergency_contacts') {
+          reveal = false; // not exposed on the friends map
         }
+        if (reveal) { lat = fLat; lng = fLng; location_shared = true; }
       }
 
       friends.push({

@@ -1,0 +1,62 @@
+{
+  "name": "LocationSession",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "revoked",
+        "expired"
+      ],
+      "default": "active"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "navigation",
+        "group_ride",
+        "auto_ride",
+        "manual"
+      ],
+      "default": "manual"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_lat": {
+      "type": "number"
+    },
+    "last_lng": {
+      "type": "number"
+    },
+    "last_speed_kmh": {
+      "type": "number"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "post_ride_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "audience": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id"
+  ]
+}
