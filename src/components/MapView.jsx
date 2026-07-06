@@ -6,6 +6,7 @@ import { getEventMarkerUrl } from '@/lib/eventMarkers';
 import { MAP_LAYERS } from '@/lib/mapLayers';
 import RiderMarker from '@/components/RiderMarker';
 import ServiceMarkers from '@/components/ServiceMarkers';
+import FriendMarkers from '@/components/FriendMarkers';
 
 const CATEGORY_CONFIG = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -111,6 +112,9 @@ export default function MapView({
   services = [],
   showServices = false,
   onServiceClick,
+  friends = [],
+  showFriends = false,
+  onFriendClick,
   userPos = null,
   className = '',
 }) {
@@ -152,6 +156,9 @@ export default function MapView({
       ))}
       {showServices && (
         <ServiceMarkers services={services} userPos={userPos} onMarkerClick={onServiceClick} />
+      )}
+      {showFriends && (
+        <FriendMarkers friends={friends} onSelect={onFriendClick} />
       )}
     </MapContainer>
   );

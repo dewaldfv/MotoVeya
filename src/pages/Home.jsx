@@ -48,6 +48,31 @@ export default function Home() {
     queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || [],
   });
 
+  const { data: me } = useQuery({
+    queryKey: ['me'],
+    queryFn: async () => (await base44.auth.isAuthenticated() ? base44.auth.me() : null),
+  });
+
+  const { data: friends = [] } = useQuery({
+    queryKey: ['map-friends'],
+    queryFn: async () => {
+      const accepted = await base44.entities.Friend.filter({ status: 'accepted' }, '-created_date', 100);
+      return (accepted || [])
+        .filter((f) => f.location_shared && f.last_lat != null)
+        .map((f) => {
+          const isRequester = f.requester_id === me?.id;
+          return {
+            id: f.id,
+            user_id: isRequester ? f.recipient_id : f.requester_id,
+            name: isRequester ? f.recipient_name : f.requester_name,
+            lat: f.last_lat,
+            lng: f.last_lng,
+          };
+        });
+    },
+    enabled: !!me?.id,
+  });
+
   useEffect(() => {
     (async () => {
       try {
@@ -89,6 +114,7 @@ export default function Home() {
   const eventsToShow = (activeCat === 'all' ? overlays.events : activeCat === 'event') ? events : [];
   const distressToShow = (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [];
   const servicesToShow = overlays.services ? services : [];
+  const friendsToShow = overlays.friends ? friends : [];
   const isEvent = !!selected?.event_date;
   const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
 
@@ -171,6 +197,9 @@ export default function Home() {
         services={servicesToShow}
         showServices={overlays.services}
         onServiceClick={setSelectedService}
+        friends={friendsToShow}
+        showFriends={overlays.friends}
+        onFriendClick={(f) => navigate(`/rider/${f.user_id}`)}
         userPos={userPos}
         riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
         followRider={false}
