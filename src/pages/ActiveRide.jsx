@@ -145,21 +145,6 @@ export default function ActiveRide() {
     handleStartRide();
   }, []);
 
-  // Lock navigation screen to portrait while riding
-  useEffect(() => {
-    const lockPortrait = async () => {
-      try {
-        if (screen.orientation && typeof screen.orientation.lock === 'function') {
-          await screen.orientation.lock('portrait');
-        }
-      } catch (e) { /* not in fullscreen or unsupported */ }
-    };
-    lockPortrait();
-    return () => {
-      try { screen.orientation?.unlock?.(); } catch (e) {}
-    };
-  }, []);
-
   const speedRef = useRef(speed);
   const headingRef = useRef(heading);
   useEffect(() => { speedRef.current = speed; }, [speed]);
