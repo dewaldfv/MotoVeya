@@ -5,9 +5,10 @@ import StatusBadge from './StatusBadge';
 import StreakBadge from './StreakBadge';
 import MiniActivityChart from './MiniActivityChart';
 import RiderQuickActions from './RiderQuickActions';
+import RemoveFriendButton from './RemoveFriendButton';
 import { formatDistance, formatDuration, formatRelativeDate, onlineStatus } from '@/lib/riderStats';
 
-export default function FriendCard({ rider, friend, user, index = 0, onOpen, onShowLocation, onNavigate, onInvite }) {
+export default function FriendCard({ rider, friend, user, index = 0, onOpen, onShowLocation, onNavigate, onInvite, onRemove }) {
   const name = rider?.nickname || rider?.full_name || (friend?.requester_id === user?.id ? friend?.recipient_name : friend?.requester_name) || 'Rider';
   const status = onlineStatus(rider?.weekly?.last_ride_date);
   const locShared = friend?.location_shared && friend?.last_lat != null;
@@ -60,6 +61,10 @@ export default function FriendCard({ rider, friend, user, index = 0, onOpen, onS
 
       <div className="mt-3">
         <RiderQuickActions rider={rider} compact onShowLocation={onShowLocation} onNavigate={onNavigate} onInvite={onInvite} />
+      </div>
+
+      <div className="mt-2 flex justify-end border-t border-border/60 pt-2">
+        <RemoveFriendButton friendName={name} onConfirm={() => onRemove?.(friend)} />
       </div>
     </motion.div>
   );

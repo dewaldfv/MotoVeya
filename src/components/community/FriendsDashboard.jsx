@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Users } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import FriendCard from './FriendCard';
@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 export default function FriendsDashboard({ user, friends = [] }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [locSheet, setLocSheet] = useState(null);
 
   const friendIds = useMemo(
@@ -65,6 +66,17 @@ export default function FriendsDashboard({ user, friends = [] }) {
     }
   };
 
+  const handleRemoveFriend = async (friend) => {
+    try {
+      await base44.entities.Friend.delete(friend.id);
+      await queryClient.invalidateQueries({ queryKey: ['community'] });
+      await queryClient.invalidateQueries({ queryKey: ['map-friends'] });
+      toast.success('Friend removed');
+    } catch (e) {
+      toast.error('Could not remove friend');
+    }
+  };
+
   if (friends.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -93,6 +105,7 @@ export default function FriendsDashboard({ user, friends = [] }) {
               onShowLocation={() => setLocSheet(f)}
               onNavigate={() => handleNavigate(f)}
               onInvite={() => handleInvite(rider || { user_id: fid })}
+              onRemove={handleRemoveFriend}
             />
           );
         })}
