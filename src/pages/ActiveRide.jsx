@@ -22,6 +22,8 @@ import LayersSheet from '@/components/LayersSheet';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
 import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
 import { toast } from 'sonner';
+import RideInviteToggle from '@/components/RideInviteToggle';
+import { notifyFriendsOfRide } from '@/lib/rideInvite';
 
 const SA_CENTER = [-26.2041, 28.0473];
 
@@ -74,6 +76,7 @@ export default function ActiveRide() {
   const [layersOpen, setLayersOpen] = useState(false);
   const [headingUp, setHeadingUp] = useState(true);
   const [recenterToken, setRecenterToken] = useState(0);
+  const [notifyFriends, setNotifyFriends] = useState(true);
   const speedLimit = useSpeedLimit(userPos);
   const [services, setServices] = useState([]);
   const [nearbyService, setNearbyService] = useState(null);
@@ -590,6 +593,11 @@ export default function ActiveRide() {
         toast.error('Could not get GPS for route');
       }
     }
+    if (notifyFriends && destination && user?.subscription_tier === 'premium') {
+      notifyFriendsOfRide(user, destination)
+        .then((n) => { if (n > 0) toast.success(`Ride invite sent to ${n} friend${n > 1 ? 's' : ''}`); })
+        .catch((e) => console.error(e));
+    }
   };
 
   const handleEndRide = async () => {
@@ -768,7 +776,10 @@ export default function ActiveRide() {
           />
         </div>
       ) : (
-        <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/60 to-transparent p-4 pt-10">
+        <div className="absolute bottom-0 left-0 right-0 z-10 space-y-2 bg-gradient-to-t from-black/60 to-transparent p-4 pt-10">
+          {destination && user?.subscription_tier === 'premium' && (
+            <RideInviteToggle enabled={notifyFriends} onChange={setNotifyFriends} />
+          )}
           <button
             onClick={handleStartRide}
             className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 landscape:max-w-xs landscape:mx-auto"

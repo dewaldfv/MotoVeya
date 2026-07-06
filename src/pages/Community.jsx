@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, UserPlus, Ticket, LogOut, Siren } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -17,6 +18,7 @@ function generateCode() { return Math.random().toString(36).substring(2, 8).toUp
 
 export default function Community() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
@@ -30,13 +32,14 @@ export default function Community() {
       const authed = await base44.auth.isAuthenticated();
       if (!authed) return null;
       const me = await base44.auth.me();
-      const [groups, friends, memberships, pending] = await Promise.all([
+      const [groups, friends, memberships, pending, invites] = await Promise.all([
         base44.entities.Group.filter({ is_active: true }, '-created_date', 50),
         base44.entities.Friend.filter({ status: 'accepted' }, '-created_date', 50),
         base44.entities.GroupMember.filter({ user_id: me.id, status: 'active' }, '-created_date', 50),
         base44.entities.Friend.filter({ recipient_id: me.id, status: 'pending' }, '-created_date', 20),
+        base44.entities.Notification.filter({ recipient_id: me.id, type: 'ride_invite', is_read: false }, '-created_date', 20),
       ]);
-      return { user: me, groups: groups || [], friends: friends || [], memberships: memberships || [], pending: pending || [] };
+      return { user: me, groups: groups || [], friends: friends || [], memberships: memberships || [], pending: pending || [], invites: invites || [] };
     },
   });
 
@@ -45,6 +48,7 @@ export default function Community() {
   const friends = data?.friends ?? [];
   const memberships = data?.memberships ?? [];
   const pendingReqs = data?.pending ?? [];
+  const rideInvites = data?.invites ?? [];
 
   const joinGroupMutation = useMutation({
     mutationFn: ({ group, user }) => base44.entities.GroupMember.create({
@@ -132,6 +136,21 @@ export default function Community() {
     try { await base44.entities.Friend.update(req.id, { status: 'declined' }); await queryClient.invalidateQueries({ queryKey: ['community'] }); } catch (e) { console.error(e); }
   };
 
+  const handleJoinInvite = async (inv) => {
+    let info = {};
+    try { info = JSON.parse(inv.data) || {}; } catch (e) { console.error(e); }
+    try { await base44.entities.Notification.update(inv.id, { is_read: true }); } catch (e) { console.error(e); }
+    if (info.lat != null && info.lng != null) {
+      navigate('/ride/active', { state: { destination: { lat: info.lat, lng: info.lng, name: info.name || 'Group ride' } } });
+    } else {
+      toast.error('Destination unavailable');
+    }
+  };
+
+  const handleDismissInvite = async (inv) => {
+    try { await base44.entities.Notification.update(inv.id, { is_read: true }); await queryClient.invalidateQueries({ queryKey: ['community'] }); } catch (e) { console.error(e); }
+  };
+
   if (isLoading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!user) return <LoginPrompt message="Log in to connect with riders" />;
 
@@ -179,6 +198,21 @@ export default function Community() {
           </TabsContent>
 
           <TabsContent value="friends" className="space-y-3">
+            {rideInvites.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-muted-foreground">Ride Invites</p>
+                {rideInvites.map((inv) => (
+                  <div key={inv.id} className="rounded-2xl border border-primary/20 bg-primary/5 p-3">
+                    <p className="text-sm font-bold">{inv.title}</p>
+                    {inv.body && <p className="mt-0.5 text-xs text-muted-foreground">{inv.body}</p>}
+                    <div className="mt-2 flex gap-2">
+                      <Button size="sm" onClick={() => handleJoinInvite(inv)}>Join Ride</Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDismissInvite(inv)}>Dismiss</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {!isPremium && (
               <div className="rounded-2xl bg-card p-4 text-center">
                 <Siren size={24} className="mx-auto mb-2 text-primary" />
