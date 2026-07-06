@@ -17,11 +17,13 @@ function postRideMs(key) {
   return opt ? opt.ms : 0;
 }
 
-// Adaptive throttle around the user's chosen base interval: faster when moving, slower when stationary.
+const STATIONARY_INTERVAL_MS = 2 * 60 * 1000;
+
+// Adaptive throttle: fast while moving, 2-minute intervals when stationary, per spec.
 function adaptiveIntervalMs(speed, baseSec) {
   const base = (baseSec || DEFAULT_GPS_INTERVAL_SEC) * 1000;
-  if (speed >= 25) return Math.max(3000, Math.round(base / 2));
-  if (speed < STATIONARY_SPEED_KMH) return base * 2;
+  if (speed >= 25) return Math.max(5000, Math.round(base / 2));
+  if (speed < STATIONARY_SPEED_KMH) return STATIONARY_INTERVAL_MS;
   return base;
 }
 
@@ -49,6 +51,7 @@ export function useLocationBroadcast() {
   const rideEndedAtRef = useRef(null);
   const stationarySinceRef = useRef(null);
   const lastSpeedRef = useRef(0);
+  const batteryRef = useRef(null);
   const wakeLockRef = useRef(null);
   const trackingRef = useRef(false);
   const notifiedRef = useRef(false);
@@ -57,6 +60,7 @@ export function useLocationBroadcast() {
     let watchId = null;
     let intervalId = null;
     let settingsPollId = null;
+    let batteryPollId = null;
     let destroyed = false;
 
     const acquireWakeLock = async () => {
@@ -148,8 +152,8 @@ export function useLocationBroadcast() {
 
       try {
         const res = await base44.functions.invoke('update-my-location', {
-          lat: pos.lat, lng: pos.lng, speed_kmh: speed,
-          source: hasActiveRide ? 'navigation' : 'manual',
+          lat: pos.lat, lng: pos.lng, speed_kmh: speed, heading: pos.heading,
+          battery_level: batteryRef.current, source: hasActiveRide ? 'navigation' : 'manual',
         });
         if (res.data && res.data.sharing === false) await endSession();
       } catch (e) { /* retry next tick */ }
@@ -158,7 +162,8 @@ export function useLocationBroadcast() {
     const onPos = (pos) => {
       const c = pos.coords;
       const speed = c.speed != null && !Number.isNaN(c.speed) ? c.speed * 3.6 : lastSpeedRef.current;
-      latestPosRef.current = { lat: c.latitude, lng: c.longitude, speed };
+      const heading = c.heading != null && !Number.isNaN(c.heading) ? c.heading : null;
+      latestPosRef.current = { lat: c.latitude, lng: c.longitude, speed, heading };
     };
     const onPosError = (err) => {
       if (err && err.code === err.PERMISSION_DENIED && trackingRef.current) endSession();
@@ -178,11 +183,22 @@ export function useLocationBroadcast() {
       } catch (e) {}
     };
 
+    const updateBattery = async () => {
+      try {
+        if ('getBattery' in navigator) {
+          const battery = await navigator.getBattery();
+          batteryRef.current = Math.round(battery.level * 100);
+        }
+      } catch (e) {}
+    };
+
     const init = async () => {
       authedRef.current = await base44.auth.isAuthenticated();
       if (!authedRef.current || destroyed) return;
       await loadSettings();
+      await updateBattery();
       settingsPollId = setInterval(loadSettings, SETTINGS_POLL_MS);
+      batteryPollId = setInterval(updateBattery, 30000);
       if (navigator.geolocation) {
         watchId = navigator.geolocation.watchPosition(onPos, onPosError, {
           enableHighAccuracy: true, maximumAge: 5000, timeout: 15000,
@@ -199,6 +215,7 @@ export function useLocationBroadcast() {
       if (watchId) navigator.geolocation.clearWatch(watchId);
       if (intervalId) clearInterval(intervalId);
       if (settingsPollId) clearInterval(settingsPollId);
+      if (batteryPollId) clearInterval(batteryPollId);
       document.removeEventListener('visibilitychange', onVis);
       releaseWakeLock();
       if (trackingRef.current) {

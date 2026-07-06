@@ -32,6 +32,18 @@ Deno.serve(async (req) => {
     ]);
     const friendRecords = [...(asReq || []), ...(asRec || [])];
 
+    // Bulk-fetch active distress and crash alerts to flag friends in distress.
+    const distressMap = new Map();
+    try {
+      const [activeDistress, activeCrashes] = await Promise.all([
+        svc.entities.DistressAlert.filter({ status: 'active' }, '-created_date', 100),
+        svc.entities.CrashAlert.filter({ status: 'active' }, '-created_date', 100),
+      ]);
+      for (const d of [...(activeDistress || []), ...(activeCrashes || [])]) {
+        if (d.rider_id && !distressMap.has(d.rider_id)) distressMap.set(d.rider_id, d);
+      }
+    } catch (e) { console.error('distress fetch error', e); }
+
     // Determine which active group rides the current user is in (for location_group_rides_only).
     const myParts = (await svc.entities.RideParticipant.filter({ user_id: me.id }, '-last_updated', 50)) || [];
     const activeRideIds = [];
@@ -107,6 +119,7 @@ Deno.serve(async (req) => {
         if (reveal) { lat = fLat; lng = fLng; location_shared = true; }
       }
 
+      const hasDistress = distressMap.has(friendUid);
       friends.push({
         friend_id: f.id,
         user_id: friendUid,
@@ -121,6 +134,13 @@ Deno.serve(async (req) => {
         lat,
         lng,
         location_shared,
+        speed_kmh: location_shared ? (profile?.last_speed_kmh ?? 0) : 0,
+        heading: location_shared ? (profile?.last_heading ?? null) : null,
+        battery_level: location_shared ? (profile?.battery_level ?? null) : null,
+        last_updated: location_shared ? fUpdated : null,
+        is_favorite: f.is_favorite || false,
+        distress: hasDistress,
+        phone: hasDistress ? (profile?.phone || null) : null,
         share_live_location: privacy.share_live_location,
         location_group_rides_only: privacy.location_group_rides_only,
       });

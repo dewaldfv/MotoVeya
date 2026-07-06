@@ -207,6 +207,24 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
+.friend-distress-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 52px;
+  height: 52px;
+  margin-top: -26px;
+  margin-left: -26px;
+  border-radius: 50%;
+  border: 3px solid #ef4444;
+  animation: friend-distress-pulse 1.5s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes friend-distress-pulse {
+  0% { transform: scale(0.8); opacity: 0.9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

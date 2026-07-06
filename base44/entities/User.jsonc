@@ -73,6 +73,15 @@
     "last_location_updated": {
       "type": "string",
       "format": "date-time"
+    },
+    "last_speed_kmh": {
+      "type": "number"
+    },
+    "last_heading": {
+      "type": "number"
+    },
+    "battery_level": {
+      "type": "number"
     }
   }
 }

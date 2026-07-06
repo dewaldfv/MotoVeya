@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const me = await base44.auth.me();
     if (!me) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await req.json().catch(() => ({}));
-    const { lat, lng, speed_kmh, source, end_session } = body || {};
+    const { lat, lng, speed_kmh, heading, battery_level, source, end_session } = body || {};
 
     const svc = base44.asServiceRole;
 
@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
 
     // Consent OK — update live location and upsert the active session.
     const now = new Date().toISOString();
-    await svc.entities.User.update(me.id, { last_lat: lat, last_lng: lng, last_location_updated: now });
+    await svc.entities.User.update(me.id, { last_lat: lat, last_lng: lng, last_location_updated: now, last_speed_kmh: speed_kmh ?? null, last_heading: heading ?? null, battery_level: battery_level ?? null });
 
     let sessionId = null;
     try {

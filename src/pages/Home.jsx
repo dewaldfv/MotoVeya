@@ -10,8 +10,9 @@ import SearchPanel from '@/components/SearchPanel';
 import CategoryMenu, { MAP_CATEGORIES } from '@/components/CategoryMenu';
 import LayersSheet from '@/components/LayersSheet';
 import { useMapLayer } from '@/lib/mapLayers';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ServiceDetailSheet from '@/components/services/ServiceDetailSheet';
+import FriendInfoSheet from '@/components/friends/FriendInfoSheet';
 import { useMapOverlays, POI_OVERLAY_MAP } from '@/lib/mapOverlays';
 
 const SA_CENTER = [-26.2041, 28.0473];
@@ -25,6 +26,7 @@ const formatDate = (d) => new Date(d).toLocaleDateString('en-ZA', { day: 'numeri
 
 export default function Home() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [pois, setPois] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,7 @@ export default function Home() {
   const [layersOpen, setLayersOpen] = useState(false);
   const { overlays, toggle: toggleOverlay } = useMapOverlays();
   const [selectedService, setSelectedService] = useState(null);
+  const [selectedFriend, setSelectedFriend] = useState(null);
 
   const { data: services = [] } = useQuery({
     queryKey: ['services'],
@@ -59,11 +62,40 @@ export default function Home() {
       const res = await base44.functions.invoke('get-friends-secure', {});
       return (res.data?.friends || [])
         .filter((f) => f.lat != null && f.lng != null)
-        .map((f) => ({ id: f.friend_id, user_id: f.user_id, name: f.name, lat: f.lat, lng: f.lng }));
+        .map((f) => ({
+          id: f.friend_id, user_id: f.user_id, name: f.name,
+          lat: f.lat, lng: f.lng,
+          speed_kmh: f.speed_kmh, heading: f.heading, battery_level: f.battery_level,
+          last_updated: f.last_updated, is_distress: f.distress, phone: f.phone,
+          avatar_url: f.avatar_url, is_favorite: f.is_favorite,
+        }));
     },
     enabled: !!me?.id,
     refetchInterval: 10000,
   });
+
+  // Real-time channel: update friend markers instantly when a friend's location changes.
+  const friendIdsRef = useRef(new Set());
+  useEffect(() => { friendIdsRef.current = new Set(friends.map((f) => f.user_id)); }, [friends]);
+  useEffect(() => {
+    if (!me?.id) return;
+    const unsubscribe = base44.entities.User.subscribe((event) => {
+      if (event.type !== 'update' || !event.data?.id || !friendIdsRef.current.has(event.data.id)) return;
+      queryClient.setQueryData(['map-friends'], (old = []) => old.map((f) => {
+        if (f.user_id !== event.data.id) return f;
+        return {
+          ...f,
+          lat: event.data.last_lat ?? f.lat,
+          lng: event.data.last_lng ?? f.lng,
+          speed_kmh: event.data.last_speed_kmh ?? f.speed_kmh,
+          heading: event.data.last_heading ?? f.heading,
+          battery_level: event.data.battery_level ?? f.battery_level,
+          last_updated: event.data.last_location_updated ?? f.last_updated,
+        };
+      }));
+    });
+    return unsubscribe;
+  }, [me?.id, queryClient]);
 
   useEffect(() => {
     (async () => {
@@ -191,7 +223,7 @@ export default function Home() {
         onServiceClick={setSelectedService}
         friends={friendsToShow}
         showFriends={overlays.friends}
-        onFriendClick={(f) => navigate(`/rider/${f.user_id}`)}
+        onFriendClick={setSelectedFriend}
         userPos={userPos}
         riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
         followRider={false}
@@ -323,6 +355,13 @@ export default function Home() {
 
       <ServiceDetailSheet service={selectedService} userPos={userPos}
         isFavorite={false} onNavigate={handleServiceNavigate} onClose={() => setSelectedService(null)} />
+
+      <FriendInfoSheet friend={selectedFriend} userPos={userPos}
+        onClose={() => setSelectedFriend(null)}
+        onNavigate={(f) => {
+          setSelectedFriend(null);
+          navigate('/ride/active', { state: { destination: { lat: f.lat, lng: f.lng, name: f.name } } });
+        }} />
     </div>
   );
 }
