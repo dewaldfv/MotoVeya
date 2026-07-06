@@ -72,11 +72,13 @@ Deno.serve(async (req) => {
         } catch (e) {}
       }
 
-      // Live location — gated by share_live_location + location_group_rides_only.
+      // Live location — read from the friend's own User profile, gated by their privacy.
+      const fLat = profile?.last_lat;
+      const fLng = profile?.last_lng;
       let lat = null;
       let lng = null;
       let location_shared = false;
-      if (privacy.share_live_location && f.last_lat != null && f.last_lng != null) {
+      if (privacy.share_live_location && fLat != null && fLng != null) {
         location_shared = true;
         if (privacy.location_group_rides_only) {
           // Only reveal location if both riders are in an active group ride together.
@@ -89,11 +91,11 @@ Deno.serve(async (req) => {
               } catch (e) {}
             }
           }
-          if (inSharedRide) { lat = f.last_lat; lng = f.last_lng; }
+          if (inSharedRide) { lat = fLat; lng = fLng; }
           else { location_shared = false; }
         } else {
-          lat = f.last_lat;
-          lng = f.last_lng;
+          lat = fLat;
+          lng = fLng;
         }
       }
 

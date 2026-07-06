@@ -3,6 +3,7 @@ import { useOutlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import BottomNav from './BottomNav';
 import { useAutoRideStart } from '@/hooks/useAutoRideStart';
+import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import RideResumeBanner from './RideResumeBanner';
 import { getActiveRide } from '@/lib/rideCache';
 
@@ -21,6 +22,8 @@ export default function AppLayout() {
     enabled: localStorage.getItem('motogo_auto_ride_detection') !== 'false',
     onAutoStart: () => navigate('/ride/active', { state: { autoStart: true } }),
   });
+
+  useLocationBroadcast();
 
   const [hasActiveRide, setHasActiveRide] = useState(false);
   useEffect(() => {

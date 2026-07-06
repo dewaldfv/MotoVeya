@@ -63,6 +63,16 @@
     "onboarding_completed": {
       "type": "boolean",
       "default": false
+    },
+    "last_lat": {
+      "type": "number"
+    },
+    "last_lng": {
+      "type": "number"
+    },
+    "last_location_updated": {
+      "type": "string",
+      "format": "date-time"
     }
   }
 }

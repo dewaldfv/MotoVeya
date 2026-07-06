@@ -62,6 +62,7 @@ export default function Home() {
         .map((f) => ({ id: f.friend_id, user_id: f.user_id, name: f.name, lat: f.lat, lng: f.lng }));
     },
     enabled: !!me?.id,
+    refetchInterval: 10000,
   });
 
   useEffect(() => {
