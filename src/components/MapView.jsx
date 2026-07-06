@@ -96,6 +96,10 @@ function FitRoute({ route, signal }) {
   return null;
 }
 
+const isValid = (lat, lng) =>
+  lat != null && lng != null && !isNaN(lat) && !isNaN(lng) &&
+  Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+
 export default function MapView({
   center = [-26.2041, 28.0473],
   zoom = 12,
@@ -118,6 +122,10 @@ export default function MapView({
   userPos = null,
   className = '',
 }) {
+  const validPois = pois.filter((p) => isValid(p.lat, p.lng));
+  const validEvents = events.filter((e) => isValid(e.lat, e.lng));
+  const validDistress = distressAlerts.filter((d) => isValid(d.lat, d.lng));
+  const validRiders = riders.filter((r) => isValid(r.lat, r.lng));
   return (
     <MapContainer center={center} zoom={zoom} className={className} zoomControl={false} scrollWheelZoom>
       <MapTileLayers layer={layer} />
@@ -126,7 +134,7 @@ export default function MapView({
       {route && route.length > 0 && (
         <Polyline positions={route} pathOptions={{ color: '#FF6F00', weight: 5, opacity: 0.85 }} />
       )}
-      {pois.map((poi) => (
+      {validPois.map((poi) => (
         <Marker
           key={`poi-${poi.id}`}
           position={[poi.lat, poi.lng]}
@@ -134,7 +142,7 @@ export default function MapView({
           eventHandlers={{ click: () => onMarkerClick?.(poi) }}
         />
       ))}
-      {events.map((ev) => (
+      {validEvents.map((ev) => (
         <Marker
           key={`event-${ev.id}`}
           position={[ev.lat, ev.lng]}
@@ -142,10 +150,10 @@ export default function MapView({
           eventHandlers={{ click: () => onMarkerClick?.(ev) }}
         />
       ))}
-      {distressAlerts.map((d) => (
+      {validDistress.map((d) => (
         <Marker key={`distress-${d.id}`} position={[d.lat, d.lng]} icon={createIcon('distress')} />
       ))}
-      {riders.map((r) => (
+      {validRiders.map((r) => (
         <RiderMarker
           key={`rider-${r.id}`}
           position={[r.lat, r.lng]}
