@@ -237,11 +237,6 @@ export default function Home() {
 
       <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} overlays={overlays} onToggleOverlay={toggleOverlay} />
 
-      <button onClick={() => navigate('/ride/active')} className="fab flex flex-col items-center justify-center gap-0.5">
-        <Navigation size={26} fill="white" />
-        <span className="text-[10px] font-bold tracking-wide">RIDE</span>
-      </button>
-
       {(loading || fetchingCat) && (
         <div className="absolute bottom-24 hud-right z-10 flex h-8 w-8 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" />
