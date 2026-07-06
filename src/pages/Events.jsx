@@ -6,6 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
+import CalendarExportButton from '@/components/CalendarExportButton';
 import PullToRefresh from '@/components/PullToRefresh';
 
 const CATS = ['all', 'rally', 'breakfast_run', 'pub_ride', 'birthday_bash', 'camping', 'track_day', 'charity_ride', 'bike_night', 'scenic_ride', 'day_jol', 'other'];
@@ -41,11 +42,16 @@ export default function Events() {
       <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Events</h1>
-          {canSubmit && (
-            <Button onClick={() => setSubmitOpen(true)} className="min-h-[48px]">
-              <Plus size={18} className="mr-1" /> Submit
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {filtered.length > 0 && (
+              <CalendarExportButton events={filtered} label="Export" variant="secondary" size="default" />
+            )}
+            {canSubmit && (
+              <Button onClick={() => setSubmitOpen(true)} className="min-h-[48px]">
+                <Plus size={18} className="mr-1" /> Submit
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto">

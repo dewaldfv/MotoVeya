@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MapView from '@/components/MapView';
+import CalendarExportButton from '@/components/CalendarExportButton';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -78,6 +79,9 @@ export default function EventDetail() {
               <ExternalLink size={18} />
             </Button>
           )}
+        </div>
+        <div className="mt-2">
+          <CalendarExportButton event={event} className="w-full" />
         </div>
       </div>
     </div>
