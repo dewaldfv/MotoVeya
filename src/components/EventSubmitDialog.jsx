@@ -130,9 +130,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
               onChange={(lat, lng) => { set('lat', String(lat)); set('lng', String(lng)); }}
               onImportInfo={(info) => { if (!form.venue_name && (info.name || info.address)) set('venue_name', info.name || info.address); }}
             />
-            {form.lat && form.lng ? (
-              <p className="mt-1 text-xs text-muted-foreground">{Number(form.lat).toFixed(4)}, {Number(form.lng).toFixed(4)}</p>
-            ) : (
+            {!form.lat && (
               <p className="mt-1 text-xs text-muted-foreground">Import from Google Maps or tap the map to set the location.</p>
             )}
           </div>
