@@ -131,7 +131,13 @@
 }
 
 .nav-map-heading-up .leaflet-container {
-  transform: rotate(var(--nav-rot, 0deg));
+  width: 142vmax !important;
+  height: 142vmax !important;
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) rotate(var(--nav-rot, 0deg));
   transform-origin: center center;
   transition: transform 0.4s ease-out;
 }
