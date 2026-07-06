@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, User, KeyRound, LogOut, Trash2, Shield, FileText, ScrollText, Check, Bike } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Monitor, Smartphone, RotateCw, User, KeyRound, LogOut, Trash2, Shield, FileText, ScrollText, Check, Bike } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useTheme } from '@/hooks/useTheme';
+import { useOrientation } from '@/hooks/useOrientation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { isBackgroundTrackingEnabled, setBackgroundTrackingEnabled, hasSeenBgExplainer, setBgExplainerSeen } from '@/lib/rideCache';
@@ -34,6 +35,7 @@ function Row({ icon: Icon, label, value, onClick, danger, last }) {
 export default function Settings() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { orientation, setOrientation } = useOrientation();
   const [user, setUser] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -70,6 +72,12 @@ export default function Settings() {
     { key: 'light', label: 'Light Mode', icon: Sun },
     { key: 'dark', label: 'Dark Mode', icon: Moon },
     { key: 'auto', label: 'Auto (System)', icon: Smartphone },
+  ];
+
+  const orientationOptions = [
+    { key: 'auto', label: 'Auto Rotate', icon: RotateCw, desc: 'Follows device' },
+    { key: 'portrait', label: 'Portrait', icon: Smartphone, desc: 'Always upright' },
+    { key: 'landscape', label: 'Landscape', icon: Monitor, desc: 'Always sideways' },
   ];
 
   const goLegal = (doc) => navigate(`/legal/${doc}`);
@@ -126,9 +134,20 @@ export default function Settings() {
         </Section>
 
         <Section title="📱 Screen Orientation">
-          <Row icon={RotateCw} label="Auto-Rotate" value="Follows device" />
+          {orientationOptions.map((opt, i) => (
+            <button
+              key={opt.key}
+              onClick={() => setOrientation(opt.key)}
+              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-secondary ${i === orientationOptions.length - 1 ? '' : 'border-b border-border'}`}
+            >
+              <opt.icon size={20} className="text-primary" />
+              <span className="flex-1 text-sm font-medium">{opt.label}</span>
+              <span className="text-xs text-muted-foreground">{opt.desc}</span>
+              {orientation === opt.key && <Check size={20} className="text-primary" />}
+            </button>
+          ))}
           <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-            The app rotates automatically with your device. If Rotation Lock is enabled on your phone, the app respects that and stays in the current orientation.
+            Your preference is saved and applied every time the app starts. "Auto Rotate" follows your device's rotation setting.
           </p>
         </Section>
 
