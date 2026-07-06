@@ -44,12 +44,12 @@ export default function Profile() {
   }, []);
 
   const { data: bikes = [], isLoading: bikesLoading } = useQuery({
-    queryKey: ['bikes'],
+    queryKey: ['bikes', user?.id],
     queryFn: async () => {
-      const authed = await base44.auth.isAuthenticated();
-      if (!authed) return [];
-      return (await base44.entities.Bike.list('-created_date', 20)) || [];
+      if (!user?.id) return [];
+      return (await base44.entities.Bike.filter({ created_by_id: user.id }, '-created_date', 20)) || [];
     },
+    enabled: !!user?.id,
   });
 
   const saveBikeMutation = useMutation({
