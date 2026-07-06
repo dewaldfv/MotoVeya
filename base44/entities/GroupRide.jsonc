@@ -1,0 +1,102 @@
+{
+  "name": "GroupRide",
+  "type": "object",
+  "properties": {
+    "group_id": {
+      "type": "string"
+    },
+    "group_name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "icon": {
+      "type": "string",
+      "default": "\ud83c\udfcd\ufe0f"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planning",
+        "waiting",
+        "riding",
+        "paused",
+        "finished"
+      ],
+      "default": "planning"
+    },
+    "destination_name": {
+      "type": "string"
+    },
+    "destination_lat": {
+      "type": "number"
+    },
+    "destination_lng": {
+      "type": "number"
+    },
+    "start_lat": {
+      "type": "number"
+    },
+    "start_lng": {
+      "type": "number"
+    },
+    "planned_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "leader_id": {
+      "type": "string"
+    },
+    "leader_name": {
+      "type": "string"
+    },
+    "sweep_id": {
+      "type": "string"
+    },
+    "sweep_name": {
+      "type": "string"
+    },
+    "fuel_stop_name": {
+      "type": "string"
+    },
+    "fuel_stop_lat": {
+      "type": "number"
+    },
+    "fuel_stop_lng": {
+      "type": "number"
+    },
+    "rest_stop_name": {
+      "type": "string"
+    },
+    "rest_stop_lat": {
+      "type": "number"
+    },
+    "rest_stop_lng": {
+      "type": "number"
+    },
+    "weather": {
+      "type": "string"
+    },
+    "distance_remaining_km": {
+      "type": "number"
+    },
+    "eta_minutes": {
+      "type": "number"
+    },
+    "completed_ride_id": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "group_id",
+    "title"
+  ]
+}

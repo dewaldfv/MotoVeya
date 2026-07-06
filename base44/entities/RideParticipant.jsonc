@@ -1,0 +1,88 @@
+{
+  "name": "RideParticipant",
+  "type": "object",
+  "properties": {
+    "group_ride_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "bike_make": {
+      "type": "string"
+    },
+    "bike_model": {
+      "type": "string"
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "speed_kmh": {
+      "type": "number"
+    },
+    "max_speed_kmh": {
+      "type": "number",
+      "default": 0
+    },
+    "distance_km": {
+      "type": "number",
+      "default": 0
+    },
+    "battery_level": {
+      "type": "number"
+    },
+    "gps_status": {
+      "type": "string",
+      "enum": [
+        "good",
+        "weak",
+        "lost"
+      ],
+      "default": "good"
+    },
+    "riding_status": {
+      "type": "string",
+      "enum": [
+        "riding",
+        "stopped",
+        "fuel_stop",
+        "rest_stop",
+        "emergency"
+      ],
+      "default": "stopped"
+    },
+    "distance_from_leader_km": {
+      "type": "number"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "leader",
+        "sweep",
+        "member"
+      ],
+      "default": "member"
+    },
+    "joined_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "group_ride_id",
+    "user_id"
+  ]
+}

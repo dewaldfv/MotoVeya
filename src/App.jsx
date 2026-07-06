@@ -25,6 +25,7 @@ import Settings from '@/pages/Settings';
 import Legal from '@/pages/Legal';
 import FuelTracker from '@/pages/FuelTracker';
 import RiderProfile from '@/pages/RiderProfile';
+import ActiveGroupRide from '@/pages/ActiveGroupRide';
 import { useTheme } from '@/hooks/useTheme';
 import ActiveRide from '@/pages/ActiveRide';
 import Onboarding from '@/pages/Onboarding';
@@ -94,6 +95,7 @@ const AuthenticatedApp = () => {
         <Route path="/legal/:doc" element={<Legal />} />
         <Route path="/fuel-tracker" element={<FuelTracker />} />
         <Route path="/rider/:id" element={<RiderProfile />} />
+        <Route path="/ride/group/:id" element={<ActiveGroupRide />} />
       </Route>
       <Route path="/ride/active" element={<ActiveRide />} />
       <Route path="/onboarding" element={<Onboarding />} />

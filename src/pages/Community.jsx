@@ -15,6 +15,7 @@ import ServicesTab from '@/components/services/ServicesTab';
 import QrScanner from '@/components/QrScanner';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
 import FriendsDashboard from '@/components/community/FriendsDashboard';
+import GroupRidesList from '@/components/grouprides/GroupRidesList';
 import { toast } from 'sonner';
 
 function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
@@ -201,12 +202,14 @@ export default function Community() {
             <TabsTrigger value="services" className="flex-1">Services</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="groups" className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
-            <div className="flex gap-2">
-              <Button className="min-h-[48px] flex-1" onClick={() => setCreateOpen(true)}><Users size={18} className="mr-2" /> Create</Button>
-              <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setJoinOpen(true)}><Ticket size={18} className="mr-2" /> Join</Button>
-              <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => { setScannerMode('group'); setScannerOpen(true); }}><QrIcon size={18} className="mr-2" /> Scan</Button>
-            </div>
+          <TabsContent value="groups" className="space-y-4">
+            <GroupRidesList user={user} groups={groups} memberships={memberships} />
+            <div className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
+              <div className="flex gap-2">
+                <Button className="min-h-[48px] flex-1" onClick={() => setCreateOpen(true)}><Users size={18} className="mr-2" /> Create</Button>
+                <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setJoinOpen(true)}><Ticket size={18} className="mr-2" /> Join</Button>
+                <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => { setScannerMode('group'); setScannerOpen(true); }}><QrIcon size={18} className="mr-2" /> Scan</Button>
+              </div>
             {!isPremium && <p className="text-xs text-muted-foreground">Free tier: max 2 riders per group. Upgrade to Premium for 32 riders.</p>}
             {myGroups.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-16 text-center">
@@ -237,6 +240,7 @@ export default function Community() {
                 );
               })
             )}
+            </div>
           </TabsContent>
 
           <TabsContent value="friends" className="space-y-3">
