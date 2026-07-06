@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { RIDE_ICONS, geocode } from '@/lib/groupRide';
+import { notifyFriendsOfGroupRide } from '@/lib/rideInvite';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
@@ -44,6 +45,8 @@ export default function CreateRideDialog({ open, onClose, user, groups = [], onC
         leader_name: user.nickname || user.full_name,
       });
       toast.success('Ride planned');
+      const notified = await notifyFriendsOfGroupRide(user, ride);
+      if (notified > 0) toast.success(`Ride invite sent to ${notified} friend${notified > 1 ? 's' : ''}`);
       setTitle(''); setDestination(''); setFuelStop(''); setRestStop('');
       onClose();
       onCreated(ride.id);
