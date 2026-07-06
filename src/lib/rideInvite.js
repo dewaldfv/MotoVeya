@@ -38,3 +38,28 @@ export async function notifyFriendsOfRide(user, destination) {
   await base44.entities.Notification.bulkCreate(notifications);
   return friendIds.length;
 }
+
+// Sends a single ride_invite to one friend with an optional meet-up destination.
+export async function inviteFriendToRide(user, friendUserId, destination) {
+  if (!user || !friendUserId) return false;
+  const riderName = user.nickname || user.full_name || 'A rider';
+  const title = `${riderName} invited you to a ride`;
+  const body = destination ? `Meet at ${destination.name}. Tap to navigate.` : 'Tap to join the ride.';
+  const data = JSON.stringify({
+    rider_id: user.id,
+    rider_name: riderName,
+    lat: destination?.lat ?? null,
+    lng: destination?.lng ?? null,
+    name: destination?.name || null,
+  });
+  await base44.entities.Notification.create({
+    type: 'ride_invite',
+    title,
+    body,
+    recipient_id: friendUserId,
+    data,
+    action_url: '/community',
+    is_read: false,
+  });
+  return true;
+}

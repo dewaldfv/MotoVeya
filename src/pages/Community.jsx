@@ -14,6 +14,7 @@ import PullToRefresh from '@/components/PullToRefresh';
 import ServicesTab from '@/components/services/ServicesTab';
 import QrScanner from '@/components/QrScanner';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
+import FriendsDashboard from '@/components/community/FriendsDashboard';
 import { toast } from 'sonner';
 
 function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
@@ -281,22 +282,7 @@ export default function Community() {
                 <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setShare({ title: 'My MotoGo Code', code: user.id, qrData: `motogo://friend?code=${user.id}`, description: 'Share to add as friend' })}><Share2 size={18} className="mr-2" /> My Code</Button>
               </div>
             )}
-            {friends.length === 0 ? (
-              <div className="flex flex-col items-center gap-4 py-16 text-center">
-                <Users size={48} className="text-muted-foreground" />
-                <p className="text-muted-foreground">{isPremium ? 'No friends yet. Add riders by their MotoGo code.' : 'Upgrade to Premium to add friends.'}</p>
-              </div>
-            ) : (
-              friends.map((f) => {
-                const name = f.requester_id === user.id ? f.recipient_name : f.requester_name;
-                return (
-                  <div key={f.id} className="flex items-center gap-3 rounded-2xl bg-card p-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">{name?.[0]?.toUpperCase() || '?'}</div>
-                    <span className="font-medium">{name || 'Unknown Rider'}</span>
-                  </div>
-                );
-              })
-            )}
+            {isPremium && <FriendsDashboard user={user} friends={friends} />}
           </TabsContent>
 
           <TabsContent value="services">

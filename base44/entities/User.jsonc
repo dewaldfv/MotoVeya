@@ -23,6 +23,9 @@
     "bio": {
       "type": "string"
     },
+    "phone": {
+      "type": "string"
+    },
     "emergency_contact_name": {
       "type": "string"
     },
