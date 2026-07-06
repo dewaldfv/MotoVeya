@@ -226,7 +226,8 @@ export default function Home() {
 
       <button
         onClick={handleMyLocation}
-        className="glove-target absolute hud-right hud-top-2 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}
         aria-label="My Location"
       >
         <LocateFixed size={22} className="text-primary" />
