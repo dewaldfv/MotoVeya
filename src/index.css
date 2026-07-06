@@ -155,6 +155,52 @@
   border: none;
 }
 
+.motogo-event-pin {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+.motogo-event-pin__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: hsl(var(--primary) / 0.4);
+  animation: motogo-pin-pulse 2s ease-out infinite;
+}
+.motogo-event-pin__body {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: hsl(var(--primary));
+  border: 3px solid white;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.motogo-event-pin__body span {
+  transform: rotate(45deg);
+  display: flex;
+}
+@keyframes motogo-pin-pulse {
+  0% { transform: rotate(-45deg) scale(1); opacity: 0.6; }
+  100% { transform: rotate(-45deg) scale(1.9); opacity: 0; }
+}
+.motogo-landmark-marker {
+  background: transparent;
+  border: none;
+}
+.motogo-landmark-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
