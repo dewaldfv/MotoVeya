@@ -74,27 +74,41 @@ export default function Home() {
     refetchInterval: 10000,
   });
 
-  // Real-time channel: update friend markers instantly when a friend's location changes.
+  // Real-time: update friend markers instantly when a friend's location changes.
   const friendIdsRef = useRef(new Set());
   useEffect(() => { friendIdsRef.current = new Set(friends.map((f) => f.user_id)); }, [friends]);
   useEffect(() => {
     if (!me?.id) return;
-    const unsubscribe = base44.entities.User.subscribe((event) => {
+
+    // Position updates — listen to User entity changes for friends only.
+    // Use `in` checks instead of ?? so null values (location revoked) clear the marker.
+    const unsubUser = base44.entities.User.subscribe((event) => {
       if (event.type !== 'update' || !event.data?.id || !friendIdsRef.current.has(event.data.id)) return;
       queryClient.setQueryData(['map-friends'], (old = []) => old.map((f) => {
         if (f.user_id !== event.data.id) return f;
+        const d = event.data;
         return {
           ...f,
-          lat: event.data.last_lat ?? f.lat,
-          lng: event.data.last_lng ?? f.lng,
-          speed_kmh: event.data.last_speed_kmh ?? f.speed_kmh,
-          heading: event.data.last_heading ?? f.heading,
-          battery_level: event.data.battery_level ?? f.battery_level,
-          last_updated: event.data.last_location_updated ?? f.last_updated,
+          lat: 'last_lat' in d ? d.last_lat : f.lat,
+          lng: 'last_lng' in d ? d.last_lng : f.lng,
+          speed_kmh: 'last_speed_kmh' in d ? d.last_speed_kmh : f.speed_kmh,
+          heading: 'last_heading' in d ? d.last_heading : f.heading,
+          battery_level: 'battery_level' in d ? d.battery_level : f.battery_level,
+          last_updated: 'last_location_updated' in d ? d.last_location_updated : f.last_updated,
         };
       }));
     });
-    return unsubscribe;
+
+    // Distress/crash state — invalidate so the server recomputes is_distress flags.
+    const invalidateFriends = () => queryClient.invalidateQueries({ queryKey: ['map-friends'] });
+    const unsubDistress = base44.entities.DistressAlert.subscribe(invalidateFriends);
+    const unsubCrash = base44.entities.CrashAlert.subscribe(invalidateFriends);
+
+    return () => {
+      unsubUser();
+      unsubDistress();
+      unsubCrash();
+    };
   }, [me?.id, queryClient]);
 
   useEffect(() => {
