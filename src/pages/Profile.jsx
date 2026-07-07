@@ -22,7 +22,7 @@ const coerceBike = (form) => ({
   year: Number(form.year) || undefined,
   engine_size_cc: Number(form.engine_size_cc) || undefined,
   tank_capacity_l: Number(form.tank_capacity_l) || undefined,
-  fuel_consumption_l_per_100km: Number(form.fuel_consumption_l_per_100km) || undefined,
+  fuel_consumption_l_per_100km: Number(form.fuel_consumption_l_per_100km) || undefined
 });
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -54,54 +54,54 @@ export default function Profile() {
     (async () => {
       try {
         const authed = await base44.auth.isAuthenticated();
-        if (!authed) { setLoading(false); return; }
+        if (!authed) {setLoading(false);return;}
         const me = await base44.auth.me();
         setUser(me);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+      } catch (e) {console.error(e);} finally
+      {setLoading(false);}
     })();
   }, []);
 
   const { data: bikes = [] } = useQuery({
     queryKey: ['bikes', user?.id],
     queryFn: () => base44.entities.Bike.filter({ created_by_id: user.id }, '-created_date', 20),
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   const { data: rides = [] } = useQuery({
     queryKey: ['profile-rides', user?.id],
     queryFn: () => base44.entities.Ride.filter({ created_by_id: user.id }, '-ride_date', 200),
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   const { data: refills = [] } = useQuery({
     queryKey: ['profile-refills', user?.id],
     queryFn: () => base44.entities.FuelRefill.filter({}, '-refill_date', 200),
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   const { data: fuelProfiles = [] } = useQuery({
     queryKey: ['profile-fuel-profiles', user?.id],
     queryFn: () => base44.entities.FuelProfile.filter({}, '-last_calculated', 10),
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   const { data: friends = [] } = useQuery({
     queryKey: ['profile-friends', user?.id],
     queryFn: () => base44.entities.Friend.filter({ status: 'accepted' }, '-created_date', 100),
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   const { data: pending = [] } = useQuery({
     queryKey: ['profile-pending', user?.id],
     queryFn: () => base44.entities.Friend.filter({ recipient_id: user.id, status: 'pending' }, '-created_date', 20),
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   const { data: memberships = [] } = useQuery({
     queryKey: ['profile-memberships', user?.id],
     queryFn: () => base44.entities.GroupMember.filter({ user_id: user.id, status: 'active' }, '-created_date', 50),
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   const saveBikeMutation = useMutation({
@@ -109,12 +109,12 @@ export default function Profile() {
       const data = coerceBike(form);
       return editing ? base44.entities.Bike.update(editing.id, data) : base44.entities.Bike.create(data);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['bikes'] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['bikes'] })
   });
 
   const deleteBikeMutation = useMutation({
     mutationFn: (id) => base44.entities.Bike.delete(id),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['bikes'] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['bikes'] })
   });
 
   const stats = useMemo(() => {
@@ -133,7 +133,7 @@ export default function Profile() {
     const rideTime = rideTimeMin >= 60 ? `${Math.floor(rideTimeMin / 60)}h ${rideTimeMin % 60}m` : `${rideTimeMin}m`;
 
     const dayCounts = {};
-    rides.forEach((r) => { if (r.ride_date) { const d = DAYS[new Date(r.ride_date).getDay()]; dayCounts[d] = (dayCounts[d] || 0) + 1; } });
+    rides.forEach((r) => {if (r.ride_date) {const d = DAYS[new Date(r.ride_date).getDay()];dayCounts[d] = (dayCounts[d] || 0) + 1;}});
     const favDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
 
     const sorted = [...rides].sort((a, b) => new Date(b.ride_date) - new Date(a.ride_date));
@@ -142,7 +142,7 @@ export default function Profile() {
 
     const primaryBike = bikes.find((b) => b.is_primary) || bikes[0];
     const serviceInterval = 5000;
-    const nextService = primaryBike ? Math.max(0, serviceInterval - (totalDistance % serviceInterval)) : null;
+    const nextService = primaryBike ? Math.max(0, serviceInterval - totalDistance % serviceInterval) : null;
 
     return {
       totalRides, totalDistance, fuelUsed, achievementCount: badges.length, newestBadge: badges[badges.length - 1],
@@ -150,7 +150,7 @@ export default function Profile() {
       lastRide: lastRide?.title || '—', longestRide: longestRide ? `${longestRide.title} (${Math.round(longestRide.distance_km)}km)` : '—',
       primaryBike, nextService,
       friendsOnline: friends.filter((f) => f.location_shared).length,
-      groupCount: memberships.length, pendingCount: pending.length,
+      groupCount: memberships.length, pendingCount: pending.length
     };
   }, [user, rides, refills, fuelProfiles, bikes, friends, pending, memberships]);
 
@@ -169,13 +169,13 @@ export default function Profile() {
   };
 
   const handleSaveBike = async () => {
-    try { await saveBikeMutation.mutateAsync({ editing: editingBike, form: bikeForm }); setBikeDialog(false); }
-    catch (e) { console.error(e); toast.error('Failed to save bike'); }
+    try {await saveBikeMutation.mutateAsync({ editing: editingBike, form: bikeForm });setBikeDialog(false);}
+    catch (e) {console.error(e);toast.error('Failed to save bike');}
   };
 
-  const handleDeleteBike = async (id) => { try { await deleteBikeMutation.mutateAsync(id); } catch (e) { console.error(e); } };
+  const handleDeleteBike = async (id) => {try {await deleteBikeMutation.mutateAsync(id);} catch (e) {console.error(e);}};
 
-  const copyCode = () => { navigator.clipboard.writeText(user.id); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const copyCode = () => {navigator.clipboard.writeText(user.id);setCopied(true);setTimeout(() => setCopied(false), 2000);};
 
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!user) return <LoginPrompt />;
@@ -192,23 +192,23 @@ export default function Profile() {
           copied={copied}
           onCopy={copyCode}
           onShare={() => setShareOpen(true)}
-          onSettings={() => navigate('/settings')}
-        />
+          onSettings={() => navigate('/settings')} />
+        
 
         <StatGrid
           totalRides={stats.totalRides}
           totalDistance={stats.totalDistance}
           fuelUsed={stats.fuelUsed}
-          achievements={stats.achievementCount}
-        />
+          achievements={stats.achievementCount} />
+        
 
-        {!isPremium && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-4 shadow-sm"
-          >
+        {!isPremium &&
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-4 shadow-sm">
+          
             <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-primary/20 blur-xl" />
             <div className="relative flex items-center gap-2">
               <Crown size={20} className="text-primary" />
@@ -217,7 +217,7 @@ export default function Profile() {
             <p className="relative mt-1 text-sm text-muted-foreground">Rider In Distress, 32-rider groups, friends network, emergency services.</p>
             <Button className="relative mt-3 min-h-[48px] w-full" onClick={() => navigate('/premium')}>Go Premium — R79.99/mo</Button>
           </motion.div>
-        )}
+        }
 
         <div className="space-y-2.5">
           <MenuCard icon={Fuel} title="Fuel Tracker" subtitle="Adaptive fuel consumption and refill history" delay={0.35} onClick={() => navigate('/fuel-tracker')} />
@@ -228,8 +228,8 @@ export default function Profile() {
             subtitle="Manage your motorcycles and riding statistics"
             details={stats.primaryBike ? `${stats.primaryBike.make} ${stats.primaryBike.model} · ${stats.fuelEconomy} L/100km · ${stats.totalDistance} km · Next service: ${stats.nextService} km` : 'No bikes added yet'}
             delay={0.4}
-            onClick={openAddBike}
-          />
+            onClick={openAddBike} />
+          
 
           <MenuCard
             icon={Route}
@@ -237,8 +237,8 @@ export default function Profile() {
             subtitle="View every ride you've completed"
             details={`Last: ${stats.lastRide} · Longest: ${stats.longestRide}`}
             delay={0.45}
-            onClick={() => navigate('/rides')}
-          />
+            onClick={() => navigate('/rides')} />
+          
 
           <MenuCard
             icon={Trophy}
@@ -246,8 +246,8 @@ export default function Profile() {
             subtitle="Badges, milestones and riding goals"
             details={stats.newestBadge || 'No badges yet — start riding!'}
             delay={0.5}
-            onClick={() => navigate('/rides')}
-          />
+            onClick={() => navigate('/rides')} />
+          
 
           <MenuCard
             icon={Users}
@@ -255,8 +255,8 @@ export default function Profile() {
             subtitle="Manage friends, groups and voice channels"
             details={`${stats.friendsOnline} online · ${stats.groupCount} groups · ${stats.pendingCount} pending`}
             delay={0.55}
-            onClick={() => navigate('/community')}
-          />
+            onClick={() => navigate('/community')} />
+          
 
           <MenuCard
             icon={Shield}
@@ -264,8 +264,8 @@ export default function Profile() {
             subtitle="Crash Detection, SOS and Emergency Contacts"
             details={`Crash Detection ${crashDetectionOn ? 'ON' : 'OFF'} · ${emergencyContacts} Emergency Contact${emergencyContacts === 1 ? '' : 's'}`}
             delay={0.6}
-            onClick={() => navigate('/settings')}
-          />
+            onClick={() => navigate('/settings')} />
+          
 
           <MenuCard
             icon={Crown}
@@ -273,25 +273,25 @@ export default function Profile() {
             subtitle="Manage Premium membership"
             details={isPremium ? `Premium · ${user.subscription_renewal_date || 'Active'}` : 'Free Rider · Tap to upgrade'}
             delay={0.65}
-            onClick={() => navigate('/premium')}
-          />
+            onClick={() => navigate('/premium')} />
+          
 
           <MenuCard
             icon={SlidersHorizontal}
             title="Preferences"
             subtitle="Display, navigation and ride settings"
             delay={0.7}
-            onClick={() => navigate('/settings')}
-          />
+            onClick={() => navigate('/settings')} />
+          
         </div>
 
-        {bikes.length > 0 && (
-          <div className="space-y-2">
-            {bikes.map((bike) => (
-              <BikeCard key={bike.id} bike={bike} onEdit={openEditBike} onDelete={handleDeleteBike} />
-            ))}
+        {bikes.length > 0 &&
+        <div className="space-y-2">
+            {bikes.map((bike) =>
+          <BikeCard key={bike.id} bike={bike} onEdit={openEditBike} onDelete={handleDeleteBike} />
+          )}
           </div>
-        )}
+        }
 
         <RideSummaryCard
           data={{
@@ -300,19 +300,19 @@ export default function Profile() {
             fuelEconomy: stats.fuelEconomy,
             rideTime: stats.rideTime,
             favDay: stats.favDay,
-            weatherPref: 'Clear skies',
+            weatherPref: 'Clear skies'
           }}
-          delay={0.75}
-        />
+          delay={0.75} />
+        
 
         <div className="flex gap-3 pt-2">
           <Button variant="secondary" className="min-h-[56px] flex-1 text-base" onClick={openAddBike}>
             <Plus size={20} className="mr-2" /> Add Motorcycle
           </Button>
           <Button
-            className="min-h-[56px] flex-1 bg-gradient-to-r from-primary to-amber-600 text-base shadow-[0_4px_20px_rgba(255,111,0,0.35)]"
-            onClick={() => navigate('/')}
-          >
+            className="min-h-[56px] flex-1 bg-gradient-to-r from-primary to-amber-600 text-base shadow-[0_4px_20px_rgba(255,111,0,0.35)] hidden"
+            onClick={() => navigate('/')}>
+            
             <Play size={20} className="mr-2" fill="white" /> Start Ride
           </Button>
         </div>
@@ -345,6 +345,6 @@ export default function Profile() {
       </Dialog>
 
       <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} title="My MotoGo Code" code={user.id} qrData={`motogo://friend?code=${user.id}`} description="Share to add as friend" />
-    </div>
-  );
+    </div>);
+
 }
