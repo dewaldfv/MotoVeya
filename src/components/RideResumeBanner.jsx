@@ -5,7 +5,7 @@ export default function RideResumeBanner() {
   const navigate = useNavigate();
   return (
     <button
-      onClick={() => navigate('/ride/active', { state: { resume: true } })}
+      onClick={() => navigate('/', { state: { resume: true } })}
       className="fixed left-3 right-3 z-50 flex items-center gap-3 rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-lg transition-transform active:scale-[0.98]"
       style={{ top: 'calc(env(safe-area-inset-top) + 4px)' }}
     >

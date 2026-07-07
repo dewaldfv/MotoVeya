@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Navigation, Phone, MapPin, Calendar, ExternalLink, BadgeCheck, Menu, LocateFixed, Layers, X } from 'lucide-react';
+import { Search, Navigation, Phone, MapPin, Calendar, ExternalLink, BadgeCheck, Menu, LocateFixed, Layers, X, Compass } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +13,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ServiceDetailSheet from '@/components/services/ServiceDetailSheet';
 import FriendInfoSheet from '@/components/friends/FriendInfoSheet';
 import { useMapOverlays, POI_OVERLAY_MAP } from '@/lib/mapOverlays';
+import { useRideSession } from '@/hooks/useRideSession';
+import NavigationOverlay from '@/components/NavigationOverlay';
+import { setRideActive } from '@/lib/rideStatus';
 
 const SA_CENTER = [-26.2041, 28.0473];
 const REMOTE_CATS = {
@@ -25,35 +27,57 @@ const REMOTE_CATS = {
 const formatDate = (d) => new Date(d).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function Home() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [pois, setPois] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [activeCat, setActiveCat] = useState('all');
-  const [userPos, setUserPos] = useState(null);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [remotePois, setRemotePois] = useState([]);
   const [distressAlerts, setDistressAlerts] = useState([]);
   const [fetchingCat, setFetchingCat] = useState(false);
   const [recenterSignal, setRecenterSignal] = useState(0);
-  const userPosRef = useRef(null);
-  const [layer, setLayer] = useMapLayer();
+  const [fitRouteSignal, setFitRouteSignal] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
-  const { overlays, toggle: toggleOverlay } = useMapOverlays();
   const [selectedService, setSelectedService] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
-
-  const { data: services = [] } = useQuery({
-    queryKey: ['services'],
-    queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || [],
-  });
+  const [layer, setLayer] = useMapLayer();
+  const { overlays, toggle: toggleOverlay } = useMapOverlays();
+  const [headingUp, setHeadingUp] = useState(true);
+  const [notifyFriends, setNotifyFriends] = useState(true);
+  const userPosRef = useRef(null);
 
   const { data: me } = useQuery({
     queryKey: ['me'],
     queryFn: async () => (await base44.auth.isAuthenticated() ? base44.auth.me() : null),
+  });
+
+  const { data: bikeData } = useQuery({
+    queryKey: ['primary-bike'],
+    queryFn: async () => {
+      const bikes = await base44.entities.Bike.filter({ is_primary: true }, '-created_date', 1);
+      let bike = bikes[0];
+      if (!bike) { const all = await base44.entities.Bike.list('-created_date', 1); bike = all[0]; }
+      return bike || null;
+    },
+    enabled: !!me?.id,
+  });
+
+  const { data: fuelProfile } = useQuery({
+    queryKey: ['fuel-profile', bikeData?.id],
+    queryFn: async () => {
+      if (!bikeData?.id) return null;
+      const profiles = await base44.entities.FuelProfile.filter({ bike_id: bikeData.id }, '-last_calculated', 1);
+      return profiles[0] || null;
+    },
+    enabled: !!bikeData?.id,
+  });
+
+  const { data: services = [] } = useQuery({
+    queryKey: ['services'],
+    queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || [],
   });
 
   const { data: friends = [] } = useQuery({
@@ -74,14 +98,23 @@ export default function Home() {
     refetchInterval: 10000,
   });
 
-  // Real-time: update friend markers instantly when a friend's location changes.
+  const session = useRideSession({
+    user: me,
+    bike: bikeData,
+    fuelProfile,
+    services,
+    autoDetectEnabled: localStorage.getItem('motogo_auto_ride_detection') !== 'false',
+    notifyFriends,
+  });
+
+  useEffect(() => { setRideActive(session.isActive); }, [session.isActive]);
+  useEffect(() => { if (session.userPos) userPosRef.current = session.userPos; }, [session.userPos]);
+
+  // Real-time friend marker updates
   const friendIdsRef = useRef(new Set());
   useEffect(() => { friendIdsRef.current = new Set(friends.map((f) => f.user_id)); }, [friends]);
   useEffect(() => {
     if (!me?.id) return;
-
-    // Position updates — listen to User entity changes for friends only.
-    // Use `in` checks instead of ?? so null values (location revoked) clear the marker.
     const unsubUser = base44.entities.User.subscribe((event) => {
       if (event.type !== 'update' || !event.data?.id || !friendIdsRef.current.has(event.data.id)) return;
       queryClient.setQueryData(['map-friends'], (old = []) => old.map((f) => {
@@ -98,17 +131,10 @@ export default function Home() {
         };
       }));
     });
-
-    // Distress/crash state — invalidate so the server recomputes is_distress flags.
     const invalidateFriends = () => queryClient.invalidateQueries({ queryKey: ['map-friends'] });
     const unsubDistress = base44.entities.DistressAlert.subscribe(invalidateFriends);
     const unsubCrash = base44.entities.CrashAlert.subscribe(invalidateFriends);
-
-    return () => {
-      unsubUser();
-      unsubDistress();
-      unsubCrash();
-    };
+    return () => { unsubUser(); unsubDistress(); unsubCrash(); };
   }, [me?.id, queryClient]);
 
   useEffect(() => {
@@ -126,35 +152,7 @@ export default function Home() {
         setLoading(false);
       }
     })();
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const p = [pos.coords.latitude, pos.coords.longitude];
-          userPosRef.current = p;
-          setUserPos(p);
-        },
-        () => {}
-      );
-    }
   }, []);
-
-  const isRemoteCat = !!REMOTE_CATS[activeCat];
-  const poisToShow = activeCat === 'all'
-    ? pois.filter((p) => {
-        const overlayKey = POI_OVERLAY_MAP[p.category];
-        return !overlayKey || overlays[overlayKey];
-      })
-    : isRemoteCat
-      ? remotePois
-      : activeCat === 'event' || activeCat === 'distress'
-        ? []
-        : pois.filter((p) => p.category === activeCat);
-  const eventsToShow = (activeCat === 'all' ? overlays.events : activeCat === 'event') ? events : [];
-  const distressToShow = (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [];
-  const servicesToShow = overlays.services ? services : [];
-  const friendsToShow = overlays.friends ? friends : [];
-  const isEvent = !!selected?.event_date;
-  const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
 
   useEffect(() => {
     if (REMOTE_CATS[activeCat]) {
@@ -188,47 +186,58 @@ export default function Home() {
     }
   }, [activeCat]);
 
-  const handleMyLocation = () => {
-    if (userPos) {
-      setRecenterSignal((s) => s + 1);
-    } else if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const p = [pos.coords.latitude, pos.coords.longitude];
-          userPosRef.current = p;
-          setUserPos(p);
-        },
-        () => {}
-      );
+  // Fit route preview when a new route is calculated (idle mode)
+  useEffect(() => {
+    if (!session.isActive && session.routeData) {
+      setFitRouteSignal((s) => s + 1);
     }
-  };
+  }, [session.routeData, session.isActive]);
 
-  const handleSelectCategory = (key) => {
-    setActiveCat(key);
-    setSelected(null);
-  };
+  const isRemoteCat = !!REMOTE_CATS[activeCat];
+  const isActive = session.isActive;
+  const hasDestination = !!session.destination;
+  const showIdleControls = !isActive && !hasDestination;
 
+  const poisToShow = activeCat === 'all'
+    ? pois.filter((p) => {
+        const overlayKey = POI_OVERLAY_MAP[p.category];
+        return !overlayKey || overlays[overlayKey];
+      })
+    : isRemoteCat
+      ? remotePois
+      : activeCat === 'event' || activeCat === 'distress'
+        ? []
+        : pois.filter((p) => p.category === activeCat);
+  const eventsToShow = (activeCat === 'all' ? overlays.events : activeCat === 'event') ? events : [];
+  const distressToShow = (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [];
+  const servicesToShow = overlays.services ? services : [];
+  const friendsToShow = overlays.friends ? friends : [];
+  const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
+
+  const previewRoute = !isActive && session.routeData?.coordinates ? session.routeData.coordinates : null;
+  const completedRoute = isActive ? (session.navProgress?.completedRoute || []) : null;
+  const remainingRoute = isActive ? (session.navProgress?.remainingRoute || session.routeData?.coordinates || []) : null;
+
+  const handleMyLocation = () => setRecenterSignal((s) => s + 1);
+  const handleSelectCategory = (key) => { setActiveCat(key); setSelected(null); };
   const handleDirections = (item) => {
     setSelected(null);
-    navigate('/ride/active', { state: { destination: { lat: item.lat, lng: item.lng, name: item.name || item.title } } });
+    session.navigateTo({ lat: item.lat, lng: item.lng, name: item.name || item.title });
   };
-
-  const handleSearchSelect = (dest) => {
-    navigate('/ride/active', { state: { destination: dest } });
-  };
-
+  const handleSearchSelect = (dest) => session.handleDestination(dest);
   const handleServiceNavigate = (service) => {
     setSelectedService(null);
-    navigate('/ride/active', { state: { destination: { lat: service.lat, lng: service.lng, name: service.name } } });
+    session.navigateTo({ lat: service.lat, lng: service.lng, name: service.name });
   };
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
       <MapView
-        center={userPos || SA_CENTER}
+        center={session.userPos || SA_CENTER}
         zoom={12}
         layer={layer}
         recenterSignal={recenterSignal}
+        fitRouteSignal={fitRouteSignal}
         pois={poisToShow}
         events={eventsToShow}
         distressAlerts={distressToShow}
@@ -238,56 +247,91 @@ export default function Home() {
         friends={friendsToShow}
         showFriends={overlays.friends}
         onFriendClick={setSelectedFriend}
-        userPos={userPos}
-        riders={userPos ? [{ id: 'me', lat: userPos[0], lng: userPos[1] }] : []}
-        followRider={false}
-        onMarkerClick={setSelected}
+        userPos={session.userPos}
+        riders={session.userPos ? [{ id: 'me', lat: session.userPos[0], lng: session.userPos[1], heading: session.heading, accuracy: session.accuracy }] : []}
+        navActive={isActive}
+        heading={session.heading}
+        headingUp={headingUp}
+        speed={session.speed}
+        nextManeuverDistance={session.navProgress?.distanceToManeuver}
+        completedRoute={completedRoute}
+        remainingRoute={remainingRoute}
+        route={previewRoute}
+        destination={session.destination}
         className="absolute inset-0 z-0 h-full w-full"
       />
 
-      <button
-        onClick={() => setSearchOpen(true)}
-        className="glove-target absolute hud-left hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        aria-label="Search"
-      >
-        <Search size={22} className="text-foreground" />
-      </button>
+      {showIdleControls && (
+        <>
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="glove-target absolute hud-left hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+            aria-label="Search"
+          >
+            <Search size={22} className="text-foreground" />
+          </button>
 
-      {activeCat !== 'all' && (
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+            aria-label="Categories"
+          >
+            <Menu size={22} className="text-foreground" />
+          </button>
+
+          <button
+            onClick={handleMyLocation}
+            className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+            style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}
+            aria-label="My Location"
+          >
+            <LocateFixed size={22} className="text-primary" />
+          </button>
+
+          <button
+            onClick={() => setLayersOpen(true)}
+            className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+            style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}
+            aria-label="Map Layers"
+          >
+            <Layers size={22} className="text-foreground" />
+          </button>
+
+          {activeCat !== 'all' && (
+            <button
+              onClick={() => handleSelectCategory('all')}
+              className="absolute z-20 flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-lg"
+              style={{ top: 'calc(1.6rem + env(safe-area-inset-top))', left: 'calc(4.5rem + 1.25rem)' }}
+            >
+              {activeLabel} <X size={13} />
+            </button>
+          )}
+        </>
+      )}
+
+      {isActive && !session.rideMode && (
         <button
-          onClick={() => handleSelectCategory('all')}
-          className="absolute z-20 flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-lg"
-          style={{ top: 'calc(1.6rem + env(safe-area-inset-top))', left: 'calc(4.5rem + 1.25rem)' }}
+          onClick={() => setHeadingUp((v) => !v)}
+          className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+          aria-label="Toggle heading up"
         >
-          {activeLabel} <X size={13} />
+          <Compass size={22} className={headingUp ? 'text-primary' : 'text-foreground'} />
         </button>
       )}
 
-      <button
-        onClick={() => setMenuOpen(true)}
-        className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        aria-label="Categories"
-      >
-        <Menu size={22} className="text-foreground" />
-      </button>
+      {(loading || fetchingCat || session.routeLoading) && (
+        <div className="absolute z-10 flex h-8 w-8 items-center justify-center" style={{ bottom: 'calc(7rem + env(safe-area-inset-bottom))', right: 'calc(1.5rem + env(safe-area-inset-right))' }}>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" />
+        </div>
+      )}
 
-      <button
-        onClick={handleMyLocation}
-        className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}
-        aria-label="My Location"
-      >
-        <LocateFixed size={22} className="text-primary" />
-      </button>
-
-      <button
-        onClick={() => setLayersOpen(true)}
-        className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-        style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}
-        aria-label="Map Layers"
-      >
-        <Layers size={22} className="text-foreground" />
-      </button>
+      <NavigationOverlay
+        session={session}
+        user={me}
+        bike={bikeData}
+        notifyFriends={notifyFriends}
+        setNotifyFriends={setNotifyFriends}
+      />
 
       <SearchPanel
         open={searchOpen}
@@ -306,32 +350,21 @@ export default function Home() {
 
       <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} overlays={overlays} onToggleOverlay={toggleOverlay} />
 
-      {(loading || fetchingCat) && (
-        <div className="absolute bottom-24 hud-right z-10 flex h-8 w-8 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" />
-        </div>
-      )}
-
       <BottomSheet open={!!selected} onClose={() => setSelected(null)} title={selected?.name || selected?.title}>
         {selected && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="capitalize">
-                {isEvent ? selected.category : selected.category}
-              </Badge>
+              <Badge variant="secondary" className="capitalize">{selected.category}</Badge>
               {selected.is_open_24h && <Badge className="bg-green-600">24h</Badge>}
               {selected.rating && <Badge variant="outline">⭐ {selected.rating}</Badge>}
             </div>
-
             {selected.photo_urls?.[0] && (
               <img src={selected.photo_urls[0]} alt={selected.title} className="h-40 w-full rounded-2xl object-cover" />
             )}
             {selected.photo_url && (
               <img src={selected.photo_url} alt={selected.name} className="h-40 w-full rounded-2xl object-cover" />
             )}
-
             {selected.description && <p className="text-sm text-muted-foreground">{selected.description}</p>}
-
             <div className="space-y-2 text-sm">
               {selected.address && (
                 <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {selected.address}</div>
@@ -352,7 +385,6 @@ export default function Home() {
                 <div className="flex items-center gap-2 text-muted-foreground"><BadgeCheck size={16} /> {selected.entry_fee_zar === 0 ? 'Free entry' : `R${selected.entry_fee_zar} entry`}</div>
               )}
             </div>
-
             <div className="flex gap-2 pt-2">
               <Button size="lg" className="min-h-[56px] flex-1 text-base" onClick={() => handleDirections(selected)}>
                 <Navigation size={18} className="mr-2" /> Get Directions
@@ -367,14 +399,14 @@ export default function Home() {
         )}
       </BottomSheet>
 
-      <ServiceDetailSheet service={selectedService} userPos={userPos}
+      <ServiceDetailSheet service={selectedService} userPos={session.userPos}
         isFavorite={false} onNavigate={handleServiceNavigate} onClose={() => setSelectedService(null)} />
 
-      <FriendInfoSheet friend={selectedFriend} userPos={userPos}
+      <FriendInfoSheet friend={selectedFriend} userPos={session.userPos}
         onClose={() => setSelectedFriend(null)}
         onNavigate={(f) => {
           setSelectedFriend(null);
-          navigate('/ride/active', { state: { destination: { lat: f.lat, lng: f.lng, name: f.name } } });
+          session.navigateTo({ lat: f.lat, lng: f.lng, name: f.name });
         }} />
     </div>
   );

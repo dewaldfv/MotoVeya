@@ -3,7 +3,7 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { useState, useCallback } from 'react';
-import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -29,7 +29,6 @@ import FuelTracker from '@/pages/FuelTracker';
 import RiderProfile from '@/pages/RiderProfile';
 import ActiveGroupRide from '@/pages/ActiveGroupRide';
 import { useTheme } from '@/hooks/useTheme';
-import ActiveRide from '@/pages/ActiveRide';
 import Onboarding from '@/pages/Onboarding';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -101,7 +100,7 @@ const AuthenticatedApp = () => {
         <Route path="/rider/:id" element={<RiderProfile />} />
         <Route path="/ride/group/:id" element={<ActiveGroupRide />} />
       </Route>
-      <Route path="/ride/active" element={<ActiveRide />} />
+      <Route path="/ride/active" element={<Navigate to="/" replace />} />
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

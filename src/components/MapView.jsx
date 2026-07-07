@@ -1,9 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, CircleMarker, Polyline, useMap } from 'react-leaflet';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getEventMarkerUrl } from '@/lib/eventMarkers';
-import { MAP_LAYERS } from '@/lib/mapLayers';
+import { MAP_LAYERS, getLayerBackground } from '@/lib/mapLayers';
 import RiderMarker from '@/components/RiderMarker';
 import ServiceMarkers from '@/components/ServiceMarkers';
 import FriendMarkers from '@/components/FriendMarkers';
@@ -76,11 +76,37 @@ function MapTileLayers({ layer }) {
   ));
 }
 
-function Recenter({ center, zoom, signal }) {
+function MapResizer() {
   const map = useMap();
   useEffect(() => {
-    if (center) map.flyTo(center, zoom ?? map.getZoom());
-  }, [center?.[0], center?.[1], zoom, signal, map]);
+    const resize = () => map.invalidateSize();
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(map.getContainer());
+    window.addEventListener('resize', resize);
+    const onOrient = () => setTimeout(resize, 300);
+    window.addEventListener('orientationchange', onOrient);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', onOrient);
+    };
+  }, [map]);
+  return null;
+}
+
+function Recenter({ center, zoom, signal }) {
+  const map = useMap();
+  const firstRef = useRef(true);
+  useEffect(() => {
+    if (!center) return;
+    if (firstRef.current) {
+      map.setView(center, zoom ?? map.getZoom(), { animate: false });
+      firstRef.current = false;
+    } else if (signal > 0) {
+      map.flyTo(center, zoom ?? map.getZoom());
+    }
+  }, [center?.[0], center?.[1], signal, map, zoom]);
   return null;
 }
 
@@ -91,9 +117,69 @@ function FitRoute({ route, signal }) {
       const bounds = L.latLngBounds(route);
       map.fitBounds(bounds, { padding: [60, 60] });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signal, map]);
+  }, [signal, map, route]);
   return null;
+}
+
+function NavCamera({ userPos, heading, speed, nextManeuverDistance, recenterToken, headingUp }) {
+  const map = useMap();
+  const failCountRef = useRef(0);
+  const targetZoom = useMemo(() => {
+    if (nextManeuverDistance != null && nextManeuverDistance < 200) return 17;
+    if (speed > 80) return 14;
+    if (speed > 40) return 16;
+    return 16;
+  }, [speed, nextManeuverDistance]);
+
+  useEffect(() => {
+    map.dragging?.disable();
+    map.touchZoom?.disable();
+    map.doubleClickZoom?.disable();
+    return () => {
+      map.dragging?.enable();
+      map.touchZoom?.enable();
+      map.doubleClickZoom?.enable();
+    };
+  }, [map]);
+
+  useEffect(() => {
+    if (!userPos) return;
+    try {
+      if (headingUp && heading != null && !isNaN(heading)) {
+        const headingRad = (heading * Math.PI) / 180;
+        const size = map.getSize();
+        if (!size.x || !size.y) throw new Error('no size');
+        const offsetPx = size.y * 0.30;
+        const riderPoint = map.project(userPos, targetZoom);
+        const dx = offsetPx * Math.sin(headingRad);
+        const dy = -offsetPx * Math.cos(headingRad);
+        const centerPoint = L.point(riderPoint.x + dx, riderPoint.y + dy);
+        const newCenter = map.unproject(centerPoint, targetZoom);
+        map.setView(newCenter, targetZoom, { animate: true, duration: 1.0, easeLinearity: 0.5 });
+      } else {
+        map.setView(userPos, targetZoom, { animate: true, duration: 0.5 });
+      }
+      failCountRef.current = 0;
+    } catch (e) {
+      failCountRef.current++;
+      if (failCountRef.current >= 2) {
+        map.setView(userPos, targetZoom, { animate: false });
+        failCountRef.current = 0;
+      }
+    }
+  }, [userPos, heading, targetZoom, map, recenterToken, headingUp]);
+
+  return null;
+}
+
+function destinationIcon(rot = null) {
+  const angle = rot != null ? -45 + rot : -45;
+  return L.divIcon({
+    html: `<div style="width:28px;height:28px;background:#4285F4;border-radius:50% 50% 50% 0;transform:rotate(${angle}deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
+    className: 'custom-marker',
+    iconSize: [28, 28],
+    iconAnchor: [14, 26],
+  });
 }
 
 const isValid = (lat, lng) =>
@@ -111,7 +197,6 @@ export default function MapView({
   recenterSignal = 0,
   fitRouteSignal = 0,
   layer = 'dark',
-  followRider = false,
   onMarkerClick,
   services = [],
   showServices = false,
@@ -121,53 +206,92 @@ export default function MapView({
   onFriendClick,
   userPos = null,
   className = '',
+  navActive = false,
+  heading = null,
+  headingUp = true,
+  speed = 0,
+  nextManeuverDistance = null,
+  completedRoute = null,
+  remainingRoute = null,
+  destination = null,
 }) {
   const validPois = pois.filter((p) => isValid(p.lat, p.lng));
   const validEvents = events.filter((e) => isValid(e.lat, e.lng));
   const validDistress = distressAlerts.filter((d) => isValid(d.lat, d.lng));
   const validRiders = riders.filter((r) => isValid(r.lat, r.lng));
+  const bgColor = getLayerBackground(layer);
+  const rotating = navActive && heading != null && !isNaN(heading) && headingUp;
+  const navRot = rotating ? `${-heading}deg` : '0deg';
+
   return (
-    <MapContainer center={center} zoom={zoom} className={className} zoomControl={false} scrollWheelZoom>
-      <MapTileLayers layer={layer} />
-      <Recenter center={center} zoom={zoom} signal={recenterSignal} />
-      <FitRoute route={route} signal={fitRouteSignal} />
-      {route && route.length > 0 && (
-        <Polyline positions={route} pathOptions={{ color: '#FF6F00', weight: 5, opacity: 0.85 }} />
-      )}
-      {validPois.map((poi) => (
-        <Marker
-          key={`poi-${poi.id}`}
-          position={[poi.lat, poi.lng]}
-          icon={createIcon(poi.category)}
-          eventHandlers={{ click: () => onMarkerClick?.(poi) }}
-        />
-      ))}
-      {validEvents.map((ev) => (
-        <Marker
-          key={`event-${ev.id}`}
-          position={[ev.lat, ev.lng]}
-          icon={getEventIcon(ev)}
-          eventHandlers={{ click: () => onMarkerClick?.(ev) }}
-        />
-      ))}
-      {validDistress.map((d) => (
-        <Marker key={`distress-${d.id}`} position={[d.lat, d.lng]} icon={createIcon('distress')} />
-      ))}
-      {validRiders.map((r) => (
-        <RiderMarker
-          key={`rider-${r.id}`}
-          position={[r.lat, r.lng]}
-          heading={r.heading}
-          accuracy={r.accuracy}
-          zIndex={1200}
-        />
-      ))}
-      {showServices && (
-        <ServiceMarkers services={services} userPos={userPos} onMarkerClick={onServiceClick} />
-      )}
-      {showFriends && (
-        <FriendMarkers friends={friends} onSelect={onFriendClick} />
-      )}
-    </MapContainer>
+    <div
+      className={`absolute inset-0 z-0 ${rotating ? 'nav-map-heading-up' : ''} ${className}`}
+      style={{ background: bgColor, '--nav-rot': navRot }}
+    >
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        className="absolute inset-0 h-full w-full"
+        zoomControl={false}
+        scrollWheelZoom
+      >
+        <MapTileLayers layer={layer} />
+        <MapResizer />
+        {navActive ? (
+          <NavCamera
+            userPos={userPos || center}
+            heading={heading}
+            speed={speed}
+            nextManeuverDistance={nextManeuverDistance}
+            recenterToken={recenterSignal}
+            headingUp={headingUp}
+          />
+        ) : (
+          <>
+            <Recenter center={center} zoom={zoom} signal={recenterSignal} />
+            <FitRoute route={route} signal={fitRouteSignal} />
+          </>
+        )}
+
+        {navActive && completedRoute && completedRoute.length > 1 && (
+          <>
+            <Polyline positions={completedRoute} pathOptions={{ color: '#ffffff', weight: 11, opacity: 0.9, lineCap: 'round' }} />
+            <Polyline positions={completedRoute} pathOptions={{ color: '#9aa0a6', weight: 7, opacity: 0.7, lineCap: 'round' }} />
+          </>
+        )}
+        {navActive && remainingRoute && remainingRoute.length > 1 && (
+          <>
+            <Polyline positions={remainingRoute} pathOptions={{ color: '#ffffff', weight: 11, opacity: 1, lineCap: 'round' }} />
+            <Polyline positions={remainingRoute} pathOptions={{ color: '#2D7FF9', weight: 7, opacity: 1, lineCap: 'round' }} />
+          </>
+        )}
+        {!navActive && route && route.length > 0 && (
+          <Polyline positions={route} pathOptions={{ color: '#FF6F00', weight: 5, opacity: 0.85 }} />
+        )}
+
+        {destination && (
+          <Marker position={[destination.lat, destination.lng]} icon={destinationIcon(rotating ? heading : null)} />
+        )}
+
+        {validPois.map((poi) => (
+          <Marker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} icon={createIcon(poi.category)} eventHandlers={{ click: () => onMarkerClick?.(poi) }} />
+        ))}
+        {validEvents.map((ev) => (
+          <Marker key={`event-${ev.id}`} position={[ev.lat, ev.lng]} icon={getEventIcon(ev)} eventHandlers={{ click: () => onMarkerClick?.(ev) }} />
+        ))}
+        {validDistress.map((d) => (
+          <Marker key={`distress-${d.id}`} position={[d.lat, d.lng]} icon={createIcon('distress')} />
+        ))}
+        {validRiders.map((r) => (
+          <RiderMarker key={`rider-${r.id}`} position={[r.lat, r.lng]} heading={r.heading} accuracy={r.accuracy} zIndex={1200} />
+        ))}
+        {showServices && (
+          <ServiceMarkers services={services} userPos={userPos} onMarkerClick={onServiceClick} />
+        )}
+        {showFriends && (
+          <FriendMarkers friends={friends} onSelect={onFriendClick} />
+        )}
+      </MapContainer>
+    </div>
   );
 }

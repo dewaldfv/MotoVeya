@@ -1,28 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Navigation, AlertTriangle, X, Fuel, Search, ChevronLeft, Layers, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import NavMapView from '@/components/NavMapView';
-import NavigationCard from '@/components/NavigationCard';
-import Speedometer from '@/components/Speedometer';
-import NavActionButtons from '@/components/NavActionButtons';
-import NavControls from '@/components/NavControls';
-import SpeedLimitBadge from '@/components/SpeedLimitBadge';
-import { useSpeedLimit } from '@/hooks/useSpeedLimit';
-import EmergencyOverlay from '@/components/EmergencyOverlay';
+import { useBackgroundTracking } from '@/hooks/useBackgroundTracking';
 import { useCrashDetection, requestMotionPermission } from '@/hooks/useCrashDetection';
+import { useAutoRideStop } from '@/hooks/useAutoRideStop';
+import { useAutoRideStart } from '@/hooks/useAutoRideStart';
 import { useEmergencyBeacon } from '@/hooks/useEmergencyBeacon';
 import { useEmergencyCancellation } from '@/hooks/useEmergencyCancellation';
-import { useAutoRideStop } from '@/hooks/useAutoRideStop';
-import AutoStopCountdown from '@/components/AutoStopCountdown';
-import { useBackgroundTracking } from '@/hooks/useBackgroundTracking';
+import { useSpeedLimit } from '@/hooks/useSpeedLimit';
 import { saveRideState, getActiveRide, clearActiveRide, savePendingRide, getPendingRides, clearPendingRide } from '@/lib/rideCache';
 import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '@/lib/emergencyCache';
-import LayersSheet from '@/components/LayersSheet';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
-import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
 import { toast } from 'sonner';
-import RideInviteToggle from '@/components/RideInviteToggle';
 import { notifyFriendsOfRide } from '@/lib/rideInvite';
 
 const SA_CENTER = [-26.2041, 28.0473];
@@ -38,49 +26,34 @@ function getCurrentPosition() {
   });
 }
 
-export default function ActiveRide() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const initialDest = location.state?.destination;
-  const initialSearch = location.state?.searchText;
-
-  const [user, setUser] = useState(null);
-  const [bike, setBike] = useState(null);
+export function useRideSession({ user, bike, fuelProfile, services = [], autoDetectEnabled = true, notifyFriends = true }) {
+  const [rideStatus, setRideStatus] = useState('idle');
   const [userPos, setUserPos] = useState(null);
+  const [heading, setHeading] = useState(null);
+  const [accuracy, setAccuracy] = useState(null);
   const [speed, setSpeed] = useState(0);
   const [maxSpeed, setMaxSpeed] = useState(0);
   const [distance, setDistance] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [fuelRemaining, setFuelRemaining] = useState(null);
-  const [fuelRange, setFuelRange] = useState(null);
-  const [fuelProfile, setFuelProfile] = useState(null);
-  const [destInput, setDestInput] = useState(initialSearch || '');
-  const [destination, setDestination] = useState(initialDest || null);
+  const [batteryLevel, setBatteryLevel] = useState(null);
+  const [destination, setDestination] = useState(null);
+  const [destInput, setDestInput] = useState('');
   const [routeData, setRouteData] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [crashCountdown, setCrashCountdown] = useState(null);
-  const [distressActive, setDistressActive] = useState(false);
   const [crashPhase, setCrashPhase] = useState(null);
   const [crashAlertId, setCrashAlertId] = useState(null);
+  const [distressActive, setDistressActive] = useState(false);
   const [emergencyContactsNotified, setEmergencyContactsNotified] = useState(false);
   const [nearbyRidersNotified, setNearbyRidersNotified] = useState(false);
   const [crashIndicators, setCrashIndicators] = useState(null);
   const [severity, setSeverity] = useState('medium');
-  const [batteryLevel, setBatteryLevel] = useState(null);
   const [autoStopCountdown, setAutoStopCountdown] = useState(null);
   const [ending, setEnding] = useState(false);
-  const [heading, setHeading] = useState(null);
-  const [accuracy, setAccuracy] = useState(null);
-  const [rideStatus, setRideStatus] = useState('idle');
-  const [layer, setLayer] = useState('standard');
-  const [layersOpen, setLayersOpen] = useState(false);
-  const [headingUp, setHeadingUp] = useState(true);
-  const [recenterToken, setRecenterToken] = useState(0);
-  const [notifyFriends, setNotifyFriends] = useState(true);
-  const speedLimit = useSpeedLimit(userPos);
-  const [services, setServices] = useState([]);
   const [nearbyService, setNearbyService] = useState(null);
   const [dismissedServiceIds, setDismissedServiceIds] = useState(new Set());
+  const [fuelRemaining, setFuelRemaining] = useState(null);
+  const [fuelRange, setFuelRange] = useState(null);
 
   const lastPosRef = useRef(null);
   const positionsRef = useRef([]);
@@ -89,33 +62,21 @@ export default function ActiveRide() {
   const timerRef = useRef(null);
   const lastRecalcRef = useRef(0);
   const beacon = useEmergencyBeacon();
+  const speedLimit = useSpeedLimit(rideStatus === 'active' ? userPos : null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const authed = await base44.auth.isAuthenticated();
-        if (!authed) return;
-        const me = await base44.auth.me();
-        setUser(me);
-        const bikes = await base44.entities.Bike.filter({ is_primary: true }, '-created_date', 1);
-        let primaryBike = bikes[0];
-        if (!primaryBike) { const allBikes = await base44.entities.Bike.list('-created_date', 1); primaryBike = allBikes[0]; }
-        if (primaryBike) {
-          setBike(primaryBike);
-          try {
-            const profiles = await base44.entities.FuelProfile.filter({ bike_id: primaryBike.id }, '-last_calculated', 1);
-            if (profiles.length > 0) setFuelProfile(profiles[0]);
-          } catch (e) { console.error(e); }
-        }
-      } catch (e) { console.error(e); }
-    })();
-  }, []);
+  const speedRef = useRef(speed);
+  const headingRef = useRef(heading);
+  useEffect(() => { speedRef.current = speed; }, [speed]);
+  useEffect(() => { headingRef.current = heading; }, [heading]);
 
-  useEffect(() => {
-    if (initialDest) handleDestination(initialDest);
-    else if (initialSearch) { setDestInput(initialSearch); handleSearch(initialSearch); }
-  }, []);
+  const { gpsConfig, gpsWeak, markGpsUpdate } = useBackgroundTracking({
+    enabled: localStorage.getItem('motogo_background_tracking') !== 'false',
+    isActive: rideStatus === 'active',
+    isNavigating: !!routeData,
+    stats: { speed, duration, distance },
+  });
 
+  // Resume cached ride on mount
   useEffect(() => {
     const pending = getPendingRides();
     if (pending.length > 0) {
@@ -144,28 +105,29 @@ export default function ActiveRide() {
       setRouteData(cached.routeData || null);
       setRideStatus('active');
       toast.info('Resuming active ride');
-      return;
     } else if (cached) {
       clearActiveRide();
     }
-    if (!location.state?.autoStart) return;
-    if (localStorage.getItem('motogo_auto_ride_detection') === 'false') return;
-    toast.info('Ride Started Automatically');
-    handleStartRide();
   }, []);
 
-  const speedRef = useRef(speed);
-  const headingRef = useRef(heading);
-  useEffect(() => { speedRef.current = speed; }, [speed]);
-  useEffect(() => { headingRef.current = heading; }, [heading]);
+  // Idle GPS tracking — keeps the rider marker live on the map
+  useEffect(() => {
+    if (rideStatus !== 'idle' || !navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setUserPos([pos.coords.latitude, pos.coords.longitude, pos.coords.altitude]);
+        if (pos.coords.heading != null && !isNaN(pos.coords.heading)) setHeading(pos.coords.heading);
+        if (pos.coords.accuracy != null) setAccuracy(pos.coords.accuracy);
+        const spd = pos.coords.speed != null && pos.coords.speed > 0 ? pos.coords.speed * 3.6 : 0;
+        setSpeed(Math.round(spd));
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [rideStatus]);
 
-  const { gpsConfig, gpsWeak, markGpsUpdate } = useBackgroundTracking({
-    enabled: localStorage.getItem('motogo_background_tracking') !== 'false',
-    isActive: rideStatus === 'active',
-    isNavigating: !!routeData,
-    stats: { speed, duration, distance },
-  });
-
+  // Active GPS tracking — adaptive config + stats recording
   useEffect(() => {
     if (rideStatus !== 'active' || !navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
@@ -190,8 +152,9 @@ export default function ActiveRide() {
     );
     watchIdRef.current = watchId;
     return () => { navigator.geolocation.clearWatch(watchId); watchIdRef.current = null; };
-  }, [rideStatus, gpsConfig]);
+  }, [rideStatus, gpsConfig, markGpsUpdate]);
 
+  // Duration timer
   useEffect(() => {
     if (rideStatus !== 'active') return;
     const timer = setInterval(() => setDuration((d) => d + 1), 1000);
@@ -199,6 +162,7 @@ export default function ActiveRide() {
     return () => { clearInterval(timer); timerRef.current = null; };
   }, [rideStatus]);
 
+  // Battery
   useEffect(() => {
     if (navigator.getBattery) {
       navigator.getBattery().then((b) => {
@@ -209,6 +173,7 @@ export default function ActiveRide() {
     }
   }, []);
 
+  // Fuel calculation
   useEffect(() => {
     const consumption = fuelProfile?.adaptive_l_per_100km || bike?.fuel_consumption_l_per_100km;
     if (bike && bike.tank_capacity_l && consumption) {
@@ -220,6 +185,7 @@ export default function ActiveRide() {
     }
   }, [distance, bike, fuelProfile]);
 
+  // Crash countdown
   useEffect(() => {
     if (crashCountdown === null) return;
     if (crashCountdown <= 0) { handleCrashConfirmed(); return; }
@@ -227,6 +193,7 @@ export default function ActiveRide() {
     return () => clearTimeout(t);
   }, [crashCountdown]);
 
+  // Crash detection
   useCrashDetection({
     enabled: rideStatus === 'active',
     speed,
@@ -242,8 +209,9 @@ export default function ActiveRide() {
     },
   });
 
+  // Auto ride stop
   useAutoRideStop({
-    enabled: localStorage.getItem('motogo_auto_ride_detection') !== 'false',
+    enabled: autoDetectEnabled,
     isActive: rideStatus === 'active',
     speed,
     userPos,
@@ -251,6 +219,7 @@ export default function ActiveRide() {
     isCountingDown: autoStopCountdown !== null,
   });
 
+  // Save ride state periodically
   useEffect(() => {
     if (rideStatus !== 'active') return;
     const interval = setInterval(() => {
@@ -264,6 +233,7 @@ export default function ActiveRide() {
     return () => clearInterval(interval);
   }, [rideStatus, distance, duration, maxSpeed, destination, routeData]);
 
+  // GPS dead reckoning fallback
   useEffect(() => {
     if (rideStatus !== 'active' || !gpsWeak) return;
     const interval = setInterval(() => {
@@ -291,6 +261,7 @@ export default function ActiveRide() {
     return () => clearInterval(interval);
   }, [rideStatus, gpsWeak]);
 
+  // Auto stop countdown
   useEffect(() => {
     if (autoStopCountdown === null) return;
     if (autoStopCountdown <= 0) { setAutoStopCountdown(null); handleEndRide(); return; }
@@ -305,6 +276,7 @@ export default function ActiveRide() {
     }
   }, [speed, autoStopCountdown]);
 
+  // Emergency location updates
   useEffect(() => {
     if (crashPhase !== 'active' || !crashAlertId || !userPos) return;
     const interval = setInterval(async () => {
@@ -319,6 +291,7 @@ export default function ActiveRide() {
     return () => clearInterval(interval);
   }, [crashPhase, crashAlertId, userPos]);
 
+  // Online sync (pending rides + emergency)
   useEffect(() => {
     const handleOnline = async () => {
       const pendingRides = getPendingRides();
@@ -349,11 +322,13 @@ export default function ActiveRide() {
     return () => window.removeEventListener('online', handleOnline);
   }, []);
 
+  // Route progress
   const navProgress = useMemo(() => {
     if (!routeData || !userPos) return null;
     return getRouteProgress(routeData, userPos);
   }, [routeData, userPos]);
 
+  // Off-route recalculation
   useEffect(() => {
     if (rideStatus !== 'active' || !routeData || !destination || !userPos) return;
     const route = routeData.coordinates;
@@ -377,15 +352,7 @@ export default function ActiveRide() {
     }
   }, [userPos, rideStatus, routeData, destination]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const svcData = await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200);
-        setServices(svcData || []);
-      } catch (e) { console.error(e); }
-    })();
-  }, []);
-
+  // Nearby service on route
   useEffect(() => {
     if (rideStatus !== 'active' || !routeData || !services.length) { setNearbyService(null); return; }
     const route = routeData.coordinates;
@@ -409,6 +376,43 @@ export default function ActiveRide() {
     }
     setNearbyService(nearest);
   }, [userPos, routeData, rideStatus, services, dismissedServiceIds]);
+
+  // --- Handlers ---
+
+  const fetchRoute = async (origin, dest) => {
+    setRouteLoading(true);
+    try {
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=true`);
+      const data = await res.json();
+      if (data.routes?.[0]) {
+        setRouteData(processRouteData(data));
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not calculate route');
+    } finally {
+      setRouteLoading(false);
+    }
+  };
+
+  const handleDestination = async (dest) => {
+    setDestination(dest);
+    setDestInput(dest.name);
+    try {
+      const origin = await getCurrentPosition();
+      setUserPos(origin);
+      await fetchRoute(origin, dest);
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not get your location. Enable GPS and try again.');
+    }
+  };
+
+  const clearDestination = () => {
+    setDestination(null);
+    setDestInput('');
+    setRouteData(null);
+  };
 
   const handleAddStop = async (svc) => {
     if (!userPos || !destination) return;
@@ -434,57 +438,13 @@ export default function ActiveRide() {
     setNearbyService(null);
   };
 
-  const fetchRoute = async (origin, dest) => {
-    setRouteLoading(true);
-    try {
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=true`);
-      const data = await res.json();
-      if (data.routes?.[0]) {
-        setRouteData(processRouteData(data));
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error('Could not calculate route');
-    } finally {
-      setRouteLoading(false);
-    }
-  };
-
-  const handleSearch = async (query) => {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=za`);
-      const data = await res.json();
-      if (data.length > 0) {
-        const dest = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), name: data[0].display_name.split(',')[0] };
-        handleDestination(dest);
-      } else {
-        toast.error('Location not found');
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error('Search failed');
-    }
-  };
-
-  const handleDestination = async (dest) => {
-    setDestination(dest);
-    setDestInput(dest.name);
-    try {
-      const origin = await getCurrentPosition();
-      setUserPos(origin);
-      await fetchRoute(origin, dest);
-    } catch (e) {
-      console.error(e);
-      toast.error('Could not get your location. Enable GPS and try again.');
-    }
-  };
-
   const handleSimulateCrash = () => {
     setCrashIndicators({ highGForce: true, suddenDecel: true });
     setSeverity('medium');
     setCrashCountdown(15);
     setCrashPhase('countdown');
   };
+
   const handleCancelCrash = () => {
     setCrashCountdown(null);
     setCrashPhase(null);
@@ -576,25 +536,27 @@ export default function ActiveRide() {
     } catch (e) { console.error(e); }
   };
 
-  const handleStartRide = async () => {
+  const startRide = async (destOverride) => {
     await requestMotionPermission();
     setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
     setHeading(null); setAccuracy(null); setDistressActive(false);
     positionsRef.current = []; lastPosRef.current = null;
     startTimeRef.current = Date.now();
     setRideStatus('active');
-    if (destination) {
+    const dest = destOverride || destination;
+    if (dest) {
+      if (destOverride) { setDestination(destOverride); setDestInput(destOverride.name); }
       try {
         const origin = await getCurrentPosition();
         setUserPos(origin);
-        await fetchRoute(origin, destination);
+        await fetchRoute(origin, dest);
       } catch (e) {
         console.error(e);
         toast.error('Could not get GPS for route');
       }
     }
-    if (notifyFriends && destination && user?.subscription_tier === 'premium') {
-      notifyFriendsOfRide(user, destination)
+    if (notifyFriends && dest && user?.subscription_tier === 'premium') {
+      notifyFriendsOfRide(user, dest)
         .then((n) => { if (n > 0) toast.success(`Ride invite sent to ${n} friend${n > 1 ? 's' : ''}`); })
         .catch((e) => console.error(e));
     }
@@ -652,174 +614,34 @@ export default function ActiveRide() {
     }
   };
 
+  // Auto ride start — detects movement and starts a ride automatically
+  const startRideRef = useRef(startRide);
+  useEffect(() => { startRideRef.current = startRide; });
+  useAutoRideStart({
+    enabled: autoDetectEnabled && rideStatus === 'idle',
+    onAutoStart: () => {
+      toast.info('Ride Started Automatically');
+      startRideRef.current();
+    },
+  });
+
   const lowFuel = fuelRange !== null && fuelRange < 50;
   const isActive = rideStatus === 'active';
   const rideMode = isActive && speed > 15;
 
-  return (
-    <div className="relative h-screen w-full overflow-hidden bg-background">
-      <NavMapView
-        userPos={userPos}
-        heading={heading}
-        accuracy={accuracy}
-        active={isActive}
-        speed={speed}
-        nextManeuverDistance={navProgress?.distanceToManeuver}
-        remainingRoute={navProgress?.remainingRoute || routeData?.coordinates}
-        completedRoute={navProgress?.completedRoute || []}
-        destination={destination}
-        layer={layer}
-        headingUp={headingUp}
-        recenterToken={recenterToken}
-      />
-
-      {isActive ? (
-        <>
-          {navProgress?.nextStep && (
-            <NavigationCard
-              step={navProgress.nextStep}
-              followingStep={navProgress.followingStep}
-              distanceToManeuver={navProgress.distanceToManeuver}
-              remainingDistance={navProgress.remainingDistance}
-              remainingDuration={navProgress.remainingDuration}
-              destinationName={destination?.name}
-              rideMode={rideMode}
-            />
-          )}
-          {routeLoading && !navProgress?.nextStep && (
-            <div className="absolute left-3 right-3 z-20 flex items-center gap-2 rounded-2xl bg-card/95 p-3 shadow-xl backdrop-blur-lg landscape:max-w-md" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
-              <Loader2 size={20} className="animate-spin text-primary" />
-              <span className="text-sm font-medium">Calculating route...</span>
-            </div>
-          )}
-          {nearbyService && (
-            <div className="absolute left-3 right-3 z-[15] landscape:max-w-sm landscape:mx-auto" style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }}>
-              <div className="mx-auto flex max-w-sm items-center gap-2 rounded-2xl bg-card/95 p-2.5 shadow-xl backdrop-blur-lg">
-                <span className="text-xl">{getServiceCategory(nearbyService.category).emoji}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold">{nearbyService.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {getServiceCategory(nearbyService.category).short} · {formatDistance(userPos ? haversine(nearbyService.lat, nearbyService.lng, userPos[0], userPos[1]) : null)} off route
-                  </p>
-                </div>
-                <button onClick={() => handleAddStop(nearbyService)} className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground">Add Stop</button>
-                <button onClick={handleDismissService} className="shrink-0"><X size={16} className="text-muted-foreground" /></button>
-              </div>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="absolute left-0 right-0 top-0 z-10 bg-gradient-to-b from-black/60 to-transparent p-3 pb-8" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
-          <div className="flex items-center gap-2 landscape:max-w-md">
-            <button onClick={() => navigate('/')} className="glove-target flex items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg">
-              <ChevronLeft size={24} />
-            </button>
-            <div className="flex flex-1 items-center gap-2 rounded-2xl bg-card/95 px-4 py-2.5 shadow-lg backdrop-blur-lg">
-              {routeLoading ? <Loader2 size={18} className="animate-spin text-muted-foreground" /> : <Search size={18} className="text-muted-foreground" />}
-              <input
-                value={destInput}
-                onChange={(e) => setDestInput(e.target.value)}
-                placeholder="Where to?"
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                onKeyDown={(e) => { if (e.key === 'Enter' && destInput) handleSearch(destInput); }}
-              />
-              {destInput && (
-                <button onClick={() => { setDestInput(''); setDestination(null); setRouteData(null); }}>
-                  <X size={16} className="text-muted-foreground" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!rideMode && (
-        <NavControls
-          active={isActive}
-          headingUp={headingUp}
-          onLayers={() => setLayersOpen(true)}
-          onToggleHeading={() => setHeadingUp((v) => !v)}
-          onRecenter={() => setRecenterToken((t) => t + 1)}
-        />
-      )}
-
-      <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} />
-
-      {isActive && (
-        <div className="absolute bottom-5 hud-left z-10 flex flex-col items-center gap-1.5">
-          <div className="flex items-end gap-2">
-            <Speedometer speed={speed} limit={speedLimit} />
-            <SpeedLimitBadge limit={speedLimit} speed={speed} />
-          </div>
-          {gpsWeak && (
-            <div className="flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-xs font-bold text-white shadow-lg">
-              GPS Weak
-            </div>
-          )}
-          {fuelRange !== null && (
-            <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold shadow-lg ${lowFuel ? 'bg-destructive text-white animate-pulse' : 'bg-card/95 text-foreground'}`}>
-              <Fuel size={10} /> {fuelRange}km
-            </div>
-          )}
-        </div>
-      )}
-
-      {isActive ? (
-        <div className="absolute bottom-5 hud-right z-10">
-          <NavActionButtons
-            onDistress={handleDistress}
-            onCrash={handleSimulateCrash}
-            onEnd={handleEndRide}
-            distressActive={distressActive}
-            ending={ending}
-            disabled={!user || user.subscription_tier !== 'premium'}
-          />
-        </div>
-      ) : (
-        <div className="absolute bottom-0 left-0 right-0 z-10 space-y-2 bg-gradient-to-t from-black/60 to-transparent p-4 pt-10">
-          {destination && user?.subscription_tier === 'premium' && (
-            <RideInviteToggle enabled={notifyFriends} onChange={setNotifyFriends} />
-          )}
-          <button
-            onClick={handleStartRide}
-            className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 landscape:max-w-xs landscape:mx-auto"
-          >
-            <Navigation size={22} fill="white" /> START
-          </button>
-        </div>
-      )}
-
-      <AutoStopCountdown
-        countdown={autoStopCountdown}
-        onEnd={handleEndRide}
-        onContinue={() => setAutoStopCountdown(null)}
-      />
-
-      <EmergencyOverlay
-        phase={crashPhase}
-        severity={severity}
-        countdown={crashCountdown}
-        onCancel={handleCancelCrash}
-        onResolve={handleResolveEmergency}
-        emergencyNumber="112"
-        contactNotified={emergencyContactsNotified}
-        nearbyNotified={nearbyRidersNotified}
-        riderName={user?.nickname || user?.full_name}
-        location={userPos}
-        incidentInfo={{
-          speed,
-          heading,
-          batteryLevel,
-          bikeMake: bike?.make,
-          bikeModel: bike?.model,
-          bikeYear: bike?.year,
-        }}
-        beaconActive={beacon.isActive}
-        audioEnabled={beacon.audioEnabled}
-        onToggleAudio={beacon.toggleAudio}
-        voiceSupported={voiceSupported}
-        voiceListening={voiceListening}
-      />
-    </div>
-  );
+  return {
+    rideStatus, userPos, heading, accuracy, speed, maxSpeed, distance, duration,
+    batteryLevel, fuelRemaining, fuelRange, lowFuel,
+    destination, destInput, routeData, routeLoading, navProgress,
+    crashPhase, crashCountdown, severity, distressActive,
+    autoStopCountdown, gpsWeak, ending, speedLimit, beacon,
+    emergencyContactsNotified, nearbyRidersNotified, crashIndicators,
+    nearbyService, voiceSupported, voiceListening,
+    isActive, rideMode,
+    setDestInput, setDestination, setAutoStopCountdown, clearDestination,
+    handleDestination, handleAddStop, handleDismissService,
+    handleSimulateCrash, handleCancelCrash, handleResolveEmergency,
+    handleDistress, startRide, endRide: handleEndRide,
+    navigateTo: (dest) => { startRide(dest); },
+  };
 }

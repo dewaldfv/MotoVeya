@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useOutlet, useLocation, useNavigate } from 'react-router-dom';
+import { useOutlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import BottomNav from './BottomNav';
-import { useAutoRideStart } from '@/hooks/useAutoRideStart';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import RideResumeBanner from './RideResumeBanner';
 import VoiceChannelProvider from './voice/VoiceChannelProvider';
 import { getActiveRide } from '@/lib/rideCache';
+import { subscribeRideActive } from '@/lib/rideStatus';
 
 const pageVariants = {
   initial: { opacity: 0, x: '100%' },
@@ -17,16 +17,13 @@ const pageVariants = {
 export default function AppLayout() {
   const location = useLocation();
   const outlet = useOutlet();
-  const navigate = useNavigate();
-
-  useAutoRideStart({
-    enabled: localStorage.getItem('motogo_auto_ride_detection') !== 'false',
-    onAutoStart: () => navigate('/ride/active', { state: { autoStart: true } }),
-  });
-
-  useLocationBroadcast();
-
+  const [rideActive, setRideActive] = useState(false);
   const [hasActiveRide, setHasActiveRide] = useState(false);
+
+  useEffect(() => {
+    return subscribeRideActive(setRideActive);
+  }, []);
+
   useEffect(() => {
     const check = () => {
       const ride = getActiveRide();
@@ -37,10 +34,12 @@ export default function AppLayout() {
     return () => clearInterval(interval);
   }, []);
 
+  useLocationBroadcast();
+
   return (
     <VoiceChannelProvider>
     <div className="relative min-h-screen bg-background">
-      {hasActiveRide && <RideResumeBanner />}
+      {hasActiveRide && !rideActive && <RideResumeBanner />}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={location.pathname}
@@ -53,7 +52,7 @@ export default function AppLayout() {
           {outlet}
         </motion.div>
       </AnimatePresence>
-      <BottomNav />
+      {!rideActive && <BottomNav />}
     </div>
     </VoiceChannelProvider>
   );
