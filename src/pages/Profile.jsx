@@ -1,15 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bike as BikeIcon, Plus, Crown, Phone, Settings, Route, TrendingUp, Pencil, Trash2, Copy, Check, Share2, Fuel, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
+import ProfileHeader from '@/components/profile/ProfileHeader';
+import StatGrid from '@/components/profile/StatGrid';
+import MenuCard from '@/components/profile/MenuCard';
+import RideSummaryCard from '@/components/profile/RideSummaryCard';
+import BikeCard from '@/components/profile/BikeCard';
 import { toast } from 'sonner';
 
 const coerceBike = (form) => ({
@@ -19,6 +24,20 @@ const coerceBike = (form) => ({
   tank_capacity_l: Number(form.tank_capacity_l) || undefined,
   fuel_consumption_l_per_100km: Number(form.fuel_consumption_l_per_100km) || undefined,
 });
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function computeAchievements(rideCount, totalDistance, maxSpeed) {
+  const badges = [];
+  if (rideCount >= 1) badges.push('🏍️ First Ride');
+  if (totalDistance >= 100) badges.push('💯 Century Rider');
+  if (totalDistance >= 500) badges.push('🛣️ Long Hauler');
+  if (totalDistance >= 1000) badges.push('🏆 Kilometer King');
+  if (rideCount >= 10) badges.push('⚔️ Weekly Warrior');
+  if (rideCount >= 50) badges.push('⭐ Seasoned Rider');
+  if (maxSpeed >= 120) badges.push('⚡ Speed Demon');
+  return badges;
+}
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -43,184 +62,259 @@ export default function Profile() {
     })();
   }, []);
 
-  const { data: bikes = [], isLoading: bikesLoading } = useQuery({
+  const { data: bikes = [] } = useQuery({
     queryKey: ['bikes', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      return (await base44.entities.Bike.filter({ created_by_id: user.id }, '-created_date', 20)) || [];
-    },
+    queryFn: () => base44.entities.Bike.filter({ created_by_id: user.id }, '-created_date', 20),
+    enabled: !!user?.id,
+  });
+
+  const { data: rides = [] } = useQuery({
+    queryKey: ['profile-rides', user?.id],
+    queryFn: () => base44.entities.Ride.filter({ created_by_id: user.id }, '-ride_date', 200),
+    enabled: !!user?.id,
+  });
+
+  const { data: refills = [] } = useQuery({
+    queryKey: ['profile-refills', user?.id],
+    queryFn: () => base44.entities.FuelRefill.filter({}, '-refill_date', 200),
+    enabled: !!user?.id,
+  });
+
+  const { data: fuelProfiles = [] } = useQuery({
+    queryKey: ['profile-fuel-profiles', user?.id],
+    queryFn: () => base44.entities.FuelProfile.filter({}, '-last_calculated', 10),
+    enabled: !!user?.id,
+  });
+
+  const { data: friends = [] } = useQuery({
+    queryKey: ['profile-friends', user?.id],
+    queryFn: () => base44.entities.Friend.filter({ status: 'accepted' }, '-created_date', 100),
+    enabled: !!user?.id,
+  });
+
+  const { data: pending = [] } = useQuery({
+    queryKey: ['profile-pending', user?.id],
+    queryFn: () => base44.entities.Friend.filter({ recipient_id: user.id, status: 'pending' }, '-created_date', 20),
+    enabled: !!user?.id,
+  });
+
+  const { data: memberships = [] } = useQuery({
+    queryKey: ['profile-memberships', user?.id],
+    queryFn: () => base44.entities.GroupMember.filter({ user_id: user.id, status: 'active' }, '-created_date', 50),
     enabled: !!user?.id,
   });
 
   const saveBikeMutation = useMutation({
     mutationFn: ({ editing, form }) => {
       const data = coerceBike(form);
-      if (editing) return base44.entities.Bike.update(editing.id, data);
-      return base44.entities.Bike.create(data);
+      return editing ? base44.entities.Bike.update(editing.id, data) : base44.entities.Bike.create(data);
     },
-    onMutate: async ({ editing, form }) => {
-      await queryClient.cancelQueries({ queryKey: ['bikes'] });
-      const prev = queryClient.getQueryData(['bikes']);
-      const data = coerceBike(form);
-      queryClient.setQueryData(['bikes'], (old) => {
-        const list = old || [];
-        if (editing) {
-          return list.map((b) => {
-            if (b.id !== editing.id) return b;
-            const merged = { ...b };
-            Object.entries(data).forEach(([k, v]) => { if (v !== undefined) merged[k] = v; });
-            return merged;
-          });
-        }
-        return [...list, { ...data, id: 'temp-' + Date.now(), created_date: new Date().toISOString() }];
-      });
-      return { prev };
-    },
-    onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(['bikes'], ctx.prev); },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: ['bikes'] }); },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['bikes'] }),
   });
 
   const deleteBikeMutation = useMutation({
     mutationFn: (id) => base44.entities.Bike.delete(id),
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ['bikes'] });
-      const prev = queryClient.getQueryData(['bikes']);
-      queryClient.setQueryData(['bikes'], (old) => (old || []).filter((b) => b.id !== id));
-      return { prev };
-    },
-    onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(['bikes'], ctx.prev); },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: ['bikes'] }); },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['bikes'] }),
   });
 
-  const openAddBike = () => { setEditingBike(null); setBikeForm({ make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '', color: '', nickname: '', is_primary: bikes.length === 0 }); setBikeDialog(true); };
-  const openEditBike = (bike) => { setEditingBike(bike); setBikeForm({ ...bike, year: bike.year || '', engine_size_cc: bike.engine_size_cc || '', tank_capacity_l: bike.tank_capacity_l || '', fuel_consumption_l_per_100km: bike.fuel_consumption_l_per_100km || '' }); setBikeDialog(true); };
+  const stats = useMemo(() => {
+    const totalRides = user?.total_rides || rides.length;
+    const totalDistance = Math.round(user?.total_distance_km || rides.reduce((s, r) => s + (r.distance_km || 0), 0));
+    const fuelUsed = Math.round(refills.reduce((s, r) => s + (r.litres || 0), 0));
+    const maxSpeed = Math.max(0, ...rides.map((r) => r.max_speed_kmh || 0));
+    const badges = computeAchievements(totalRides, totalDistance, maxSpeed);
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthDistance = Math.round(rides.filter((r) => new Date(r.ride_date) >= monthStart).reduce((s, r) => s + (r.distance_km || 0), 0));
+    const avgRideLength = totalRides > 0 ? Math.round(totalDistance / totalRides) : 0;
+    const fuelEconomy = fuelProfiles[0]?.adaptive_l_per_100km || fuelProfiles[0]?.baseline_l_per_100km || bikes[0]?.fuel_consumption_l_per_100km || '—';
+    const rideTimeMin = rides.reduce((s, r) => s + (r.duration_minutes || 0), 0);
+    const rideTime = rideTimeMin >= 60 ? `${Math.floor(rideTimeMin / 60)}h ${rideTimeMin % 60}m` : `${rideTimeMin}m`;
+
+    const dayCounts = {};
+    rides.forEach((r) => { if (r.ride_date) { const d = DAYS[new Date(r.ride_date).getDay()]; dayCounts[d] = (dayCounts[d] || 0) + 1; } });
+    const favDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+
+    const sorted = [...rides].sort((a, b) => new Date(b.ride_date) - new Date(a.ride_date));
+    const lastRide = sorted[0];
+    const longestRide = [...rides].sort((a, b) => (b.distance_km || 0) - (a.distance_km || 0))[0];
+
+    const primaryBike = bikes.find((b) => b.is_primary) || bikes[0];
+    const serviceInterval = 5000;
+    const nextService = primaryBike ? Math.max(0, serviceInterval - (totalDistance % serviceInterval)) : null;
+
+    return {
+      totalRides, totalDistance, fuelUsed, achievementCount: badges.length, newestBadge: badges[badges.length - 1],
+      monthDistance, avgRideLength, fuelEconomy, rideTime, favDay,
+      lastRide: lastRide?.title || '—', longestRide: longestRide ? `${longestRide.title} (${Math.round(longestRide.distance_km)}km)` : '—',
+      primaryBike, nextService,
+      friendsOnline: friends.filter((f) => f.location_shared).length,
+      groupCount: memberships.length, pendingCount: pending.length,
+    };
+  }, [user, rides, refills, fuelProfiles, bikes, friends, pending, memberships]);
+
+  const isPremium = user?.subscription_tier === 'premium';
+
+  const openAddBike = () => {
+    setEditingBike(null);
+    setBikeForm({ make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '', color: '', nickname: '', is_primary: bikes.length === 0 });
+    setBikeDialog(true);
+  };
+
+  const openEditBike = (bike) => {
+    setEditingBike(bike);
+    setBikeForm({ ...bike, year: bike.year || '', engine_size_cc: bike.engine_size_cc || '', tank_capacity_l: bike.tank_capacity_l || '', fuel_consumption_l_per_100km: bike.fuel_consumption_l_per_100km || '' });
+    setBikeDialog(true);
+  };
 
   const handleSaveBike = async () => {
-    try {
-      await saveBikeMutation.mutateAsync({ editing: editingBike, form: bikeForm });
-      setBikeDialog(false);
-    } catch (e) { console.error(e); toast.error('Failed to save bike'); }
+    try { await saveBikeMutation.mutateAsync({ editing: editingBike, form: bikeForm }); setBikeDialog(false); }
+    catch (e) { console.error(e); toast.error('Failed to save bike'); }
   };
 
   const handleDeleteBike = async (id) => { try { await deleteBikeMutation.mutateAsync(id); } catch (e) { console.error(e); } };
 
-  const handleUpgrade = () => navigate('/premium');
-
   const copyCode = () => { navigator.clipboard.writeText(user.id); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
-  if (loading || bikesLoading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
+  if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!user) return <LoginPrompt />;
 
-  const isPremium = user.subscription_tier === 'premium';
+  const crashDetectionOn = localStorage.getItem('motogo_auto_ride_detection') !== 'false';
+  const emergencyContacts = user.emergency_contact_name ? 1 : 0;
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Profile</h1>
-        <button onClick={() => navigate('/settings')} className="glove-target flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-sm" aria-label="Settings">
-          <Settings size={22} className="text-foreground" />
-        </button>
-      </div>
-      <div className="mb-6 flex flex-col items-center text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-black text-primary">
-          {user.nickname?.[0]?.toUpperCase() || user.full_name?.[0]?.toUpperCase() || 'R'}
-        </div>
-        <h1 className="mt-3 text-xl font-bold">{user.nickname || user.full_name}</h1>
-        {user.motorcycle_club && <p className="text-sm text-muted-foreground">{user.motorcycle_club}</p>}
-        <div className="mt-2 flex items-center gap-2">
-          <Badge variant={isPremium ? 'default' : 'secondary'} className={isPremium ? 'bg-primary' : ''}>
-            {isPremium ? <><Crown size={12} className="mr-1" /> Premium</> : 'Free Rider'}
-          </Badge>
-          <Button variant="ghost" size="sm" onClick={copyCode} className="h-7 gap-1 text-xs">
-            {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Code'}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShareOpen(true)} className="h-7 gap-1 text-xs">
-            <Share2 size={12} /> Share
-          </Button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background pb-28" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="mx-auto max-w-2xl p-4 space-y-4">
+        <ProfileHeader
+          user={user}
+          isPremium={isPremium}
+          copied={copied}
+          onCopy={copyCode}
+          onShare={() => setShareOpen(true)}
+          onSettings={() => navigate('/settings')}
+        />
 
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-card p-4 text-center">
-          <Route size={20} className="mx-auto mb-1 text-primary" />
-          <div className="text-2xl font-black">{user.total_rides || 0}</div>
-          <div className="text-xs text-muted-foreground">Total Rides</div>
-        </div>
-        <div className="rounded-2xl bg-card p-4 text-center">
-          <TrendingUp size={20} className="mx-auto mb-1 text-primary" />
-          <div className="text-2xl font-black">{Math.round(user.total_distance_km || 0)}</div>
-          <div className="text-xs text-muted-foreground">Total KM</div>
-        </div>
-      </div>
+        <StatGrid
+          totalRides={stats.totalRides}
+          totalDistance={stats.totalDistance}
+          fuelUsed={stats.fuelUsed}
+          achievements={stats.achievementCount}
+        />
 
-      {!isPremium && (
-        <div className="mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 p-4">
-          <div className="flex items-center gap-2"><Crown size={20} className="text-primary" /><h3 className="font-bold">Upgrade to Premium</h3></div>
-          <p className="mt-1 text-sm text-muted-foreground">R79.99/month — Rider In Distress, 32-rider groups, friends network, emergency services.</p>
-          <Button className="mt-3 min-h-[48px] w-full" onClick={handleUpgrade}>Go Premium — R79.99/mo</Button>
-        </div>
-      )}
+        {!isPremium && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-4 shadow-sm"
+          >
+            <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-primary/20 blur-xl" />
+            <div className="relative flex items-center gap-2">
+              <Crown size={20} className="text-primary" />
+              <h3 className="font-bold">Upgrade to Premium</h3>
+            </div>
+            <p className="relative mt-1 text-sm text-muted-foreground">Rider In Distress, 32-rider groups, friends network, emergency services.</p>
+            <Button className="relative mt-3 min-h-[48px] w-full" onClick={() => navigate('/premium')}>Go Premium — R79.99/mo</Button>
+          </motion.div>
+        )}
 
-      <div className="mb-4">
-        <button onClick={() => navigate('/fuel-tracker')} className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-card p-4 text-left active:scale-[0.98]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Fuel size={24} className="text-primary" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold">Fuel Tracker</h3>
-            <p className="text-sm text-muted-foreground">Adaptive consumption & refill history</p>
-          </div>
-          <ChevronRight size={20} className="text-muted-foreground" />
-        </button>
-      </div>
+        <div className="space-y-2.5">
+          <MenuCard icon={Fuel} title="Fuel Tracker" subtitle="Adaptive fuel consumption and refill history" delay={0.35} onClick={() => navigate('/fuel-tracker')} />
 
-      <div className="mb-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-bold">My Bikes</h2>
-          <Button variant="ghost" size="sm" onClick={openAddBike}><Plus size={16} className="mr-1" /> Add</Button>
+          <MenuCard
+            icon={BikeIcon}
+            title="My Motorcycles"
+            subtitle="Manage your motorcycles and riding statistics"
+            details={stats.primaryBike ? `${stats.primaryBike.make} ${stats.primaryBike.model} · ${stats.fuelEconomy} L/100km · ${stats.totalDistance} km · Next service: ${stats.nextService} km` : 'No bikes added yet'}
+            delay={0.4}
+            onClick={openAddBike}
+          />
+
+          <MenuCard
+            icon={Route}
+            title="Ride History"
+            subtitle="View every ride you've completed"
+            details={`Last: ${stats.lastRide} · Longest: ${stats.longestRide}`}
+            delay={0.45}
+            onClick={() => navigate('/rides')}
+          />
+
+          <MenuCard
+            icon={Trophy}
+            title="Achievements"
+            subtitle="Badges, milestones and riding goals"
+            details={stats.newestBadge || 'No badges yet — start riding!'}
+            delay={0.5}
+            onClick={() => navigate('/rides')}
+          />
+
+          <MenuCard
+            icon={Users}
+            title="Friends & Community"
+            subtitle="Manage friends, groups and voice channels"
+            details={`${stats.friendsOnline} online · ${stats.groupCount} groups · ${stats.pendingCount} pending`}
+            delay={0.55}
+            onClick={() => navigate('/community')}
+          />
+
+          <MenuCard
+            icon={Shield}
+            title="Emergency & Safety"
+            subtitle="Crash Detection, SOS and Emergency Contacts"
+            details={`Crash Detection ${crashDetectionOn ? 'ON' : 'OFF'} · ${emergencyContacts} Emergency Contact${emergencyContacts === 1 ? '' : 's'}`}
+            delay={0.6}
+            onClick={() => navigate('/settings')}
+          />
+
+          <MenuCard
+            icon={Crown}
+            title="Subscription"
+            subtitle="Manage Premium membership"
+            details={isPremium ? `Premium · ${user.subscription_renewal_date || 'Active'}` : 'Free Rider · Tap to upgrade'}
+            delay={0.65}
+            onClick={() => navigate('/premium')}
+          />
+
+          <MenuCard
+            icon={SlidersHorizontal}
+            title="Preferences"
+            subtitle="Display, navigation and ride settings"
+            delay={0.7}
+            onClick={() => navigate('/settings')}
+          />
         </div>
-        {bikes.length === 0 ? (
-          <div className="rounded-2xl bg-card p-6 text-center">
-            <BikeIcon size={32} className="mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">No bikes added yet. Add your motorcycle to track fuel and stats.</p>
-            <Button className="mt-3 min-h-[48px]" onClick={openAddBike}><Plus size={18} className="mr-1" /> Add Bike</Button>
-          </div>
-        ) : (
-          <div className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:gap-2 landscape:space-y-0">
+
+        {bikes.length > 0 && (
+          <div className="space-y-2">
             {bikes.map((bike) => (
-              <div key={bike.id} className="rounded-2xl bg-card p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold">{bike.make} {bike.model}</h3>
-                      {bike.is_primary && <Badge className="bg-primary text-[10px]">Primary</Badge>}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{bike.year} · {bike.engine_size_cc || '?'}cc</p>
-                    {bike.tank_capacity_l && <p className="text-xs text-muted-foreground">{bike.tank_capacity_l}L tank · {bike.fuel_consumption_l_per_100km}L/100km</p>}
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEditBike(bike)}><Pencil size={14} /></Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => handleDeleteBike(bike.id)}><Trash2 size={14} /></Button>
-                  </div>
-                </div>
-              </div>
+              <BikeCard key={bike.id} bike={bike} onEdit={openEditBike} onDelete={handleDeleteBike} />
             ))}
           </div>
         )}
-      </div>
 
-      <div className="mb-4 space-y-2">
-        <h2 className="mb-2 font-bold">Emergency Contact</h2>
-        <div className="rounded-2xl bg-card p-4">
-          {user.emergency_contact_name ? (
-            <div className="space-y-1">
-              <p className="font-medium">{user.emergency_contact_name}</p>
-              {user.emergency_contact_phone && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Phone size={14} /> {user.emergency_contact_phone}</p>}
-              {user.medical_notes && <p className="text-xs text-muted-foreground">Medical: {user.medical_notes}</p>}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No emergency contact set. Add one during onboarding or edit your profile.</p>
-          )}
+        <RideSummaryCard
+          data={{
+            monthDistance: stats.monthDistance,
+            avgRideLength: stats.avgRideLength,
+            fuelEconomy: stats.fuelEconomy,
+            rideTime: stats.rideTime,
+            favDay: stats.favDay,
+            weatherPref: 'Clear skies',
+          }}
+          delay={0.75}
+        />
+
+        <div className="flex gap-3 pt-2">
+          <Button variant="secondary" className="min-h-[56px] flex-1 text-base" onClick={openAddBike}>
+            <Plus size={20} className="mr-2" /> Add Motorcycle
+          </Button>
+          <Button
+            className="min-h-[56px] flex-1 bg-gradient-to-r from-primary to-amber-600 text-base shadow-[0_4px_20px_rgba(255,111,0,0.35)]"
+            onClick={() => navigate('/')}
+          >
+            <Play size={20} className="mr-2" fill="white" /> Start Ride
+          </Button>
         </div>
       </div>
 
@@ -251,7 +345,6 @@ export default function Profile() {
       </Dialog>
 
       <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} title="My MotoGo Code" code={user.id} qrData={`motogo://friend?code=${user.id}`} description="Share to add as friend" />
-
     </div>
   );
 }
