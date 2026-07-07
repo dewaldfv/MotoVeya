@@ -24,7 +24,7 @@ export default function BottomNav() {
         boxShadow: '0 -2px 12px rgba(0, 0, 0, 0.08)'
       }}>
       
-      <div className="mx-auto flex max-w-2xl items-center justify-around gap-1 px-2 landscape:py-1 my-1 py-2">
+      <div className="mx-auto flex max-w-2xl items-center justify-around gap-1 px-2 landscape:py-1 my-1">
         {navItems.map(({ key, icon: Icon, label }) =>
         <button
           key={key}
