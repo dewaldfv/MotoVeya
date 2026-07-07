@@ -1,8 +1,14 @@
-import { Siren, AlertTriangle, Square } from 'lucide-react';
+import { Siren, AlertTriangle, Square, Volume2, VolumeX } from 'lucide-react';
 
-export default function NavActionButtons({ onDistress, onCrash, onEnd, distressActive, ending, disabled }) {
+export default function NavActionButtons({ onDistress, onCrash, onEnd, distressActive, ending, disabled, voiceEnabled = true, onToggleVoice, showVoiceToggle = false }) {
   return (
     <div className="flex flex-col gap-2.5">
+      {showVoiceToggle && (
+        <button onClick={onToggleVoice} aria-label={voiceEnabled ? 'Mute voice navigation' : 'Enable voice navigation'}
+          className={`flex h-11 w-11 items-center justify-center rounded-full shadow-lg transition-transform active:scale-90 ${voiceEnabled ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground'}`}>
+          {voiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+        </button>
+      )}
       {distressActive ? (
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-destructive shadow-lg animate-pulse">
           <Siren size={18} className="text-white" />

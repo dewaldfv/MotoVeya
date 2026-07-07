@@ -7,6 +7,7 @@ import { MAP_LAYERS, getLayerBackground } from '@/lib/mapLayers';
 import RiderMarker from '@/components/RiderMarker';
 import ServiceMarkers from '@/components/ServiceMarkers';
 import FriendMarkers from '@/components/FriendMarkers';
+import GroupRiderMarkers from '@/components/GroupRiderMarkers';
 
 const CATEGORY_CONFIG = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -204,6 +205,7 @@ export default function MapView({
   friends = [],
   showFriends = false,
   onFriendClick,
+  groupRiders = [],
   userPos = null,
   className = '',
   navActive = false,
@@ -290,6 +292,9 @@ export default function MapView({
         )}
         {showFriends && (
           <FriendMarkers friends={friends} onSelect={onFriendClick} />
+        )}
+        {groupRiders.length > 0 && (
+          <GroupRiderMarkers participants={groupRiders} />
         )}
       </MapContainer>
     </div>

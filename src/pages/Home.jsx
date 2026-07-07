@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, Navigation, Phone, MapPin, Calendar, ExternalLink, BadgeCheck, Menu, LocateFixed, Layers, X, Compass } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -98,6 +98,22 @@ export default function Home() {
     refetchInterval: 10000,
   });
 
+  const { data: activeGroupRide } = useQuery({
+    queryKey: ['active-group-ride'],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('get-active-group-ride-secure', {});
+      return res.data;
+    },
+    enabled: !!me?.id,
+    refetchInterval: 10000,
+  });
+
+  const groupRiders = useMemo(() => {
+    if (!activeGroupRide?.active) return [];
+    return (activeGroupRide.participants || [])
+      .filter((p) => p.user_id !== me?.id && p.lat != null && p.lng != null);
+  }, [activeGroupRide, me?.id]);
+
   const session = useRideSession({
     user: me,
     bike: bikeData,
@@ -136,6 +152,29 @@ export default function Home() {
     const unsubCrash = base44.entities.CrashAlert.subscribe(invalidateFriends);
     return () => { unsubUser(); unsubDistress(); unsubCrash(); };
   }, [me?.id, queryClient]);
+
+  // Real-time group participant marker updates
+  useEffect(() => {
+    if (!activeGroupRide?.active) return;
+    const rideId = activeGroupRide.ride.id;
+    const unsub = base44.entities.RideParticipant.subscribe((event) => {
+      const p = event.data;
+      if (!p || p.group_ride_id !== rideId) return;
+      queryClient.setQueryData(['active-group-ride'], (old) => {
+        if (!old?.active) return old;
+        const parts = old.participants || [];
+        if (event.type === 'delete') {
+          return { ...old, participants: parts.filter((x) => x.user_id !== p.user_id) };
+        }
+        const idx = parts.findIndex((x) => x.user_id === p.user_id);
+        let newParts;
+        if (idx === -1) newParts = [...parts, p];
+        else { newParts = [...parts]; newParts[idx] = { ...newParts[idx], ...p }; }
+        return { ...old, participants: newParts };
+      });
+    });
+    return unsub;
+  }, [activeGroupRide?.active, activeGroupRide?.ride?.id, queryClient]);
 
   useEffect(() => {
     (async () => {
@@ -247,6 +286,7 @@ export default function Home() {
         friends={friendsToShow}
         showFriends={overlays.friends}
         onFriendClick={setSelectedFriend}
+        groupRiders={groupRiders}
         userPos={session.userPos}
         riders={session.userPos ? [{ id: 'me', lat: session.userPos[0], lng: session.userPos[1], heading: session.heading, accuracy: session.accuracy }] : []}
         navActive={isActive}

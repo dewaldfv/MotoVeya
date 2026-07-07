@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Navigation, X, Fuel, Loader2 } from 'lucide-react';
 import NavigationCard from '@/components/NavigationCard';
+import { useVoiceNavigation } from '@/hooks/useVoiceNavigation';
 import Speedometer from '@/components/Speedometer';
 import NavActionButtons from '@/components/NavActionButtons';
 import SpeedLimitBadge from '@/components/SpeedLimitBadge';
@@ -26,6 +28,21 @@ export default function NavigationOverlay({
     handleCancelCrash, handleResolveEmergency,
     handleAddStop, handleDismissService, setAutoStopCountdown, clearDestination,
   } = session;
+
+  const [voiceEnabled, setVoiceEnabled] = useState(
+    () => localStorage.getItem('motogo_voice_nav') !== 'false'
+  );
+  const toggleVoice = () => {
+    const next = !voiceEnabled;
+    setVoiceEnabled(next);
+    localStorage.setItem('motogo_voice_nav', next ? 'true' : 'false');
+    if (!next) { try { window.speechSynthesis?.cancel(); } catch (e) {} }
+  };
+  useVoiceNavigation({
+    navProgress,
+    destinationName: destination?.name,
+    enabled: voiceEnabled,
+  });
 
   // Idle with no destination — Home's own controls handle everything
   if (!isActive && !destination) return null;
@@ -125,6 +142,9 @@ export default function NavigationOverlay({
           distressActive={distressActive}
           ending={ending}
           disabled={!user || user.subscription_tier !== 'premium'}
+          voiceEnabled={voiceEnabled}
+          onToggleVoice={toggleVoice}
+          showVoiceToggle={!!navProgress?.nextStep}
         />
       </div>
 
