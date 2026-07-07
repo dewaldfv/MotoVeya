@@ -309,12 +309,12 @@ export default function Profile() {
           <Button variant="secondary" className="min-h-[56px] flex-1 text-base" onClick={openAddBike}>
             <Plus size={20} className="mr-2" /> Add Motorcycle
           </Button>
-          <Button
-            className="min-h-[56px] flex-1 bg-gradient-to-r from-primary to-amber-600 text-base shadow-[0_4px_20px_rgba(255,111,0,0.35)] hidden"
-            onClick={() => navigate('/')}>
-            
-            <Play size={20} className="mr-2" fill="white" /> Start Ride
-          </Button>
+          
+
+
+
+
+          
         </div>
       </div>
 
