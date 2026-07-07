@@ -21,7 +21,7 @@ const CATEGORY_CONFIG = {
   accommodation: { color: '#8b5cf6', emoji: '🏨' },
   atm: { color: '#facc15', emoji: '💳' },
   event: { color: '#FF6F00', emoji: '🏁' },
-  distress: { color: '#ef4444', emoji: '🆘' },
+  distress: { color: '#ef4444', emoji: '🆘' }
 };
 
 function createIcon(category) {
@@ -31,7 +31,7 @@ function createIcon(category) {
     className: 'custom-marker',
     iconSize: [36, 36],
     iconAnchor: [18, 34],
-    popupAnchor: [0, -34],
+    popupAnchor: [0, -34]
   });
 }
 
@@ -44,7 +44,7 @@ function getEventIcon(ev) {
       className: 'custom-marker',
       iconSize: [44, 44],
       iconAnchor: [22, 22],
-      popupAnchor: [0, -22],
+      popupAnchor: [0, -22]
     });
   }
   return eventIconCache[url];
@@ -72,9 +72,9 @@ function MapTileLayers({ layer }) {
   }, [map, effective]);
 
   const config = MAP_LAYERS.find((l) => l.key === effective) || MAP_LAYERS[0];
-  return config.tiles.map((t, i) => (
-    <TileLayer key={`${effective}-${i}`} url={t.url} attribution={t.attribution} />
-  ));
+  return config.tiles.map((t, i) =>
+  <TileLayer key={`${effective}-${i}`} url={t.url} attribution={t.attribution} />
+  );
 }
 
 function MapResizer() {
@@ -147,7 +147,7 @@ function NavCamera({ userPos, heading, speed, nextManeuverDistance, recenterToke
     if (!userPos) return;
     try {
       if (headingUp && heading != null && !isNaN(heading)) {
-        const headingRad = (heading * Math.PI) / 180;
+        const headingRad = heading * Math.PI / 180;
         const size = map.getSize();
         if (!size.x || !size.y) throw new Error('no size');
         const offsetPx = size.y * 0.30;
@@ -179,13 +179,13 @@ function destinationIcon(rot = null) {
     html: `<div style="width:28px;height:28px;background:#4285F4;border-radius:50% 50% 50% 0;transform:rotate(${angle}deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
     className: 'custom-marker',
     iconSize: [28, 28],
-    iconAnchor: [14, 26],
+    iconAnchor: [14, 26]
   });
 }
 
 const isValid = (lat, lng) =>
-  lat != null && lng != null && !isNaN(lat) && !isNaN(lng) &&
-  Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+lat != null && lng != null && !isNaN(lat) && !isNaN(lng) &&
+Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 
 export default function MapView({
   center = [-26.2041, 28.0473],
@@ -215,7 +215,7 @@ export default function MapView({
   nextManeuverDistance = null,
   completedRoute = null,
   remainingRoute = null,
-  destination = null,
+  destination = null
 }) {
   const validPois = pois.filter((p) => isValid(p.lat, p.lng));
   const validEvents = events.filter((e) => isValid(e.lat, e.lng));
@@ -227,76 +227,76 @@ export default function MapView({
 
   return (
     <div
-      className={`absolute inset-0 z-0 ${rotating ? 'nav-map-heading-up' : ''} ${className}`}
-      style={{ background: bgColor, '--nav-rot': navRot }}
-    >
+      className={`absolute inset-0 z-0 opacity-100 ${rotating ? 'nav-map-heading-up' : ''} ${className}`}
+      style={{ background: bgColor, '--nav-rot': navRot }}>
+      
       <MapContainer
         center={center}
         zoom={zoom}
         className="absolute inset-0 h-full w-full"
         zoomControl={false}
-        scrollWheelZoom
-      >
+        scrollWheelZoom>
+        
         <MapTileLayers layer={layer} />
         <MapResizer />
-        {navActive ? (
-          <NavCamera
-            userPos={userPos || center}
-            heading={heading}
-            speed={speed}
-            nextManeuverDistance={nextManeuverDistance}
-            recenterToken={recenterSignal}
-            headingUp={headingUp}
-          />
-        ) : (
-          <>
+        {navActive ?
+        <NavCamera
+          userPos={userPos || center}
+          heading={heading}
+          speed={speed}
+          nextManeuverDistance={nextManeuverDistance}
+          recenterToken={recenterSignal}
+          headingUp={headingUp} /> :
+
+
+        <>
             <Recenter center={center} zoom={zoom} signal={recenterSignal} />
             <FitRoute route={route} signal={fitRouteSignal} />
           </>
-        )}
+        }
 
-        {navActive && completedRoute && completedRoute.length > 1 && (
-          <>
+        {navActive && completedRoute && completedRoute.length > 1 &&
+        <>
             <Polyline positions={completedRoute} pathOptions={{ color: '#ffffff', weight: 11, opacity: 0.9, lineCap: 'round' }} />
             <Polyline positions={completedRoute} pathOptions={{ color: '#9aa0a6', weight: 7, opacity: 0.7, lineCap: 'round' }} />
           </>
-        )}
-        {navActive && remainingRoute && remainingRoute.length > 1 && (
-          <>
+        }
+        {navActive && remainingRoute && remainingRoute.length > 1 &&
+        <>
             <Polyline positions={remainingRoute} pathOptions={{ color: '#ffffff', weight: 11, opacity: 1, lineCap: 'round' }} />
             <Polyline positions={remainingRoute} pathOptions={{ color: '#2D7FF9', weight: 7, opacity: 1, lineCap: 'round' }} />
           </>
-        )}
-        {!navActive && route && route.length > 0 && (
-          <Polyline positions={route} pathOptions={{ color: '#FF6F00', weight: 5, opacity: 0.85 }} />
-        )}
+        }
+        {!navActive && route && route.length > 0 &&
+        <Polyline positions={route} pathOptions={{ color: '#FF6F00', weight: 5, opacity: 0.85 }} />
+        }
 
-        {destination && (
-          <Marker position={[destination.lat, destination.lng]} icon={destinationIcon(rotating ? heading : null)} />
-        )}
+        {destination &&
+        <Marker position={[destination.lat, destination.lng]} icon={destinationIcon(rotating ? heading : null)} />
+        }
 
-        {validPois.map((poi) => (
-          <Marker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} icon={createIcon(poi.category)} eventHandlers={{ click: () => onMarkerClick?.(poi) }} />
-        ))}
-        {validEvents.map((ev) => (
-          <Marker key={`event-${ev.id}`} position={[ev.lat, ev.lng]} icon={getEventIcon(ev)} eventHandlers={{ click: () => onMarkerClick?.(ev) }} />
-        ))}
-        {validDistress.map((d) => (
-          <Marker key={`distress-${d.id}`} position={[d.lat, d.lng]} icon={createIcon('distress')} />
-        ))}
-        {validRiders.map((r) => (
-          <RiderMarker key={`rider-${r.id}`} position={[r.lat, r.lng]} heading={r.heading} accuracy={r.accuracy} zIndex={1200} />
-        ))}
-        {showServices && (
-          <ServiceMarkers services={services} userPos={userPos} onMarkerClick={onServiceClick} />
+        {validPois.map((poi) =>
+        <Marker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} icon={createIcon(poi.category)} eventHandlers={{ click: () => onMarkerClick?.(poi) }} />
         )}
-        {showFriends && (
-          <FriendMarkers friends={friends} onSelect={onFriendClick} />
+        {validEvents.map((ev) =>
+        <Marker key={`event-${ev.id}`} position={[ev.lat, ev.lng]} icon={getEventIcon(ev)} eventHandlers={{ click: () => onMarkerClick?.(ev) }} />
         )}
-        {groupRiders.length > 0 && (
-          <GroupRiderMarkers participants={groupRiders} />
+        {validDistress.map((d) =>
+        <Marker key={`distress-${d.id}`} position={[d.lat, d.lng]} icon={createIcon('distress')} />
         )}
+        {validRiders.map((r) =>
+        <RiderMarker key={`rider-${r.id}`} position={[r.lat, r.lng]} heading={r.heading} accuracy={r.accuracy} zIndex={1200} />
+        )}
+        {showServices &&
+        <ServiceMarkers services={services} userPos={userPos} onMarkerClick={onServiceClick} />
+        }
+        {showFriends &&
+        <FriendMarkers friends={friends} onSelect={onFriendClick} />
+        }
+        {groupRiders.length > 0 &&
+        <GroupRiderMarkers participants={groupRiders} />
+        }
       </MapContainer>
-    </div>
-  );
+    </div>);
+
 }
