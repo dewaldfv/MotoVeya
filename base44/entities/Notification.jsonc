@@ -12,7 +12,8 @@
         "distress_alert",
         "friend_request",
         "nearby_event",
-        "group_update"
+        "group_update",
+        "message"
       ]
     },
     "title": {
@@ -32,6 +33,9 @@
       "type": "string"
     },
     "recipient_id": {
+      "type": "string"
+    },
+    "conversation_id": {
       "type": "string"
     }
   },

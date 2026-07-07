@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, UserPlus, Ticket, LogOut, Siren, QrCode as QrIcon, Share2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -16,6 +16,7 @@ import QrScanner from '@/components/QrScanner';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
 import FriendsDashboard from '@/components/community/FriendsDashboard';
 import GroupRidesList from '@/components/grouprides/GroupRidesList';
+import MessagesTab from '@/components/messaging/MessagesTab';
 import { toast } from 'sonner';
 
 function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
@@ -23,6 +24,9 @@ function generateCode() { return Math.random().toString(36).substring(2, 8).toUp
 export default function Community() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => location.state?.tab || 'groups');
+  const [messageConversationId, setMessageConversationId] = useState(() => location.state?.conversationId || null);
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
@@ -32,6 +36,11 @@ export default function Community() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerMode, setScannerMode] = useState('auto');
   const [share, setShare] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.tab) setActiveTab(location.state.tab);
+    if (location.state?.conversationId) setMessageConversationId(location.state.conversationId);
+  }, [location.state]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['community'],
@@ -197,10 +206,11 @@ export default function Community() {
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
         <h1 className="mb-4 text-2xl font-bold">Community</h1>
-        <Tabs defaultValue="groups">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4 w-full">
             <TabsTrigger value="groups" className="flex-1">Groups</TabsTrigger>
             <TabsTrigger value="friends" className="flex-1">Friends</TabsTrigger>
+            <TabsTrigger value="messages" className="flex-1">Messages</TabsTrigger>
             <TabsTrigger value="services" className="flex-1">Services</TabsTrigger>
           </TabsList>
 
@@ -289,6 +299,10 @@ export default function Community() {
               </div>
             )}
             {isPremium && <FriendsDashboard user={user} friends={friends} />}
+          </TabsContent>
+
+          <TabsContent value="messages">
+            <MessagesTab user={user} initialConversationId={messageConversationId} />
           </TabsContent>
 
           <TabsContent value="services">

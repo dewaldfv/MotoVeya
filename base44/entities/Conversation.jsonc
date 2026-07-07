@@ -1,0 +1,38 @@
+{
+  "name": "Conversation",
+  "type": "object",
+  "properties": {
+    "conversation_key": {
+      "type": "string"
+    },
+    "participant_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "participant_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "last_message_preview": {
+      "type": "string"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_sender_id": {
+      "type": "string"
+    },
+    "group_ride_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "conversation_key",
+    "participant_ids"
+  ]
+}
