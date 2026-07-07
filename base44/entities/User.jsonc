@@ -82,6 +82,10 @@
     },
     "battery_level": {
       "type": "number"
+    },
+    "auto_join_voice": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Crown, Shield, ShieldOff, Megaphone, Settings2, Loader2 } from 'lucide-react';
+import { ChevronLeft, Crown, Shield, ShieldOff, Megaphone, Settings2, Loader2, Mic } from 'lucide-react';
+import { useVoiceChannelContext } from '@/components/voice/VoiceChannelProvider';
+import { getOrCreateVoiceChannelForRide } from '@/lib/voiceChannel';
 import { base44 } from '@/api/base44Client';
 import RideMapView from '@/components/grouprides/RideMapView';
 import RiderStatusCard from '@/components/grouprides/RiderStatusCard';
@@ -31,6 +33,8 @@ export default function ActiveGroupRide() {
   const [accessDenied, setAccessDenied] = useState(null);
   const [leaderOpen, setLeaderOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const voice = useVoiceChannelContext();
+  const [voiceChannel, setVoiceChannel] = useState(null);
 
   const watchRef = useRef(null);
   const lastUploadRef = useRef(0);
@@ -80,6 +84,16 @@ export default function ActiveGroupRide() {
   const isLeader = ride?.leader_id === user?.id;
   const rideStatus = RIDE_STATUS[ride?.status] || RIDE_STATUS.planning;
   const selfParticipant = participants.find((p) => p.user_id === user?.id);
+
+  useEffect(() => {
+    if (!ride || !user) return;
+    getOrCreateVoiceChannelForRide(ride, user).then(setVoiceChannel).catch(() => {});
+  }, [ride, user]);
+
+  const handleJoinVoice = async () => {
+    if (!voiceChannel) return;
+    voice.joinChannel(voiceChannel.id, voiceChannel.name, isLeader);
+  };
 
   // GPS tracking + location upload
   useEffect(() => {
@@ -322,6 +336,14 @@ export default function ActiveGroupRide() {
               </span>
             </div>
           </div>
+          <button
+            onClick={voice.joined ? voice.leaveChannel : handleJoinVoice}
+            disabled={voice.connecting || !voiceChannel}
+            className={`glove-target flex h-10 items-center gap-1.5 rounded-full px-3 shadow-lg backdrop-blur-lg ${voice.joined ? 'bg-emerald-500 text-white' : 'bg-card/95 text-foreground'}`}
+          >
+            {voice.connecting ? <Loader2 size={16} className="animate-spin" /> : <Mic size={16} />}
+            <span className="text-xs font-bold">{voice.joined ? 'On' : 'Voice'}</span>
+          </button>
           {isLeader && ride.status !== 'finished' && (
             <button onClick={() => setLeaderOpen(true)} className="glove-target flex h-10 w-10 items-center justify-center rounded-full bg-primary shadow-lg text-primary-foreground"><Settings2 size={20} /></button>
           )}

@@ -5,6 +5,7 @@ import BottomNav from './BottomNav';
 import { useAutoRideStart } from '@/hooks/useAutoRideStart';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import RideResumeBanner from './RideResumeBanner';
+import VoiceChannelProvider from './voice/VoiceChannelProvider';
 import { getActiveRide } from '@/lib/rideCache';
 
 const pageVariants = {
@@ -37,6 +38,7 @@ export default function AppLayout() {
   }, []);
 
   return (
+    <VoiceChannelProvider>
     <div className="relative min-h-screen bg-background">
       {hasActiveRide && <RideResumeBanner />}
       <AnimatePresence mode="wait" initial={false}>
@@ -53,5 +55,6 @@ export default function AppLayout() {
       </AnimatePresence>
       <BottomNav />
     </div>
+    </VoiceChannelProvider>
   );
 }

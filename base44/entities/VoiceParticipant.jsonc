@@ -1,0 +1,54 @@
+{
+  "name": "VoiceParticipant",
+  "type": "object",
+  "properties": {
+    "channel_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "is_muted": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_speaking": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_leader": {
+      "type": "boolean",
+      "default": false
+    },
+    "connection_quality": {
+      "type": "string",
+      "enum": [
+        "good",
+        "fair",
+        "poor"
+      ],
+      "default": "good"
+    },
+    "joined_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "signals": {
+      "type": "string"
+    },
+    "signal_seq": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "channel_id",
+    "user_id"
+  ]
+}

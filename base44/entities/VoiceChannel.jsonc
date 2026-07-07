@@ -1,0 +1,50 @@
+{
+  "name": "VoiceChannel",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "group_ride",
+        "friends",
+        "club",
+        "event"
+      ],
+      "default": "group_ride"
+    },
+    "group_ride_id": {
+      "type": "string"
+    },
+    "group_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "ended"
+      ],
+      "default": "active"
+    },
+    "is_locked": {
+      "type": "boolean",
+      "default": false
+    },
+    "leader_id": {
+      "type": "string"
+    },
+    "leader_name": {
+      "type": "string"
+    },
+    "max_participants": {
+      "type": "number",
+      "default": 12
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

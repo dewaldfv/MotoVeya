@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, User, KeyRound, LogOut, Trash2, Shield, Eye, FileText, ScrollText, Check, Bike, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, User, KeyRound, LogOut, Trash2, Shield, Eye, FileText, ScrollText, Check, Bike, MapPin, Mic } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useTheme } from '@/hooks/useTheme';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -40,12 +40,17 @@ export default function Settings() {
   const [autoRideEnabled, setAutoRideEnabled] = useState(localStorage.getItem('motogo_auto_ride_detection') !== 'false');
   const [bgTrackingEnabled, setBgTrackingEnabled] = useState(isBackgroundTrackingEnabled());
   const [showBgExplainer, setShowBgExplainer] = useState(false);
+  const [autoJoinVoice, setAutoJoinVoice] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const authed = await base44.auth.isAuthenticated();
-        if (authed) setUser(await base44.auth.me());
+        if (authed) {
+          const me = await base44.auth.me();
+          setUser(me);
+          setAutoJoinVoice(me.auto_join_voice || false);
+        }
       } catch (e) { console.error(e); }
     })();
   }, []);
@@ -73,6 +78,17 @@ export default function Settings() {
   ];
 
   const goLegal = (doc) => navigate(`/legal/${doc}`);
+
+  const toggleAutoJoinVoice = async (checked) => {
+    setAutoJoinVoice(checked);
+    try {
+      await base44.auth.updateMe({ auto_join_voice: checked });
+      toast.success(`Auto-Join Voice ${checked ? 'enabled' : 'disabled'}`);
+    } catch (e) {
+      setAutoJoinVoice(!checked);
+      toast.error('Could not update setting');
+    }
+  };
 
   const toggleAutoRide = () => {
     const newValue = !autoRideEnabled;
@@ -133,7 +149,15 @@ export default function Settings() {
         </Section>
 
         <Section title="🏍️ Riding">
-          <Row icon={Bike} label="Auto Ride Detection" value={autoRideEnabled ? 'On' : 'Off'} onClick={toggleAutoRide} last />
+          <Row icon={Bike} label="Auto Ride Detection" value={autoRideEnabled ? 'On' : 'Off'} onClick={toggleAutoRide} />
+          <div className="flex w-full items-center gap-3 px-4 py-3.5">
+            <Mic size={20} className="text-primary" />
+            <div className="flex-1">
+              <span className="text-sm font-medium">Auto-Join Group Voice</span>
+              <p className="text-[11px] text-muted-foreground">Connect automatically when a group ride starts</p>
+            </div>
+            <Switch checked={autoJoinVoice} onCheckedChange={toggleAutoJoinVoice} />
+          </div>
           <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
             Automatically starts a ride when you begin moving above 15 km/h, and prompts you to end the ride after 5 minutes of being stationary.
           </p>
