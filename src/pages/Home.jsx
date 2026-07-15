@@ -305,7 +305,7 @@ export default function Home() {
       <>
           <button
           onClick={() => setSearchOpen(true)}
-          className="glove-target absolute hud-left hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg"
+          className="glove-target absolute hud-left hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[#030c30]"
           aria-label="Search">
           
             <Search size={22} className="text-[hsl(var(--primary))]" />
