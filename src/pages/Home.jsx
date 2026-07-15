@@ -21,7 +21,7 @@ const SA_CENTER = [-26.2041, 28.0473];
 const REMOTE_CATS = {
   accommodation: { query: 'hotel', category: 'accommodation' },
   hospital: { query: 'hospital', category: 'emergency' },
-  atm: { query: 'atm', category: 'atm' },
+  atm: { query: 'atm', category: 'atm' }
 };
 
 const formatDate = (d) => new Date(d).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -51,7 +51,7 @@ export default function Home() {
 
   const { data: me } = useQuery({
     queryKey: ['me'],
-    queryFn: async () => (await base44.auth.isAuthenticated() ? base44.auth.me() : null),
+    queryFn: async () => (await base44.auth.isAuthenticated()) ? base44.auth.me() : null
   });
 
   const { data: bikeData } = useQuery({
@@ -59,10 +59,10 @@ export default function Home() {
     queryFn: async () => {
       const bikes = await base44.entities.Bike.filter({ is_primary: true }, '-created_date', 1);
       let bike = bikes[0];
-      if (!bike) { const all = await base44.entities.Bike.list('-created_date', 1); bike = all[0]; }
+      if (!bike) {const all = await base44.entities.Bike.list('-created_date', 1);bike = all[0];}
       return bike || null;
     },
-    enabled: !!me?.id,
+    enabled: !!me?.id
   });
 
   const { data: fuelProfile } = useQuery({
@@ -72,30 +72,30 @@ export default function Home() {
       const profiles = await base44.entities.FuelProfile.filter({ bike_id: bikeData.id }, '-last_calculated', 1);
       return profiles[0] || null;
     },
-    enabled: !!bikeData?.id,
+    enabled: !!bikeData?.id
   });
 
   const { data: services = [] } = useQuery({
     queryKey: ['services'],
-    queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || [],
+    queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || []
   });
 
   const { data: friends = [] } = useQuery({
     queryKey: ['map-friends'],
     queryFn: async () => {
       const res = await base44.functions.invoke('get-friends-secure', {});
-      return (res.data?.friends || [])
-        .filter((f) => f.lat != null && f.lng != null)
-        .map((f) => ({
-          id: f.friend_id, user_id: f.user_id, name: f.name,
-          lat: f.lat, lng: f.lng,
-          speed_kmh: f.speed_kmh, heading: f.heading, battery_level: f.battery_level,
-          last_updated: f.last_updated, is_distress: f.distress, phone: f.phone,
-          avatar_url: f.avatar_url, is_favorite: f.is_favorite,
-        }));
+      return (res.data?.friends || []).
+      filter((f) => f.lat != null && f.lng != null).
+      map((f) => ({
+        id: f.friend_id, user_id: f.user_id, name: f.name,
+        lat: f.lat, lng: f.lng,
+        speed_kmh: f.speed_kmh, heading: f.heading, battery_level: f.battery_level,
+        last_updated: f.last_updated, is_distress: f.distress, phone: f.phone,
+        avatar_url: f.avatar_url, is_favorite: f.is_favorite
+      }));
     },
     enabled: !!me?.id,
-    refetchInterval: 10000,
+    refetchInterval: 10000
   });
 
   const { data: activeGroupRide } = useQuery({
@@ -105,13 +105,13 @@ export default function Home() {
       return res.data;
     },
     enabled: !!me?.id,
-    refetchInterval: 10000,
+    refetchInterval: 10000
   });
 
   const groupRiders = useMemo(() => {
     if (!activeGroupRide?.active) return [];
-    return (activeGroupRide.participants || [])
-      .filter((p) => p.user_id !== me?.id && p.lat != null && p.lng != null);
+    return (activeGroupRide.participants || []).
+    filter((p) => p.user_id !== me?.id && p.lat != null && p.lng != null);
   }, [activeGroupRide, me?.id]);
 
   const session = useRideSession({
@@ -120,15 +120,15 @@ export default function Home() {
     fuelProfile,
     services,
     autoDetectEnabled: localStorage.getItem('motogo_auto_ride_detection') !== 'false',
-    notifyFriends,
+    notifyFriends
   });
 
-  useEffect(() => { setRideActive(session.isActive); }, [session.isActive]);
-  useEffect(() => { if (session.userPos) userPosRef.current = session.userPos; }, [session.userPos]);
+  useEffect(() => {setRideActive(session.isActive);}, [session.isActive]);
+  useEffect(() => {if (session.userPos) userPosRef.current = session.userPos;}, [session.userPos]);
 
   // Real-time friend marker updates
   const friendIdsRef = useRef(new Set());
-  useEffect(() => { friendIdsRef.current = new Set(friends.map((f) => f.user_id)); }, [friends]);
+  useEffect(() => {friendIdsRef.current = new Set(friends.map((f) => f.user_id));}, [friends]);
   useEffect(() => {
     if (!me?.id) return;
     const unsubUser = base44.entities.User.subscribe((event) => {
@@ -143,14 +143,14 @@ export default function Home() {
           speed_kmh: 'last_speed_kmh' in d ? d.last_speed_kmh : f.speed_kmh,
           heading: 'last_heading' in d ? d.last_heading : f.heading,
           battery_level: 'battery_level' in d ? d.battery_level : f.battery_level,
-          last_updated: 'last_location_updated' in d ? d.last_location_updated : f.last_updated,
+          last_updated: 'last_location_updated' in d ? d.last_location_updated : f.last_updated
         };
       }));
     });
     const invalidateFriends = () => queryClient.invalidateQueries({ queryKey: ['map-friends'] });
     const unsubDistress = base44.entities.DistressAlert.subscribe(invalidateFriends);
     const unsubCrash = base44.entities.CrashAlert.subscribe(invalidateFriends);
-    return () => { unsubUser(); unsubDistress(); unsubCrash(); };
+    return () => {unsubUser();unsubDistress();unsubCrash();};
   }, [me?.id, queryClient]);
 
   // Real-time group participant marker updates
@@ -168,8 +168,8 @@ export default function Home() {
         }
         const idx = parts.findIndex((x) => x.user_id === p.user_id);
         let newParts;
-        if (idx === -1) newParts = [...parts, p];
-        else { newParts = [...parts]; newParts[idx] = { ...newParts[idx], ...p }; }
+        if (idx === -1) newParts = [...parts, p];else
+        {newParts = [...parts];newParts[idx] = { ...newParts[idx], ...p };}
         return { ...old, participants: newParts };
       });
     });
@@ -180,9 +180,9 @@ export default function Home() {
     (async () => {
       try {
         const [poiData, eventData] = await Promise.all([
-          base44.entities.POI.list('-created_date', 100),
-          base44.entities.Event.filter({ status: 'approved' }, '-event_date', 50),
-        ]);
+        base44.entities.POI.list('-created_date', 100),
+        base44.entities.Event.filter({ status: 'approved' }, '-event_date', 50)]
+        );
         setPois(poiData || []);
         setEvents(eventData || []);
       } catch (e) {
@@ -200,25 +200,25 @@ export default function Home() {
       const [lat, lng] = center;
       const viewbox = `${lng - 0.4},${lat + 0.4},${lng + 0.4},${lat - 0.4}`;
       setFetchingCat(true);
-      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=30&countrycodes=za&bounded=1&viewbox=${viewbox}`)
-        .then((r) => r.json())
-        .then((data) => setRemotePois(data.map((d) => ({
-          id: `remote-${d.place_id}`,
-          name: d.display_name.split(',')[0],
-          address: d.display_name,
-          lat: parseFloat(d.lat),
-          lng: parseFloat(d.lon),
-          category,
-          source: 'remote',
-        }))))
-        .catch(() => setRemotePois([]))
-        .finally(() => setFetchingCat(false));
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=30&countrycodes=za&bounded=1&viewbox=${viewbox}`).
+      then((r) => r.json()).
+      then((data) => setRemotePois(data.map((d) => ({
+        id: `remote-${d.place_id}`,
+        name: d.display_name.split(',')[0],
+        address: d.display_name,
+        lat: parseFloat(d.lat),
+        lng: parseFloat(d.lon),
+        category,
+        source: 'remote'
+      })))).
+      catch(() => setRemotePois([])).
+      finally(() => setFetchingCat(false));
     } else if (activeCat === 'distress') {
       setFetchingCat(true);
-      base44.entities.DistressAlert.filter({ status: 'active' }, '-created_date', 50)
-        .then(setDistressAlerts)
-        .catch(() => setDistressAlerts([]))
-        .finally(() => setFetchingCat(false));
+      base44.entities.DistressAlert.filter({ status: 'active' }, '-created_date', 50).
+      then(setDistressAlerts).
+      catch(() => setDistressAlerts([])).
+      finally(() => setFetchingCat(false));
     } else {
       setRemotePois([]);
       setDistressAlerts([]);
@@ -237,16 +237,16 @@ export default function Home() {
   const hasDestination = !!session.destination;
   const showIdleControls = !isActive && !hasDestination;
 
-  const poisToShow = activeCat === 'all'
-    ? pois.filter((p) => {
-        const overlayKey = POI_OVERLAY_MAP[p.category];
-        return !overlayKey || overlays[overlayKey];
-      })
-    : isRemoteCat
-      ? remotePois
-      : activeCat === 'event' || activeCat === 'distress'
-        ? []
-        : pois.filter((p) => p.category === activeCat);
+  const poisToShow = activeCat === 'all' ?
+  pois.filter((p) => {
+    const overlayKey = POI_OVERLAY_MAP[p.category];
+    return !overlayKey || overlays[overlayKey];
+  }) :
+  isRemoteCat ?
+  remotePois :
+  activeCat === 'event' || activeCat === 'distress' ?
+  [] :
+  pois.filter((p) => p.category === activeCat);
   const eventsToShow = (activeCat === 'all' ? overlays.events : activeCat === 'event') ? events : [];
   const distressToShow = (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [];
   const servicesToShow = overlays.services ? services : [];
@@ -254,11 +254,11 @@ export default function Home() {
   const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
 
   const previewRoute = !isActive && session.routeData?.coordinates ? session.routeData.coordinates : null;
-  const completedRoute = isActive ? (session.navProgress?.completedRoute || []) : null;
-  const remainingRoute = isActive ? (session.navProgress?.remainingRoute || session.routeData?.coordinates || []) : null;
+  const completedRoute = isActive ? session.navProgress?.completedRoute || [] : null;
+  const remainingRoute = isActive ? session.navProgress?.remainingRoute || session.routeData?.coordinates || [] : null;
 
   const handleMyLocation = () => setRecenterSignal((s) => s + 1);
-  const handleSelectCategory = (key) => { setActiveCat(key); setSelected(null); };
+  const handleSelectCategory = (key) => {setActiveCat(key);setSelected(null);};
   const handleDirections = (item) => {
     setSelected(null);
     session.navigateTo({ lat: item.lat, lng: item.lng, name: item.name || item.title });
@@ -298,156 +298,156 @@ export default function Home() {
         remainingRoute={remainingRoute}
         route={previewRoute}
         destination={session.destination}
-        className="absolute inset-0 z-0 h-full w-full"
-      />
+        className="absolute inset-0 z-0 h-full w-full" />
+      
 
-      {showIdleControls && (
-        <>
+      {showIdleControls &&
+      <>
           <button
-            onClick={() => setSearchOpen(true)}
-            className="glove-target absolute hud-left hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-            aria-label="Search"
-          >
-            <Search size={22} className="text-foreground" />
+          onClick={() => setSearchOpen(true)}
+          className="glove-target absolute hud-left hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))]"
+          aria-label="Search">
+          
+            <Search size={22} className="text-[hsl(var(--primary))]" />
           </button>
 
           <button
-            onClick={() => setMenuOpen(true)}
-            className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-            aria-label="Categories"
-          >
-            <Menu size={22} className="text-foreground" />
+          onClick={() => setMenuOpen(true)}
+          className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+          aria-label="Categories">
+          
+            <Menu size={22} className="text-[hsl(var(--primary))]" />
           </button>
 
           <button
-            onClick={handleMyLocation}
-            className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-            style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}
-            aria-label="My Location"
-          >
+          onClick={handleMyLocation}
+          className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+          style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}
+          aria-label="My Location">
+          
             <LocateFixed size={22} className="text-primary" />
           </button>
 
           <button
-            onClick={() => setLayersOpen(true)}
-            className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-            style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}
-            aria-label="Map Layers"
-          >
-            <Layers size={22} className="text-foreground" />
+          onClick={() => setLayersOpen(true)}
+          className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+          style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}
+          aria-label="Map Layers">
+          
+            <Layers size={22} className="text-[hsl(var(--primary))]" />
           </button>
 
-          {activeCat !== 'all' && (
-            <button
-              onClick={() => handleSelectCategory('all')}
-              className="absolute z-20 flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-lg"
-              style={{ top: 'calc(1.6rem + env(safe-area-inset-top))', left: 'calc(4.5rem + 1.25rem)' }}
-            >
+          {activeCat !== 'all' &&
+        <button
+          onClick={() => handleSelectCategory('all')}
+          className="absolute z-20 flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-lg"
+          style={{ top: 'calc(1.6rem + env(safe-area-inset-top))', left: 'calc(4.5rem + 1.25rem)' }}>
+          
               {activeLabel} <X size={13} />
             </button>
-          )}
+        }
         </>
-      )}
+      }
 
-      {isActive && !session.rideMode && (
-        <button
-          onClick={() => setHeadingUp((v) => !v)}
-          className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
-          aria-label="Toggle heading up"
-        >
+      {isActive && !session.rideMode &&
+      <button
+        onClick={() => setHeadingUp((v) => !v)}
+        className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+        aria-label="Toggle heading up">
+        
           <Compass size={22} className={headingUp ? 'text-primary' : 'text-foreground'} />
         </button>
-      )}
+      }
 
-      {(loading || fetchingCat || session.routeLoading) && (
-        <div className="absolute z-10 flex h-8 w-8 items-center justify-center" style={{ bottom: 'calc(7rem + env(safe-area-inset-bottom))', right: 'calc(1.5rem + env(safe-area-inset-right))' }}>
+      {(loading || fetchingCat || session.routeLoading) &&
+      <div className="absolute z-10 flex h-8 w-8 items-center justify-center" style={{ bottom: 'calc(7rem + env(safe-area-inset-bottom))', right: 'calc(1.5rem + env(safe-area-inset-right))' }}>
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" />
         </div>
-      )}
+      }
 
       <NavigationOverlay
         session={session}
         user={me}
         bike={bikeData}
         notifyFriends={notifyFriends}
-        setNotifyFriends={setNotifyFriends}
-      />
+        setNotifyFriends={setNotifyFriends} />
+      
 
       <SearchPanel
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
         onSelect={handleSearchSelect}
         pois={pois}
-        events={events}
-      />
+        events={events} />
+      
 
       <CategoryMenu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         activeCat={activeCat}
-        onSelect={handleSelectCategory}
-      />
+        onSelect={handleSelectCategory} />
+      
 
       <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} overlays={overlays} onToggleOverlay={toggleOverlay} />
 
       <BottomSheet open={!!selected} onClose={() => setSelected(null)} title={selected?.name || selected?.title}>
-        {selected && (
-          <div className="space-y-4">
+        {selected &&
+        <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="capitalize">{selected.category}</Badge>
               {selected.is_open_24h && <Badge className="bg-green-600">24h</Badge>}
               {selected.rating && <Badge variant="outline">⭐ {selected.rating}</Badge>}
             </div>
-            {selected.photo_urls?.[0] && (
-              <img src={selected.photo_urls[0]} alt={selected.title} className="h-40 w-full rounded-2xl object-cover" />
-            )}
-            {selected.photo_url && (
-              <img src={selected.photo_url} alt={selected.name} className="h-40 w-full rounded-2xl object-cover" />
-            )}
+            {selected.photo_urls?.[0] &&
+          <img src={selected.photo_urls[0]} alt={selected.title} className="h-40 w-full rounded-2xl object-cover" />
+          }
+            {selected.photo_url &&
+          <img src={selected.photo_url} alt={selected.name} className="h-40 w-full rounded-2xl object-cover" />
+          }
             {selected.description && <p className="text-sm text-muted-foreground">{selected.description}</p>}
             <div className="space-y-2 text-sm">
-              {selected.address && (
-                <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {selected.address}</div>
-              )}
-              {selected.venue_name && (
-                <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {selected.venue_name}</div>
-              )}
-              {selected.phone && (
-                <div className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {selected.phone}</div>
-              )}
-              {selected.contact_phone && (
-                <div className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {selected.contact_phone}</div>
-              )}
-              {selected.event_date && (
-                <div className="flex items-center gap-2 text-muted-foreground"><Calendar size={16} /> {formatDate(selected.event_date)}</div>
-              )}
-              {selected.entry_fee_zar != null && (
-                <div className="flex items-center gap-2 text-muted-foreground"><BadgeCheck size={16} /> {selected.entry_fee_zar === 0 ? 'Free entry' : `R${selected.entry_fee_zar} entry`}</div>
-              )}
+              {selected.address &&
+            <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {selected.address}</div>
+            }
+              {selected.venue_name &&
+            <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {selected.venue_name}</div>
+            }
+              {selected.phone &&
+            <div className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {selected.phone}</div>
+            }
+              {selected.contact_phone &&
+            <div className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {selected.contact_phone}</div>
+            }
+              {selected.event_date &&
+            <div className="flex items-center gap-2 text-muted-foreground"><Calendar size={16} /> {formatDate(selected.event_date)}</div>
+            }
+              {selected.entry_fee_zar != null &&
+            <div className="flex items-center gap-2 text-muted-foreground"><BadgeCheck size={16} /> {selected.entry_fee_zar === 0 ? 'Free entry' : `R${selected.entry_fee_zar} entry`}</div>
+            }
             </div>
             <div className="flex gap-2 pt-2">
               <Button size="lg" className="min-h-[56px] flex-1 text-base" onClick={() => handleDirections(selected)}>
                 <Navigation size={18} className="mr-2" /> Get Directions
               </Button>
-              {selected.booking_link && (
-                <Button size="lg" variant="secondary" className="min-h-[56px] px-5" onClick={() => window.open(selected.booking_link, '_blank')}>
+              {selected.booking_link &&
+            <Button size="lg" variant="secondary" className="min-h-[56px] px-5" onClick={() => window.open(selected.booking_link, '_blank')}>
                   <ExternalLink size={18} />
                 </Button>
-              )}
+            }
             </div>
           </div>
-        )}
+        }
       </BottomSheet>
 
       <ServiceDetailSheet service={selectedService} userPos={session.userPos}
-        isFavorite={false} onNavigate={handleServiceNavigate} onClose={() => setSelectedService(null)} />
+      isFavorite={false} onNavigate={handleServiceNavigate} onClose={() => setSelectedService(null)} />
 
       <FriendInfoSheet friend={selectedFriend} userPos={session.userPos}
-        onClose={() => setSelectedFriend(null)}
-        onNavigate={(f) => {
-          setSelectedFriend(null);
-          session.navigateTo({ lat: f.lat, lng: f.lng, name: f.name });
-        }} />
-    </div>
-  );
+      onClose={() => setSelectedFriend(null)}
+      onNavigate={(f) => {
+        setSelectedFriend(null);
+        session.navigateTo({ lat: f.lat, lng: f.lng, name: f.name });
+      }} />
+    </div>);
+
 }
