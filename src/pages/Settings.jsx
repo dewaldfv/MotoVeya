@@ -15,8 +15,8 @@ function Section({ title, children }) {
     <div className="mb-6">
       <p className="mb-2 px-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{title}</p>
       <div className="overflow-hidden rounded-2xl bg-card">{children}</div>
-    </div>
-  );
+    </div>);
+
 }
 
 function Row({ icon: Icon, label, value, onClick, danger, last }) {
@@ -24,11 +24,11 @@ function Row({ icon: Icon, label, value, onClick, danger, last }) {
   return (
     <Comp onClick={onClick} className={`flex w-full items-center gap-3 px-4 py-3.5 text-left ${onClick ? 'active:bg-secondary' : ''} ${danger ? 'text-destructive' : ''} ${last ? '' : 'border-b border-border'}`}>
       {Icon && <Icon size={20} className={danger ? 'text-destructive' : 'text-primary'} />}
-      <span className="flex-1 text-sm font-medium">{label}</span>
+      <span className="flex-1 text-sm font-medium opacity-100">{label}</span>
       {value && <span className="text-sm text-muted-foreground">{value}</span>}
       {onClick && !value && <ChevronRight size={18} className="text-muted-foreground" />}
-    </Comp>
-  );
+    </Comp>);
+
 }
 
 export default function Settings() {
@@ -51,7 +51,7 @@ export default function Settings() {
           setUser(me);
           setAutoJoinVoice(me.auto_join_voice || false);
         }
-      } catch (e) { console.error(e); }
+      } catch (e) {console.error(e);}
     })();
   }, []);
 
@@ -72,10 +72,10 @@ export default function Settings() {
   };
 
   const themeOptions = [
-    { key: 'light', label: 'Light Mode', icon: Sun },
-    { key: 'dark', label: 'Dark Mode', icon: Moon },
-    { key: 'auto', label: 'Auto (System)', icon: Smartphone },
-  ];
+  { key: 'light', label: 'Light Mode', icon: Sun },
+  { key: 'dark', label: 'Dark Mode', icon: Moon },
+  { key: 'auto', label: 'Auto (System)', icon: Smartphone }];
+
 
   const goLegal = (doc) => navigate(`/legal/${doc}`);
 
@@ -128,17 +128,17 @@ export default function Settings() {
 
       <div className="mx-auto max-w-2xl p-4">
         <Section title="🎨 Display">
-          {themeOptions.map((opt, i) => (
-            <button
-              key={opt.key}
-              onClick={() => setTheme(opt.key)}
-              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-secondary ${i === themeOptions.length - 1 ? '' : 'border-b border-border'}`}
-            >
+          {themeOptions.map((opt, i) =>
+          <button
+            key={opt.key}
+            onClick={() => setTheme(opt.key)}
+            className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-secondary ${i === themeOptions.length - 1 ? '' : 'border-b border-border'}`}>
+            
               <opt.icon size={20} className="text-primary" />
               <span className="flex-1 text-sm font-medium">{opt.label}</span>
               {theme === opt.key && <Check size={20} className="text-primary" />}
             </button>
-          ))}
+          )}
         </Section>
 
         <Section title="📱 Screen Orientation">
@@ -236,6 +236,6 @@ export default function Settings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>);
+
 }
