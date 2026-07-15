@@ -16,7 +16,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className={`fixed left-4 right-4 z-40 rounded-[20px] border border-border backdrop-blur-lg transition-transform duration-200 opacity-75 ${
+      className={`fixed left-4 right-4 z-40 rounded-[20px] border border-border backdrop-blur-lg transition-transform duration-200 opacity-100 ${
       keyboardVisible ? 'translate-y-full' : 'translate-y-0'}`
       }
       style={{
