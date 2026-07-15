@@ -16,7 +16,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className={`fixed left-4 right-4 z-40 rounded-[20px] border border-border bg-card/95 backdrop-blur-lg transition-transform duration-200 ${
+      className={`fixed left-4 right-4 z-40 rounded-[20px] border border-border backdrop-blur-lg transition-transform duration-200 ${
       keyboardVisible ? 'translate-y-full' : 'translate-y-0'}`
       }
       style={{
@@ -29,7 +29,7 @@ export default function BottomNav() {
         <button
           key={key}
           onClick={() => switchToTab(key)}
-          className={`flex min-h-[50px] min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-xl transition-colors ${
+          className={`flex min-h-[50px] min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-xl transition-colors bg-[hsl(var(--card))] ${
           currentTab === key ? 'text-primary' : 'text-muted-foreground'}`
           }>
           

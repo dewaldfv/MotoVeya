@@ -330,7 +330,7 @@ export default function Home() {
 
           <button
           onClick={() => setLayersOpen(true)}
-          className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full bg-card/95 shadow-lg backdrop-blur-lg"
+          className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))]"
           style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}
           aria-label="Map Layers">
           
