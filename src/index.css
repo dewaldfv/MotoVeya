@@ -161,6 +161,22 @@
 .leaflet-bar a:hover {
   background: hsl(0 0% 14%) !important;
 }
+.leaflet-popup-content-wrapper {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+.leaflet-popup-tip {
+  background: hsl(var(--card));
+}
+.leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+}
+.leaflet-popup-close-button {
+  color: hsl(var(--muted-foreground)) !important;
+}
 
 .custom-marker {
   background: transparent;

@@ -16,6 +16,7 @@ import { useMapOverlays, POI_OVERLAY_MAP } from '@/lib/mapOverlays';
 import { useRideSession } from '@/hooks/useRideSession';
 import NavigationOverlay from '@/components/NavigationOverlay';
 import { setRideActive } from '@/lib/rideStatus';
+import { toast } from 'sonner';
 
 const SA_CENTER = [-26.2041, 28.0473];
 const REMOTE_CATS = {
@@ -263,6 +264,12 @@ export default function Home() {
     setSelected(null);
     session.navigateTo({ lat: item.lat, lng: item.lng, name: item.name || item.title });
   };
+  const handleSavePin = (item) => {
+    toast.success(`${item.name || item.title || item.rider_name || 'Location'} saved to favourites`);
+  };
+  const handleNavigatePin = (item) => {
+    session.navigateTo({ lat: item.lat, lng: item.lng, name: item.name || item.title || item.rider_name || 'Destination' });
+  };
   const handleSearchSelect = (dest) => session.handleDestination(dest);
   const handleServiceNavigate = (service) => {
     setSelectedService(null);
@@ -286,6 +293,9 @@ export default function Home() {
         friends={friendsToShow}
         showFriends={overlays.friends}
         onFriendClick={setSelectedFriend}
+        onMarkerClick={setSelected}
+        onSavePin={handleSavePin}
+        onNavigatePin={handleNavigatePin}
         groupRiders={groupRiders}
         userPos={session.userPos}
         riders={session.userPos ? [{ id: 'me', lat: session.userPos[0], lng: session.userPos[1], heading: session.heading, accuracy: session.accuracy }] : []}

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, useMap, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getEventMarkerUrl } from '@/lib/eventMarkers';
@@ -8,6 +8,7 @@ import RiderMarker from '@/components/RiderMarker';
 import ServiceMarkers from '@/components/ServiceMarkers';
 import FriendMarkers from '@/components/FriendMarkers';
 import GroupRiderMarkers from '@/components/GroupRiderMarkers';
+import MapPopupContent from '@/components/MapPopupContent';
 
 const CATEGORY_CONFIG = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -199,6 +200,8 @@ export default function MapView({
   fitRouteSignal = 0,
   layer = 'dark',
   onMarkerClick,
+  onSavePin,
+  onNavigatePin,
   services = [],
   showServices = false,
   onServiceClick,
@@ -276,13 +279,25 @@ export default function MapView({
         }
 
         {validPois.map((poi) =>
-        <Marker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} icon={createIcon(poi.category)} eventHandlers={{ click: () => onMarkerClick?.(poi) }} />
+        <Marker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} icon={createIcon(poi.category)}>
+          <Popup>
+            <MapPopupContent item={poi} onMoreInfo={() => onMarkerClick?.(poi)} onSave={() => onSavePin?.(poi)} onNavigate={() => onNavigatePin?.(poi)} />
+          </Popup>
+        </Marker>
         )}
         {validEvents.map((ev) =>
-        <Marker key={`event-${ev.id}`} position={[ev.lat, ev.lng]} icon={getEventIcon(ev)} eventHandlers={{ click: () => onMarkerClick?.(ev) }} />
+        <Marker key={`event-${ev.id}`} position={[ev.lat, ev.lng]} icon={getEventIcon(ev)}>
+          <Popup>
+            <MapPopupContent item={ev} onMoreInfo={() => onMarkerClick?.(ev)} onSave={() => onSavePin?.(ev)} onNavigate={() => onNavigatePin?.(ev)} />
+          </Popup>
+        </Marker>
         )}
         {validDistress.map((d) =>
-        <Marker key={`distress-${d.id}`} position={[d.lat, d.lng]} icon={createIcon('distress')} />
+        <Marker key={`distress-${d.id}`} position={[d.lat, d.lng]} icon={createIcon('distress')}>
+          <Popup>
+            <MapPopupContent item={d} onMoreInfo={() => onMarkerClick?.(d)} onSave={() => onSavePin?.(d)} onNavigate={() => onNavigatePin?.(d)} />
+          </Popup>
+        </Marker>
         )}
         {validRiders.map((r) =>
         <RiderMarker key={`rider-${r.id}`} position={[r.lat, r.lng]} heading={r.heading} accuracy={r.accuracy} zIndex={1200} />
