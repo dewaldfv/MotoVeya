@@ -1,26 +1,32 @@
-import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet';
-import { useEffect, useMemo, useRef } from 'react';
-import L from 'leaflet';
+/* global google */
+import { useEffect, useRef, useMemo } from 'react';
+import { GoogleMap, Polyline, useGoogleMap } from '@react-google-maps/api';
+import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
+import { MAP_LAYERS, getLayerStyles, getLayerBackground, getMapOptions } from '@/lib/mapLayers';
+import CustomMapMarker from './CustomMapMarker';
 import RiderMarker from './RiderMarker';
-import { MAP_LAYERS, getLayerBackground } from '@/lib/mapLayers';
 
-function destinationIcon(rot = null) {
-  const angle = rot != null ? -45 + rot : -45;
-  return L.divIcon({
-    html: `<div style="width:28px;height:28px;background:#4285F4;border-radius:50% 50% 50% 0;transform:rotate(${angle}deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
-    className: 'custom-marker',
-    iconSize: [28, 28],
-    iconAnchor: [14, 26],
-  });
+const SA_CENTER = [-26.2041, 28.0473];
+
+function LayerController({ layer }) {
+  const map = useGoogleMap();
+  useEffect(() => {
+    if (!map) return;
+    const config = MAP_LAYERS.find((l) => l.key === layer) || MAP_LAYERS[0];
+    map.setMapTypeId(config.mapTypeId);
+    map.setOptions({ styles: getLayerStyles(layer) });
+  }, [map, layer]);
+  return null;
 }
 
 function MapResizer() {
-  const map = useMap();
+  const map = useGoogleMap();
   useEffect(() => {
-    const resize = () => map.invalidateSize();
+    if (!map) return;
+    const resize = () => google.maps.event.trigger(map, 'resize');
     resize();
     const ro = new ResizeObserver(resize);
-    ro.observe(map.getContainer());
+    ro.observe(map.getDiv());
     window.addEventListener('resize', resize);
     const onOrient = () => setTimeout(resize, 300);
     window.addEventListener('orientationchange', onOrient);
@@ -34,9 +40,8 @@ function MapResizer() {
 }
 
 function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, route, recenterToken }) {
-  const map = useMap();
+  const map = useGoogleMap();
   const failCountRef = useRef(0);
-
   const targetZoom = useMemo(() => {
     if (!active) return 13;
     if (nextManeuverDistance != null && nextManeuverDistance < 200) return 17;
@@ -46,51 +51,41 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
   }, [active, speed, nextManeuverDistance]);
 
   useEffect(() => {
+    if (!map) return;
     if (active) {
-      map.dragging?.disable();
-      map.touchZoom?.disable();
-      map.doubleClickZoom?.disable();
+      map.setOptions({ draggable: false, scrollwheel: false, disableDoubleClickZoom: true, gestureHandling: 'none' });
     } else {
-      map.dragging?.enable();
-      map.touchZoom?.enable();
-      map.doubleClickZoom?.enable();
+      map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'auto' });
     }
   }, [active, map]);
 
-  // Camera: north-up, pitch 0°, no CSS transforms on the container.
-  // Centers the rider with an offset in the direction of travel so the
-  // upcoming road is visible ahead. RiderMarker rotates to show heading.
   useEffect(() => {
-    if (!userPos) return;
+    if (!map || !userPos) return;
     try {
-      if (active && heading != null && !isNaN(heading)) {
-        const headingRad = (heading * Math.PI) / 180;
-        const size = map.getSize();
-        if (!size.x || !size.y) throw new Error('Map has no size');
-        const offsetPx = size.y * 0.30;
-        const riderPoint = map.project(userPos, targetZoom);
-        const dx = offsetPx * Math.sin(headingRad);
-        const dy = -offsetPx * Math.cos(headingRad);
-        const centerPoint = L.point(riderPoint.x + dx, riderPoint.y + dy);
-        const newCenter = map.unproject(centerPoint, targetZoom);
-        map.setView(newCenter, targetZoom, { animate: true, duration: 1.0, easeLinearity: 0.5 });
-      } else if (!active && route && route.length > 1) {
-        map.fitBounds(L.latLngBounds(route), { padding: [80, 80], animate: true });
+      if (!active && route && route.length > 1) {
+        const bounds = new google.maps.LatLngBounds();
+        route.forEach(([lat, lng]) => bounds.extend({ lat, lng }));
+        map.fitBounds(bounds, 80);
       } else {
-        map.setView(userPos, targetZoom, { animate: true, duration: 0.5 });
+        map.setCenter({ lat: userPos[0], lng: userPos[1] });
+        map.setZoom(targetZoom);
       }
       failCountRef.current = 0;
     } catch (e) {
       failCountRef.current++;
       if (failCountRef.current >= 2) {
-        // Fallback: reset to center=rider, zoom=target, bearing=north, pitch=0
-        map.setView(userPos, targetZoom, { animate: false });
+        map.setCenter({ lat: userPos[0], lng: userPos[1] });
+        map.setZoom(targetZoom);
         failCountRef.current = 0;
       }
     }
-  }, [userPos, heading, active, targetZoom, route, map, recenterToken]);
+  }, [userPos?.[0], userPos?.[1], active, targetZoom, route, map, recenterToken]);
 
   return null;
+}
+
+function toLatLngPath(coords) {
+  return (coords || []).map(([lat, lng]) => ({ lat, lng }));
 }
 
 export default function NavMapView({
@@ -107,27 +102,34 @@ export default function NavMapView({
   headingUp = true,
   recenterToken = 0,
 }) {
-  const layerConfig = MAP_LAYERS.find((l) => l.key === layer) || MAP_LAYERS[0];
+  const isLoaded = useGoogleMapsLoaded();
   const bgColor = getLayerBackground(layer);
   const rotating = active && heading != null && !isNaN(heading) && headingUp;
   const navRot = rotating ? `${-heading}deg` : '0deg';
+  const initialCenterRef = useRef(null);
+  const centerArr = userPos || SA_CENTER;
+  if (!initialCenterRef.current) {
+    initialCenterRef.current = { lat: centerArr[0], lng: centerArr[1] };
+  }
+
+  if (!isLoaded) {
+    return <div className="absolute inset-0 z-0" style={{ background: bgColor }} />;
+  }
+
+  const options = { ...getMapOptions(layer), gestureHandling: active ? 'none' : 'auto', draggable: !active, scrollwheel: !active };
 
   return (
     <div
       className={`absolute inset-0 z-0 ${rotating ? 'nav-map-heading-up' : ''}`}
       style={{ background: bgColor, '--nav-rot': navRot }}
     >
-      <MapContainer
-        center={userPos || [-26.2041, 28.0473]}
+      <GoogleMap
+        mapContainerClassName={`absolute inset-0 h-full w-full ${rotating ? 'gm-rotatable' : ''}`}
+        center={initialCenterRef.current}
         zoom={14}
-        zoomControl={false}
-        scrollWheelZoom={false}
-        className="absolute inset-0 h-full w-full"
-        style={{ background: bgColor }}
+        options={options}
       >
-        {layerConfig.tiles.map((t, i) => (
-          <TileLayer key={`tile-${layer}-${i}`} url={t.url} attribution={t.attribution} />
-        ))}
+        <LayerController layer={layer} />
         <MapResizer />
         <NavCamera
           userPos={userPos}
@@ -140,23 +142,23 @@ export default function NavMapView({
         />
         {completedRoute && completedRoute.length > 1 && (
           <>
-            <Polyline positions={completedRoute} pathOptions={{ color: '#ffffff', weight: 11, opacity: 0.9, lineCap: 'round' }} />
-            <Polyline positions={completedRoute} pathOptions={{ color: '#9aa0a6', weight: 7, opacity: 0.7, lineCap: 'round' }} />
+            <Polyline path={toLatLngPath(completedRoute)} options={{ strokeColor: '#ffffff', strokeWeight: 11, strokeOpacity: 0.9 }} />
+            <Polyline path={toLatLngPath(completedRoute)} options={{ strokeColor: '#9aa0a6', strokeWeight: 7, strokeOpacity: 0.7 }} />
           </>
         )}
         {remainingRoute && remainingRoute.length > 1 && (
           <>
-            <Polyline positions={remainingRoute} pathOptions={{ color: '#ffffff', weight: 11, opacity: 1, lineCap: 'round' }} />
-            <Polyline positions={remainingRoute} pathOptions={{ color: '#2D7FF9', weight: 7, opacity: 1, lineCap: 'round' }} />
+            <Polyline path={toLatLngPath(remainingRoute)} options={{ strokeColor: '#ffffff', strokeWeight: 11, strokeOpacity: 1 }} />
+            <Polyline path={toLatLngPath(remainingRoute)} options={{ strokeColor: '#2D7FF9', strokeWeight: 7, strokeOpacity: 1 }} />
           </>
         )}
         {destination && (
-          <Marker position={[destination.lat, destination.lng]} icon={destinationIcon(rotating ? heading : null)} />
+          <CustomMapMarker position={[destination.lat, destination.lng]} anchor="bottom">
+            <div style={{ width: 28, height: 28, background: '#4285F4', borderRadius: '50% 50% 50% 0', transform: `rotate(${rotating && heading != null ? -45 + heading : -45}deg)`, border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }} />
+          </CustomMapMarker>
         )}
-        {userPos && (
-          <RiderMarker position={userPos} heading={heading} accuracy={accuracy} />
-        )}
-      </MapContainer>
+        {userPos && <RiderMarker position={userPos} heading={heading} accuracy={accuracy} />}
+      </GoogleMap>
     </div>
   );
 }

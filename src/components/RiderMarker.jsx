@@ -1,5 +1,5 @@
-import { Marker, Circle } from 'react-leaflet';
-import L from 'leaflet';
+import { Circle, useGoogleMap } from '@react-google-maps/api';
+import CustomMapMarker from './CustomMapMarker';
 
 const TRIANGLE_SVG = `
 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="48" viewBox="0 0 40 48" fill="none">
@@ -7,45 +7,32 @@ const TRIANGLE_SVG = `
   <path d="M20 3 L35 39 L5 39 Z" fill="#FF7A00" stroke="#FFFFFF" stroke-width="3.5" stroke-linejoin="round"/>
 </svg>`;
 
-const RIDER_ICON = L.divIcon({
-  html: `<div style="width:40px;height:48px;line-height:0;">${TRIANGLE_SVG}</div>`,
-  className: 'custom-marker rider-marker',
-  iconSize: [40, 48],
-  iconAnchor: [20, 24],
-});
-
-const ROTATING_ICON_CACHE = {};
-function getRotatedIcon(heading) {
-  const key = Math.round(heading / 5) * 5;
-  if (!ROTATING_ICON_CACHE[key]) {
-    ROTATING_ICON_CACHE[key] = L.divIcon({
-      html: `<div style="width:40px;height:48px;line-height:0;transform:rotate(${key}deg);transition:transform 0.3s ease;">${TRIANGLE_SVG}</div>`,
-      className: 'custom-marker rider-marker',
-      iconSize: [40, 48],
-      iconAnchor: [20, 24],
-    });
-  }
-  return ROTATING_ICON_CACHE[key];
-}
-
 export default function RiderMarker({ position, heading = null, accuracy = null, zIndex = 1200 }) {
+  const map = useGoogleMap();
   if (!position) return null;
-  const icon = heading != null ? getRotatedIcon(heading) : RIDER_ICON;
+  const rotation = heading != null
+    ? `transform:rotate(${Math.round(heading / 5) * 5}deg);transition:transform 0.3s ease;`
+    : '';
+
   return (
     <>
-      {accuracy != null && accuracy > 0 && (
+      {accuracy != null && accuracy > 0 && map && (
         <Circle
-          center={position}
+          center={{ lat: position[0], lng: position[1] }}
           radius={accuracy}
-          pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.15, stroke: true, weight: 1, opacity: 0.4 }}
+          options={{
+            fillColor: '#3b82f6',
+            fillOpacity: 0.15,
+            strokeColor: '#3b82f6',
+            strokeOpacity: 0.4,
+            strokeWeight: 1,
+            clickable: false,
+          }}
         />
       )}
-      <Marker
-        position={position}
-        icon={icon}
-        zIndexOffset={zIndex}
-        interactive={false}
-      />
+      <CustomMapMarker position={position} zIndex={zIndex}>
+        <div style={{ width: 40, height: 48, lineHeight: 0 }} dangerouslySetInnerHTML={{ __html: rotation ? `<div style="${rotation}">${TRIANGLE_SVG}</div>` : TRIANGLE_SVG }} />
+      </CustomMapMarker>
     </>
   );
 }

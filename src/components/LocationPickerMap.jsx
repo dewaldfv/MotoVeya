@@ -1,91 +1,87 @@
+/* global google */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import { Plus, Minus, LocateFixed, Maximize2, Minimize2, Crosshair } from 'lucide-react';
+import { GoogleMap, useGoogleMap } from '@react-google-maps/api';
+import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
+import { MAP_LAYERS, getLayerStyles, getMapOptions } from '@/lib/mapLayers';
+import CustomMapMarker from './CustomMapMarker';
 import ImportFromGoogleMapsButton from '@/components/ImportFromGoogleMapsButton';
 import LocationInfoCard from '@/components/LocationInfoCard';
+import { Plus, Minus, LocateFixed, Maximize2, Minimize2, Crosshair } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DEFAULT_CENTER = [-26.2041, 28.0473];
 
-const eventPinIcon = L.divIcon({
-  html: `<div class="motogo-event-pin"><div class="motogo-event-pin__pulse"></div><div class="motogo-event-pin__body"><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span></div></div>`,
-  className: 'custom-marker',
-  iconSize: [44, 44],
-  iconAnchor: [22, 40],
-});
+function eventPinVisual() {
+  return (
+    <div className="motogo-event-pin">
+      <div className="motogo-event-pin__pulse" />
+      <div className="motogo-event-pin__body">
+        <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="3" /><path d="M8 2v4M16 2v4M3 10h18" /></svg></span>
+      </div>
+    </div>
+  );
+}
 
-const landmarkIcon = L.divIcon({
-  html: `<div class="motogo-landmark-dot"></div>`,
-  className: 'motogo-landmark-marker',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
-});
-
-function useIsDark() {
-  const [isDark, setIsDark] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
+function LayerController({ layer }) {
+  const map = useGoogleMap();
   useEffect(() => {
-    const observer = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
-  return isDark;
-}
-
-function getTileConfig(layer, isDark) {
-  if (layer === 'satellite') {
-    return { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri, Maxar, Earthstar Geographics' };
-  }
-  if (layer === 'terrain') {
-    return { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '&copy; OpenTopoMap (CC-BY-SA)' };
-  }
-  if (isDark) {
-    return { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: '&copy; OpenStreetMap &copy; CARTO' };
-  }
-  return { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attribution: '&copy; OpenStreetMap &copy; CARTO' };
-}
-
-function MapBindings({ onReady, onZoom }) {
-  const map = useMap();
-  useEffect(() => { onReady(map); }, [map, onReady]);
-  useMapEvents({ zoomend: () => onZoom(map.getZoom()) });
+    if (!map) return;
+    const config = MAP_LAYERS.find((l) => l.key === layer) || MAP_LAYERS[0];
+    map.setMapTypeId(config.mapTypeId);
+    map.setOptions({ styles: getLayerStyles(layer) });
+  }, [map, layer]);
   return null;
 }
 
 function ClickHandler({ onPick }) {
-  useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) });
+  const map = useGoogleMap();
+  useEffect(() => {
+    if (!map) return;
+    const id = map.addListener('click', (e) => {
+      onPick(e.latLng.lat(), e.latLng.lng());
+    });
+    return () => google.maps.event.removeListener(id);
+  }, [map, onPick]);
   return null;
 }
 
-export default function LocationPickerMap({ value, onChange, onImportInfo }) {
-  const isDark = useIsDark();
-  const [layer, setLayer] = useState('standard');
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [map, setMap] = useState(null);
-  const [zoom, setZoom] = useState(12);
-  const [geoInfo, setGeoInfo] = useState(null);
-  const [loadingGeo, setLoadingGeo] = useState(false);
-  const [landmarks, setLandmarks] = useState([]);
-  const importZoomRef = useRef(0);
-
-  const position = value ? [value.lat, value.lng] : null;
-  const center = position || DEFAULT_CENTER;
-  const tileConfig = getTileConfig(layer, isDark);
-  const handleReady = useCallback((m) => setMap(m), []);
+function MapController({ mapRef, value, importZoomRef }) {
+  const map = useGoogleMap();
+  useEffect(() => {
+    if (map) mapRef.current = map;
+  }, [map, mapRef]);
 
   useEffect(() => {
     if (!map || !value) return;
     const targetZoom = importZoomRef.current || Math.max(map.getZoom(), 12);
-    map.flyTo([value.lat, value.lng], targetZoom, { duration: 1.2 });
+    map.panTo({ lat: value.lat, lng: value.lng });
+    map.setZoom(targetZoom);
     importZoomRef.current = 0;
-  }, [value?.lat, value?.lng, map]);
+  }, [value?.lat, value?.lng, map, importZoomRef]);
 
-  useEffect(() => {
-    if (!map) return;
-    const t = setTimeout(() => map.invalidateSize(), 150);
-    return () => clearTimeout(t);
-  }, [isFullscreen, map, layer]);
+  return null;
+}
+
+export default function LocationPickerMap({ value, onChange, onImportInfo }) {
+  const isLoaded = useGoogleMapsLoaded();
+  const [layer, setLayer] = useState('standard');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [geoInfo, setGeoInfo] = useState(null);
+  const [loadingGeo, setLoadingGeo] = useState(false);
+  const [landmarks, setLandmarks] = useState([]);
+  const mapRef = useRef(null);
+  const importZoomRef = useRef(0);
+  const [zoom, setZoom] = useState(12);
+
+  const center = value ? { lat: value.lat, lng: value.lng } : { lat: DEFAULT_CENTER[0], lng: DEFAULT_CENTER[1] };
+  const initialCenterRef = useRef(null);
+  if (!initialCenterRef.current) initialCenterRef.current = center;
+
+  const handleImport = useCallback((res) => {
+    importZoomRef.current = 16;
+    onChange(res.lat, res.lng);
+    onImportInfo?.(res);
+  }, [onChange, onImportInfo]);
 
   useEffect(() => {
     if (!value) { setGeoInfo(null); return; }
@@ -121,24 +117,34 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
     return () => clearTimeout(timer);
   }, [value?.lat, value?.lng, zoom]);
 
-  const handleImport = (res) => {
-    importZoomRef.current = 16;
-    onChange(res.lat, res.lng);
-    onImportInfo?.(res);
-  };
-
   const handleMyLocation = () => {
     if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
     navigator.geolocation.getCurrentPosition(
-      (pos) => { map?.flyTo([pos.coords.latitude, pos.coords.longitude], 16, { duration: 1.2 }); },
+      (pos) => {
+        const m = mapRef.current;
+        if (m) { m.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude }); m.setZoom(16); }
+      },
       () => toast.error('Could not get your location'),
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
   const handleRecenter = () => {
-    if (value) map?.flyTo([value.lat, value.lng], Math.max(zoom, 16), { duration: 1.2 });
+    const m = mapRef.current;
+    if (m && value) { m.panTo({ lat: value.lat, lng: value.lng }); m.setZoom(Math.max(zoom, 16)); }
   };
+
+  const handleZoomChange = useCallback(() => {
+    const m = mapRef.current;
+    if (m) setZoom(m.getZoom());
+  }, []);
+
+  if (!isLoaded) {
+    return <div className={isFullscreen ? 'fixed inset-0 z-[100] bg-background p-3' : 'relative'}>
+      <div className="mb-2"><ImportFromGoogleMapsButton onImport={handleImport} /></div>
+      <div className="relative h-56 w-full overflow-hidden rounded-xl border border-border bg-muted" />
+    </div>;
+  }
 
   return (
     <div className={isFullscreen ? 'fixed inset-0 z-[100] flex flex-col bg-background p-3' : 'relative'}>
@@ -147,17 +153,29 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
       </div>
 
       <div className={`relative w-full overflow-hidden rounded-xl border border-border ${isFullscreen ? 'flex-1' : 'h-56 landscape:h-64'}`}>
-        <MapContainer center={center} zoom={12} className="h-full w-full" zoomControl={false} scrollWheelZoom>
-          <MapBindings onReady={handleReady} onZoom={setZoom} />
+        <GoogleMap
+          mapContainerClassName="absolute inset-0 h-full w-full"
+          center={initialCenterRef.current}
+          zoom={12}
+          options={{ ...getMapOptions(layer), draggable: true, scrollwheel: true, gestureHandling: 'auto' }}
+          onZoomChanged={handleZoomChange}
+        >
+          <LayerController layer={layer} />
           <ClickHandler onPick={onChange} />
-          <TileLayer key={tileConfig.url} url={tileConfig.url} attribution={tileConfig.attribution} />
-          {position && (
-            <Marker position={position} icon={eventPinIcon} draggable eventHandlers={{ dragend: (e) => { const { lat, lng } = e.target.getLatLng(); onChange(lat, lng); } }} />
+          <MapController mapRef={mapRef} value={value} importZoomRef={importZoomRef} />
+
+          {value && (
+            <CustomMapMarker position={[value.lat, value.lng]} anchor="bottom">
+              {eventPinVisual()}
+            </CustomMapMarker>
           )}
+
           {landmarks.map((lm) => (
-            <Marker key={lm.id} position={[lm.lat, lm.lng]} icon={landmarkIcon} title={lm.name} />
+            <CustomMapMarker key={lm.id} position={[lm.lat, lm.lng]}>
+              <div className="motogo-landmark-dot" />
+            </CustomMapMarker>
           ))}
-        </MapContainer>
+        </GoogleMap>
 
         <div className="absolute bottom-2 left-2 z-[1000] flex gap-1 rounded-lg bg-card/95 p-1 shadow-lg backdrop-blur">
           {['standard', 'satellite', 'terrain'].map((l) => (
@@ -166,8 +184,8 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
         </div>
 
         <div className="absolute right-2 top-2 z-[1000] flex flex-col gap-1.5">
-          <button type="button" onClick={() => map?.zoomIn()} className="glove-target flex h-10 w-10 items-center justify-center rounded-lg bg-card/95 shadow-lg backdrop-blur" aria-label="Zoom in"><Plus size={18} /></button>
-          <button type="button" onClick={() => map?.zoomOut()} className="glove-target flex h-10 w-10 items-center justify-center rounded-lg bg-card/95 shadow-lg backdrop-blur" aria-label="Zoom out"><Minus size={18} /></button>
+          <button type="button" onClick={() => mapRef.current?.setZoom(mapRef.current.getZoom() + 1)} className="glove-target flex h-10 w-10 items-center justify-center rounded-lg bg-card/95 shadow-lg backdrop-blur" aria-label="Zoom in"><Plus size={18} /></button>
+          <button type="button" onClick={() => mapRef.current?.setZoom(mapRef.current.getZoom() - 1)} className="glove-target flex h-10 w-10 items-center justify-center rounded-lg bg-card/95 shadow-lg backdrop-blur" aria-label="Zoom out"><Minus size={18} /></button>
         </div>
 
         <div className="absolute bottom-2 right-2 z-[1000] flex flex-col gap-1.5">

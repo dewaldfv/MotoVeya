@@ -1,6 +1,7 @@
+/* global google */
 import { useEffect, useState } from 'react';
-import { Marker, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import { useGoogleMap } from '@react-google-maps/api';
+import CustomMapMarker from './CustomMapMarker';
 
 const STATUS_COLORS = {
   active: '#3b82f6',
@@ -26,30 +27,31 @@ function arrowSvg(color) {
 </svg>`;
 }
 
-const iconCache = {};
-function getArrowIcon(color, heading, isDistress) {
-  const h = heading != null ? Math.round(heading / 5) * 5 : null;
-  const key = `${color}-${h}-${isDistress}`;
-  if (!iconCache[key]) {
-    const rotation = h != null ? `transform:rotate(${h}deg);transition:transform 0.3s ease;` : '';
-    const ring = isDistress ? '<div class="friend-distress-ring"></div>' : '';
-    iconCache[key] = L.divIcon({
-      html: `<div style="position:relative;width:40px;height:48px;line-height:0;">${ring}<div style="${rotation}">${arrowSvg(color)}</div></div>`,
-      className: 'custom-marker',
-      iconSize: [40, 48],
-      iconAnchor: [20, 24],
-    });
-  }
-  return iconCache[key];
+function FriendArrow({ friend, onSelect, zIndex }) {
+  const status = computeStatus(friend);
+  const color = STATUS_COLORS[status];
+  const heading = friend.heading != null ? Math.round(friend.heading / 5) * 5 : null;
+  const rotation = heading != null ? `transform:rotate(${heading}deg);transition:transform 0.3s ease;` : '';
+  const ring = status === 'distress' ? '<div class="friend-distress-ring"></div>' : '';
+  return (
+    <CustomMapMarker
+      position={[friend.lat, friend.lng]}
+      onClick={() => onSelect?.(friend)}
+      zIndex={zIndex}
+    >
+      <div style={{ position: 'relative', width: 40, height: 48, lineHeight: 0 }} dangerouslySetInnerHTML={{ __html: `${ring}<div style="${rotation}">${arrowSvg(color)}</div>` }} />
+    </CustomMapMarker>
+  );
 }
 
-function clusterIcon(count) {
-  return L.divIcon({
-    html: `<div style="width:44px;height:44px;border-radius:50%;background:hsl(26 100% 50%);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px;font-family:Inter,sans-serif;">${count}</div>`,
-    className: 'custom-marker',
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
-  });
+function ClusterPin({ count, lat, lng, onClick, zIndex }) {
+  return (
+    <CustomMapMarker position={[lat, lng]} onClick={onClick} zIndex={zIndex}>
+      <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'hsl(26 100% 50%)', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 16, fontFamily: 'Inter,sans-serif' }}>
+        {count}
+      </div>
+    </CustomMapMarker>
+  );
 }
 
 function clusterFriends(friends, zoom) {
@@ -75,17 +77,17 @@ function clusterFriends(friends, zoom) {
 }
 
 export default function FriendMarkers({ friends = [], onSelect }) {
-  const map = useMap();
-  const [zoom, setZoom] = useState(map.getZoom());
+  const map = useGoogleMap();
+  const [zoom, setZoom] = useState(map?.getZoom() || 12);
   const [, setTick] = useState(0);
 
   useEffect(() => {
-    const handler = () => setZoom(map.getZoom());
-    map.on('zoomend', handler);
-    return () => map.off('zoomend', handler);
+    if (!map) return;
+    const onZoom = () => setZoom(map.getZoom());
+    const id = map.addListener('zoom_changed', onZoom);
+    return () => google.maps.event.removeListener(id);
   }, [map]);
 
-  // Re-evaluate statuses periodically so active→inactive transitions happen without a new poll.
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(id);
@@ -97,26 +99,26 @@ export default function FriendMarkers({ friends = [], onSelect }) {
   return items.map((item, i) => {
     if (item.type === 'cluster') {
       return (
-        <Marker
+        <ClusterPin
           key={`fcluster-${i}`}
-          position={[item.lat, item.lng]}
-          icon={clusterIcon(item.friends.length)}
-          zIndexOffset={900}
-          eventHandlers={{ click: () => map.setView([item.lat, item.lng], Math.max(zoom + 2, 14)) }}
+          count={item.friends.length}
+          lat={item.lat}
+          lng={item.lng}
+          zIndex={900}
+          onClick={() => {
+            if (map) map.setZoom(Math.max(zoom + 2, 14));
+            if (map) map.panTo({ lat: item.lat, lng: item.lng });
+          }}
         />
       );
     }
-    const f = item.friend;
-    const status = computeStatus(f);
-    const color = STATUS_COLORS[status];
-    const icon = getArrowIcon(color, f.heading, status === 'distress');
+    const status = computeStatus(item.friend);
     return (
-      <Marker
-        key={`friend-${f.id}`}
-        position={[f.lat, f.lng]}
-        icon={icon}
-        zIndexOffset={status === 'distress' ? 1100 : 1000}
-        eventHandlers={{ click: () => onSelect?.(f) }}
+      <FriendArrow
+        key={`friend-${item.friend.id}`}
+        friend={item.friend}
+        onSelect={onSelect}
+        zIndex={status === 'distress' ? 1100 : 1000}
       />
     );
   });

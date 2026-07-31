@@ -142,6 +142,17 @@
   transition: transform 0.4s ease-out;
 }
 
+.nav-map-heading-up .gm-rotatable {
+  width: 142vmax !important;
+  height: 142vmax !important;
+  left: 50% !important;
+  top: 50% !important;
+  position: absolute !important;
+  transform: translate(-50%, -50%) rotate(var(--nav-rot, 0deg));
+  transform-origin: center center;
+  transition: transform 0.4s ease-out;
+}
+
 .leaflet-control-attribution {
   background: hsl(0 0% 4% / 0.8) !important;
   color: hsl(0 0% 50%) !important;
