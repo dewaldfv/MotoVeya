@@ -60,6 +60,10 @@
       "type": "number",
       "default": 0
     },
+    "total_incidents": {
+      "type": "number",
+      "default": 0
+    },
     "onboarding_completed": {
       "type": "boolean",
       "default": false

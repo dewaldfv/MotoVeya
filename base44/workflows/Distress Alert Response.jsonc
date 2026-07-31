@@ -1,0 +1,82 @@
+{
+  "name": "Distress Alert Response",
+  "description": "When a DistressAlert is created, updates the rider's emergency location, notifies all active group members via voice channel, and logs the incident to the rider's stats",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "DistressAlert",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.status == \"active\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "distress_alert_response",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "update_location": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "update-distress-location",
+            "args": {
+              "rider_id": "${ .trigger.data.rider_id }",
+              "lat": "${ .trigger.data.lat }",
+              "lng": "${ .trigger.data.lng }",
+              "distress_alert_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "notify_group",
+          "x-base44": {
+            "title": "Update emergency location",
+            "description": "Update rider's live GPS position"
+          }
+        }
+      },
+      {
+        "notify_group": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notify-group-voice-channel",
+            "args": {
+              "rider_id": "${ .trigger.data.rider_id }",
+              "rider_name": "${ .trigger.data.rider_name }",
+              "lat": "${ .trigger.data.lat }",
+              "lng": "${ .trigger.data.lng }",
+              "distress_alert_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "log_incident",
+          "x-base44": {
+            "title": "Notify group members",
+            "description": "Alert active voice channel participants"
+          }
+        }
+      },
+      {
+        "log_incident": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "log-incident-stats",
+            "args": {
+              "rider_id": "${ .trigger.data.rider_id }",
+              "distress_alert_id": "${ .trigger.entity_id }",
+              "lat": "${ .trigger.data.lat }",
+              "lng": "${ .trigger.data.lng }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Log incident",
+            "description": "Record to rider's stats"
+          }
+        }
+      }
+    ]
+  }
+}
