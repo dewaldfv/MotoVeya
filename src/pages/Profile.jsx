@@ -353,7 +353,7 @@ export default function Profile() {
         
 
         <div className="flex gap-3 pt-2">
-          <Button variant="secondary" className="min-h-[56px] flex-1 text-base" onClick={openAddBike}>
+          <Button variant="secondary" className="min-h-[56px] flex-1 text-base hidden" onClick={openAddBike}>
             <Plus size={20} className="mr-2" /> Add Motorcycle
           </Button>
           
