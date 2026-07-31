@@ -536,7 +536,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     } catch (e) { console.error(e); }
   };
 
-  const startRide = async (destOverride) => {
+  const startRide = async (destOverride, originOverride) => {
     await requestMotionPermission();
     setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
     setHeading(null); setAccuracy(null); setDistressActive(false);
@@ -547,7 +547,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     if (dest) {
       if (destOverride) { setDestination(destOverride); setDestInput(destOverride.name); }
       try {
-        const origin = await getCurrentPosition();
+        const origin = originOverride || await getCurrentPosition();
         setUserPos(origin);
         await fetchRoute(origin, dest);
       } catch (e) {
@@ -642,6 +642,6 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     handleDestination, handleAddStop, handleDismissService,
     handleSimulateCrash, handleCancelCrash, handleResolveEmergency,
     handleDistress, startRide, endRide: handleEndRide,
-    navigateTo: (dest) => { startRide(dest); },
+    navigateTo: (dest, origin) => { startRide(dest, origin); },
   };
 }

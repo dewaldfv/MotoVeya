@@ -57,3 +57,20 @@ export function hasSeenBgExplainer() {
 export function setBgExplainerSeen() {
   localStorage.setItem(BG_EXPLAINER_KEY, 'true');
 }
+
+const PENDING_NAV_KEY = 'motogo_pending_navigation';
+
+export function savePendingNavigation(nav) {
+  try { localStorage.setItem(PENDING_NAV_KEY, JSON.stringify(nav)); } catch (e) {}
+}
+
+export function getPendingNavigation() {
+  try {
+    const data = localStorage.getItem(PENDING_NAV_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (e) { return null; }
+}
+
+export function clearPendingNavigation() {
+  try { localStorage.removeItem(PENDING_NAV_KEY); } catch (e) {}
+}

@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Navigation, Phone, MapPin, Calendar, ExternalLink, BadgeCheck, Menu, LocateFixed, Layers, X, Compass } from 'lucide-react';
+import { Navigation, Phone, MapPin, Calendar, ExternalLink, BadgeCheck, Menu, LocateFixed, Layers, X, Compass } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MapView from '@/components/MapView';
 import BottomSheet from '@/components/BottomSheet';
-import SearchPanel from '@/components/SearchPanel';
 import CategoryMenu, { MAP_CATEGORIES } from '@/components/CategoryMenu';
 import LayersSheet from '@/components/LayersSheet';
 import { useMapLayer } from '@/lib/mapLayers';
@@ -16,6 +15,7 @@ import { useMapOverlays, POI_OVERLAY_MAP } from '@/lib/mapOverlays';
 import { useRideSession } from '@/hooks/useRideSession';
 import NavigationOverlay from '@/components/NavigationOverlay';
 import { setRideActive } from '@/lib/rideStatus';
+import { getPendingNavigation, clearPendingNavigation } from '@/lib/rideCache';
 import { toast } from 'sonner';
 
 const SA_CENTER = [-26.2041, 28.0473];
@@ -39,7 +39,6 @@ export default function Home() {
   const [fetchingCat, setFetchingCat] = useState(false);
   const [recenterSignal, setRecenterSignal] = useState(0);
   const [fitRouteSignal, setFitRouteSignal] = useState(0);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
@@ -126,6 +125,16 @@ export default function Home() {
 
   useEffect(() => {setRideActive(session.isActive);}, [session.isActive]);
   useEffect(() => {if (session.userPos) userPosRef.current = session.userPos;}, [session.userPos]);
+
+  // Pick up navigation planned on the Rides tab
+  useEffect(() => {
+    const pending = getPendingNavigation();
+    if (pending?.dest) {
+      clearPendingNavigation();
+      session.navigateTo(pending.dest, pending.start ? [pending.start.lat, pending.start.lng] : undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Real-time friend marker updates
   const friendIdsRef = useRef(new Set());
@@ -270,7 +279,6 @@ export default function Home() {
   const handleNavigatePin = (item) => {
     session.navigateTo({ lat: item.lat, lng: item.lng, name: item.name || item.title || item.rider_name || 'Destination' });
   };
-  const handleSearchSelect = (dest) => session.handleDestination(dest);
   const handleServiceNavigate = (service) => {
     setSelectedService(null);
     session.navigateTo({ lat: service.lat, lng: service.lng, name: service.name });
@@ -313,14 +321,6 @@ export default function Home() {
 
       {showIdleControls &&
       <>
-          <button
-          onClick={() => setSearchOpen(true)}
-          className="glove-target absolute hud-left hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))] opacity-100"
-          aria-label="Search">
-          
-            <Search size={22} className="text-[hsl(var(--primary))]" />
-          </button>
-
           <button
           onClick={() => setMenuOpen(true)}
           className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))]"
@@ -381,14 +381,6 @@ export default function Home() {
         bike={bikeData}
         notifyFriends={notifyFriends}
         setNotifyFriends={setNotifyFriends} />
-      
-
-      <SearchPanel
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        onSelect={handleSearchSelect}
-        pois={pois}
-        events={events} />
       
 
       <CategoryMenu

@@ -14,6 +14,7 @@ import SplashScreen from '@/components/SplashScreen';
 import AppLayout from '@/components/AppLayout';
 import Home from '@/pages/Home';
 import Rides from '@/pages/Rides';
+import RideHistory from '@/pages/RideHistory';
 import RideDetail from '@/pages/RideDetail';
 import Events from '@/pages/Events';
 import EventDetail from '@/pages/EventDetail';
@@ -84,6 +85,7 @@ const AuthenticatedApp = () => {
       {/* Add your page Route elements here */}
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/rides/history" element={<RideHistory />} />
         <Route path="/rides" element={<Rides />} />
         <Route path="/rides/:id" element={<RideDetail />} />
         <Route path="/events" element={<Events />} />
