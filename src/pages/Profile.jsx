@@ -265,7 +265,7 @@ export default function Profile() {
             subtitle="Badges, milestones and riding goals"
             details={stats.newestBadge || 'No badges yet — start riding!'}
             delay={0.5}
-            onClick={() => navigate('/rides')} />
+            onClick={() => navigate('/achievements')} />
           
 
           <MenuCard
