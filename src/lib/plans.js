@@ -1,6 +1,6 @@
 export const PRICING = {
   free: { label: 'Free', monthly: 0, annual: 0 },
-  premium: { label: 'Premium', monthly: 79.99, annual: 799.99 },
+  premium: { label: 'Premium', monthly: 69, annual: 690 },
 };
 
 export const PREMIUM_FEATURES = [
