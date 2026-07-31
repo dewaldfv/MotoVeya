@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle, LifeBuoy, HelpCircle, MapPinned } from 'lucide-react';
+import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle, LifeBuoy, HelpCircle, MapPinned, Wrench, Gauge } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -284,10 +284,31 @@ export default function Profile() {
             onClick={() => navigate('/settings')} />
 
           <MenuCard
+            icon={BikeIcon}
+            title="Bike Garage"
+            subtitle="Manage your motorcycles, fuel data and photos"
+            delay={0.72}
+            onClick={() => navigate('/bike-garage')} />
+
+          <MenuCard
+            icon={Wrench}
+            title="Service History"
+            subtitle="Log maintenance and workshop visits"
+            delay={0.725}
+            onClick={() => navigate('/service-history')} />
+
+          <MenuCard
+            icon={Gauge}
+            title="Safety Dashboard"
+            subtitle="Your riding safety stats and alert history"
+            delay={0.73}
+            onClick={() => navigate('/safety-dashboard')} />
+
+          <MenuCard
             icon={MapPinned}
             title="Ride Planner"
             subtitle="Map out future routes and share with friends"
-            delay={0.72}
+            delay={0.735}
             onClick={() => navigate('/ride-planner')} />
 
           <MenuCard

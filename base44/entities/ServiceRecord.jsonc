@@ -1,55 +1,60 @@
 {
-  "name": "Bike",
+  "name": "ServiceRecord",
   "type": "object",
   "properties": {
-    "make": {
+    "bike_id": {
       "type": "string"
     },
-    "model": {
+    "bike_make": {
       "type": "string"
     },
-    "year": {
+    "bike_model": {
+      "type": "string"
+    },
+    "service_type": {
+      "type": "string",
+      "enum": [
+        "oil_change",
+        "chain_sprockets",
+        "tyres",
+        "brakes",
+        "battery",
+        "general_service",
+        "major_service",
+        "suspension",
+        "electrical",
+        "other"
+      ],
+      "default": "general_service"
+    },
+    "description": {
+      "type": "string"
+    },
+    "workshop_name": {
+      "type": "string"
+    },
+    "cost_zar": {
       "type": "number"
     },
-    "engine_size_cc": {
+    "odometer_km": {
       "type": "number"
     },
-    "tank_capacity_l": {
+    "service_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "next_service_km": {
       "type": "number"
-    },
-    "fuel_consumption_l_per_100km": {
-      "type": "number"
-    },
-    "color": {
-      "type": "string"
-    },
-    "nickname": {
-      "type": "string"
-    },
-    "is_primary": {
-      "type": "boolean",
-      "default": false
-    },
-    "photo_url": {
-      "type": "string"
     }
   },
   "required": [
-    "make",
-    "model"
+    "bike_id",
+    "service_type",
+    "service_date"
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "created_by_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+      "created_by_id": "{{user.id}}"
     },
     "read": {
       "$or": [
