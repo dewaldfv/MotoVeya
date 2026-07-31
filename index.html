@@ -13,6 +13,8 @@
     <title>MotoGo — Motorcycle Navigation & Safety</title>
     <script>
       (function(){try{var t=localStorage.getItem('motogo-theme')||'auto';var d=t==='dark'||(t==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();
+      // Allow the screen to follow the device orientation (clears any prior lock).
+      (function(){try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();}catch(e){}})();
     </script>
   </head>
   <body>
