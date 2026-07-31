@@ -301,7 +301,7 @@
 }
 
 /* Landscape mode: add an extra grid column to common layouts to use the wider screen */
-@media (orientation: landscape) and (max-height: 500px) {
+@media (orientation: landscape) {
   [data-orientation="landscape"] .grid-cols-1:not(.map-grid):not(.nav-grid) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

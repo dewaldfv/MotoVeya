@@ -8,20 +8,19 @@ import { useState, useEffect, useRef } from 'react';
  */
 export function useScreenOrientation() {
   const getOrientationState = () => {
-    let type = 'portrait-primary';
     let angle = 0;
 
     if (typeof screen !== 'undefined' && screen.orientation) {
-      type = screen.orientation.type;
       angle = screen.orientation.angle || 0;
-    } else if (typeof window !== 'undefined') {
-      if (window.matchMedia && window.matchMedia('(orientation: landscape)').matches) {
-        type = 'landscape-primary';
-      }
-      if (typeof window.orientation === 'number') {
-        angle = window.orientation;
-      }
+    } else if (typeof window !== 'undefined' && typeof window.orientation === 'number') {
+      angle = window.orientation;
     }
+
+    // Derive orientation from the actual viewport rather than the physical
+    // screen, so the layout also adapts inside iframes and resized windows.
+    const landscape =
+      typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
+    const type = landscape ? 'landscape-primary' : 'portrait-primary';
 
     return { type, angle };
   };
