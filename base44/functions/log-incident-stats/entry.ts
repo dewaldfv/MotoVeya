@@ -10,6 +10,17 @@ export default async function(req) {
       return Response.json({ error: 'rider_id required' }, { status: 400 });
     }
 
+    // Authenticate caller and verify they match the rider whose stats are being logged
+    let me;
+    try {
+      me = await base44.auth.me();
+    } catch (e) {
+      return Response.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!me || me.id !== rider_id) {
+      return Response.json({ error: 'You can only log incidents for yourself' }, { status: 403 });
+    }
+
     const svc = base44.asServiceRole;
 
     // Fetch the rider to read their current incident count

@@ -10,6 +10,17 @@ export default async function(req) {
       return Response.json({ error: 'rider_id required' }, { status: 400 });
     }
 
+    // Authenticate caller and verify they match the rider in distress
+    let me;
+    try {
+      me = await base44.auth.me();
+    } catch (e) {
+      return Response.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!me || me.id !== rider_id) {
+      return Response.json({ error: 'You can only broadcast distress alerts for yourself' }, { status: 403 });
+    }
+
     const svc = base44.asServiceRole;
     const trackingLink = lat != null && lng != null
       ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`

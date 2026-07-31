@@ -10,6 +10,17 @@ export default async function(req) {
       return Response.json({ error: 'rider_id, lat, lng required' }, { status: 400 });
     }
 
+    // Authenticate caller and verify they own the location being updated
+    let me;
+    try {
+      me = await base44.auth.me();
+    } catch (e) {
+      return Response.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!me || me.id !== rider_id) {
+      return Response.json({ error: 'You can only update your own location' }, { status: 403 });
+    }
+
     const now = new Date().toISOString();
     const svc = base44.asServiceRole;
 

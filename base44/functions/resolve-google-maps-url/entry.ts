@@ -10,8 +10,13 @@ Deno.serve(async (req) => {
     let finalUrl = url;
     let resolvedShortLink = false;
 
-    // Resolve short links (maps.app.goo.gl, goo.gl/maps)
-    if (/goo\.gl/i.test(url)) {
+    // Resolve short links (maps.app.goo.gl, goo.gl/maps) — strict hostname whitelist to prevent SSRF
+    let parsedInput = null;
+    try { parsedInput = new URL(url); } catch (e) { /* fall through */ }
+    const isShortLink = parsedInput &&
+      (parsedInput.protocol === 'http:' || parsedInput.protocol === 'https:') &&
+      /^(maps\.app\.goo\.gl|goo\.gl)$/i.test(parsedInput.hostname);
+    if (isShortLink) {
       try {
         const res = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 MotoGo-App' } });
         finalUrl = res.url || url;

@@ -29,8 +29,16 @@ export default async function(req) {
     const cycle = billing_cycle === 'annual' ? 'annual' : 'monthly';
     const amount = AMOUNT_CENTS[cycle];
     const reference = `motogo_${cycle}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-    const appOrigin = origin || req.headers.get('origin') || 'https://app.base44.com';
     const appId = secrets.get('BASE44_APP_ID') || '';
+
+    // Strict origin whitelist to prevent open-redirect via callback_url injection
+    const TRUSTED_ORIGINS = [
+      'https://motogo.app',
+      'https://app.base44.com',
+      'https://www.motogo.app',
+    ];
+    const candidateOrigin = (typeof origin === 'string' ? origin : '') || req.headers.get('origin') || '';
+    const appOrigin = TRUSTED_ORIGINS.includes(candidateOrigin) ? candidateOrigin : TRUSTED_ORIGINS[0];
 
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
