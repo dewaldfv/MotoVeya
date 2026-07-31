@@ -47,7 +47,7 @@ export default function ProfileHeader({ user, isPremium, copied, onCopy, onShare
           <div className="h-full w-full bg-gradient-to-br from-primary/25 via-primary/10 to-card" />
         )}
       </div>
-      {hasCover && <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/10 to-black/45" />}
+      {hasCover && <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/60" />}
       {!hasCover && <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/15 blur-2xl" />}
 
       <button
