@@ -189,7 +189,6 @@ export default function Settings() {
 
         <Section title="📄 Legal">
           <Row icon={FileText} label="End User License Agreement" onClick={() => goLegal('eula')} />
-          <Row icon={Shield} label="Privacy Policy" onClick={() => goLegal('privacy')} />
           <Row icon={ScrollText} label="Terms & Conditions" onClick={() => goLegal('terms')} last />
         </Section>
 
