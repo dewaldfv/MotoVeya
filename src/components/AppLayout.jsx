@@ -6,6 +6,7 @@ import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import RideResumeBanner from './RideResumeBanner';
 import VoiceChannelProvider from './voice/VoiceChannelProvider';
 import NotificationPopUp from './NotificationPopUp';
+import OrientationPermissionPrompt from './OrientationPermissionPrompt';
 import { getActiveRide } from '@/lib/rideCache';
 import { subscribeRideActive } from '@/lib/rideStatus';
 import { useScreenOrientation } from '@/hooks/useScreenOrientation';
@@ -46,6 +47,7 @@ export default function AppLayout() {
       data-orientation={isLandscape ? 'landscape' : 'portrait'}
     >
       <NotificationPopUp />
+      <OrientationPermissionPrompt />
       {hasActiveRide && !rideActive && <RideResumeBanner />}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
