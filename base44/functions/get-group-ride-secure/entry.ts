@@ -47,19 +47,21 @@ Deno.serve(async (req) => {
     let participants = [];
     try { participants = await svc.entities.RideParticipant.filter({ group_ride_id: rideId }, '-last_updated', 100); } catch (e) {}
 
-    // Privacy: once a ride is finished, strip live location data — only summary info remains.
+    // Privacy: bike details are private to the owner — never expose them to other
+    // group members. Live location stays visible to co-members while the ride is active.
     const isActive = ACTIVE_RIDE_STATES.includes(ride.status);
-    if (!isActive) {
-      participants = (participants || []).map((p) => ({
-        ...p,
-        lat: null,
-        lng: null,
-        speed_kmh: null,
-        distance_from_leader_km: null,
-        gps_status: null,
-        battery_level: null,
-      }));
-    }
+    participants = (participants || []).map((p) => {
+      const stripped = { ...p, bike_make: null, bike_model: null };
+      if (!isActive) {
+        stripped.lat = null;
+        stripped.lng = null;
+        stripped.speed_kmh = null;
+        stripped.distance_from_leader_km = null;
+        stripped.gps_status = null;
+        stripped.battery_level = null;
+      }
+      return stripped;
+    });
 
     return Response.json({ ride, participants, my_participation: myParticipation, is_active: isActive });
   } catch (error) {

@@ -55,6 +55,24 @@ Deno.serve(async (req) => {
         if (ps && ps[0]) privacy = { ...privacy, ...ps[0] };
       } catch (e) { /* no settings = defaults */ }
 
+      // Profile, bike details and stats are private to the owner. Only the owner
+      // receives their full rider stats; every other user (even a friend) gets
+      // identity only — no bio, club, bike, stats, history, photos or fuel data.
+      if (uid !== me.id) {
+        riders.push({
+          user_id: uid,
+          nickname: profile?.nickname || profile?.full_name || null,
+          full_name: profile?.full_name || null,
+          avatar_url: profile?.avatar_url || null,
+          bio: null, phone: null, motorcycle_club: null,
+          bike_make: null, bike_model: null, bike_nickname: null,
+          weekly: null, streak: null, monthly: null, fuel: null,
+          events_count: null, rides_completed: null, photos: [], history: [],
+          total_distance_km: null, privacy, profile_private: true,
+        });
+        continue;
+      }
+
       // Only load rides if at least one dependent section is visible.
       const needsRides = privacy.show_weekly_stats || privacy.show_completed_rides || privacy.show_fuel_stats || privacy.show_events || privacy.show_photos;
       let rides = [];

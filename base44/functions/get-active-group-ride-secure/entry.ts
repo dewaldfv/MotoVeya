@@ -37,10 +37,14 @@ Deno.serve(async (req) => {
       participants = await svc.entities.RideParticipant.filter({ group_ride_id: activeRide.id }, '-last_updated', 100);
     } catch (e) { /* none */ }
 
+    // Bike details are private to the owner — strip them from participants. Live
+    // location/status remain visible to co-members during the active ride.
+    const strippedParticipants = (participants || []).map((p) => ({ ...p, bike_make: null, bike_model: null }));
+
     return Response.json({
       active: true,
       ride: activeRide,
-      participants: participants || [],
+      participants: strippedParticipants,
     });
   } catch (error) {
     console.error('get-active-group-ride-secure error', error);

@@ -74,19 +74,6 @@ Deno.serve(async (req) => {
         if (ps && ps[0]) privacy = { ...privacy, ...ps[0] };
       } catch (e) { /* no settings = defaults */ }
 
-      // Motorcycle info — gated by the owner's privacy setting.
-      let bike = null;
-      if (privacy.show_motorcycle) {
-        try {
-          const bikes = await svc.entities.Bike.filter({ created_by_id: friendUid, is_primary: true }, '-created_date', 1);
-          bike = bikes[0] || null;
-          if (!bike) {
-            const all = await svc.entities.Bike.filter({ created_by_id: friendUid }, '-created_date', 1);
-            bike = all[0] || null;
-          }
-        } catch (e) {}
-      }
-
       // Live location — read from the friend's own User profile, gated by their audience choice.
       const fLat = profile?.last_lat;
       const fLng = profile?.last_lng;
@@ -126,11 +113,6 @@ Deno.serve(async (req) => {
         name: profile?.nickname || profile?.full_name || friendName || 'Rider',
         nickname: profile?.nickname || null,
         avatar_url: profile?.avatar_url || null,
-        bio: profile?.bio || null,
-        motorcycle_club: profile?.motorcycle_club || null,
-        bike_make: bike?.make || null,
-        bike_model: bike?.model || null,
-        bike_nickname: bike?.nickname || null,
         lat,
         lng,
         location_shared,
