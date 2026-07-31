@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle } from 'lucide-react';
+import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle, LifeBuoy, HelpCircle, MapPinned } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -284,10 +284,31 @@ export default function Profile() {
             onClick={() => navigate('/settings')} />
 
           <MenuCard
+            icon={MapPinned}
+            title="Ride Planner"
+            subtitle="Map out future routes and share with friends"
+            delay={0.72}
+            onClick={() => navigate('/ride-planner')} />
+
+          <MenuCard
+            icon={LifeBuoy}
+            title="Safety Guidelines"
+            subtitle="Emergency procedures, crash tips and group riding"
+            delay={0.73}
+            onClick={() => navigate('/safety-guidelines')} />
+
+          <MenuCard
+            icon={HelpCircle}
+            title="Support Center"
+            subtitle="FAQs on features, navigation and subscriptions"
+            delay={0.74}
+            onClick={() => navigate('/support')} />
+
+          <MenuCard
             icon={Info}
             title="About MotoGo"
             subtitle="What we do and who we are"
-            delay={0.72}
+            delay={0.75}
             onClick={() => navigate('/about')} />
 
           <MenuCard

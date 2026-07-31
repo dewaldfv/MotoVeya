@@ -1,0 +1,22 @@
+{
+  "name": "RidePlan",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "waypoints": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "planned_date": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

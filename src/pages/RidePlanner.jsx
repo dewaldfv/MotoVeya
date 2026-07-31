@@ -1,0 +1,228 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, MapPin, Route, Loader2, Calendar } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import LocationSearchInput from '@/components/rides/LocationSearchInput';
+import RidePlannerMap from '@/components/ride-planner/RidePlannerMap';
+import ShareCodeSheet from '@/components/ShareCodeSheet';
+import { toast } from 'sonner';
+
+const STORAGE_KEY = 'motogo_ride_plan_draft';
+
+export default function RidePlanner() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [title, setTitle] = useState('');
+  const [notes, setNotes] = useState('');
+  const [plannedDate, setPlannedDate] = useState('');
+  const [waypoints, setWaypoints] = useState([]);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharePlan, setSharePlan] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const loadId = params.get('load');
+        if (loadId) {
+          const plan = await base44.entities.RidePlan.get(loadId);
+          if (plan) {
+            const wp = JSON.parse(plan.waypoints || '[]');
+            setTitle(plan.title || '');
+            setNotes(plan.notes || '');
+            setPlannedDate(plan.planned_date ? plan.planned_date.slice(0, 10) : '');
+            setWaypoints(wp);
+            toast.success('Shared route loaded');
+            window.history.replaceState({}, '', '/ride-planner');
+            return;
+          }
+        }
+      } catch (e) { /* ignore */ }
+      try {
+        const draft = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (draft) {
+          setTitle(draft.title || '');
+          setNotes(draft.notes || '');
+          setPlannedDate(draft.plannedDate || '');
+          setWaypoints(Array.isArray(draft.waypoints) ? draft.waypoints : []);
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, notes, plannedDate, waypoints }));
+  }, [title, notes, plannedDate, waypoints]);
+
+  const { data: plans = [], isLoading: plansLoading } = useQuery({
+    queryKey: ['ride-plans'],
+    queryFn: () => base44.entities.RidePlan.filter({}, '-created_date', 50),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (data) => base44.entities.RidePlan.create(data),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['ride-plans'] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.RidePlan.delete(id),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['ride-plans'] }),
+  });
+
+  const addWaypoint = (loc) => {
+    setWaypoints((prev) => [...prev, { name: loc.name, lat: loc.lat, lng: loc.lng }]);
+  };
+
+  const removeWaypoint = (i) => setWaypoints((prev) => prev.filter((_, idx) => idx !== i));
+  const moveUp = (i) => i > 0 && setWaypoints((prev) => {
+    const next = [...prev]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; return next;
+  });
+  const moveDown = (i) => i < waypoints.length - 1 && setWaypoints((prev) => {
+    const next = [...prev]; [next[i + 1], next[i]] = [next[i], next[i + 1]]; return next;
+  });
+
+  const handleSave = async () => {
+    if (!title.trim()) { toast.error('Give your route a title'); return; }
+    if (waypoints.length < 2) { toast.error('Add at least two waypoints'); return; }
+    try {
+      const plan = await saveMutation.mutateAsync({
+        title: title.trim(),
+        waypoints: JSON.stringify(waypoints),
+        notes: notes.trim(),
+        planned_date: plannedDate ? new Date(plannedDate).toISOString() : undefined,
+      });
+      toast.success('Route saved');
+      setSharePlan({ id: plan.id, title: title.trim() });
+      setShareOpen(true);
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not save route');
+    }
+  };
+
+  const loadPlan = (plan) => {
+    try {
+      const wp = JSON.parse(plan.waypoints || '[]');
+      setTitle(plan.title);
+      setNotes(plan.notes || '');
+      setPlannedDate(plan.planned_date ? plan.planned_date.slice(0, 10) : '');
+      setWaypoints(wp);
+      toast.success('Route loaded — edit and re-save to update');
+    } catch (e) { toast.error('Could not load route'); }
+  };
+
+  const shareLink = sharePlan ? `${window.location.origin}/ride-planner?load=${sharePlan.id}` : '';
+
+  return (
+    <div className="min-h-screen bg-background pb-12">
+      <div className="sticky top-0 z-10 flex items-center gap-3 bg-background/95 p-4 backdrop-blur-lg" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
+        <button onClick={() => navigate(-1)} className="glove-target flex items-center justify-center rounded-full bg-card" aria-label="Back">
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="text-lg font-bold">Ride Planner</h1>
+      </div>
+
+      <div className="mx-auto max-w-2xl space-y-4 p-4">
+        <div className="space-y-3 rounded-3xl border border-border bg-card p-4">
+          <div>
+            <Label>Route title</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Sunday Breakfast Run" className="mt-1" />
+          </div>
+          <div>
+            <Label>Planned date (optional)</Label>
+            <div className="mt-1 flex items-center gap-2 rounded-xl border border-input bg-transparent px-3 py-2">
+              <Calendar size={16} className="text-muted-foreground" />
+              <input type="date" value={plannedDate} onChange={(e) => setPlannedDate(e.target.value)} className="flex-1 bg-transparent text-sm outline-none" />
+            </div>
+          </div>
+          <div>
+            <Label>Notes (optional)</Label>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Fuel stop at midway, lunch at the end" className="mt-1" />
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-border bg-card p-4">
+          <Label className="mb-2 block">Add a waypoint</Label>
+          <LocationSearchInput placeholder="Search for a place..." onSelect={addWaypoint} />
+        </div>
+
+        {waypoints.length > 0 && <RidePlannerMap waypoints={waypoints} />}
+
+        {waypoints.length > 0 && (
+          <div className="overflow-hidden rounded-3xl border border-border bg-card">
+            {waypoints.map((w, i) => (
+              <div key={i} className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-black text-primary-foreground">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{w.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{w.lat.toFixed(4)}, {w.lng.toFixed(4)}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button onClick={() => moveUp(i)} disabled={i === 0} className="rounded-lg p-1.5 text-muted-foreground disabled:opacity-30" aria-label="Move up"><ArrowUp size={16} /></button>
+                  <button onClick={() => moveDown(i)} disabled={i === waypoints.length - 1} className="rounded-lg p-1.5 text-muted-foreground disabled:opacity-30" aria-label="Move down"><ArrowDown size={16} /></button>
+                  <button onClick={() => removeWaypoint(i)} className="rounded-lg p-1.5 text-destructive" aria-label="Remove"><Trash2 size={16} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Button
+          onClick={handleSave}
+          disabled={saveMutation.isPending}
+          className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl text-base font-bold"
+        >
+          {saveMutation.isPending ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+          Save & Share Route
+        </Button>
+
+        <div>
+          <div className="mb-2 flex items-center gap-2 px-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">
+            <Route size={16} /> Saved Routes
+          </div>
+          {plansLoading ? (
+            <div className="rounded-3xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">Loading…</div>
+          ) : plans.length === 0 ? (
+            <div className="rounded-3xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">No saved routes yet. Plan your first one above.</div>
+          ) : (
+            <div className="space-y-2">
+              {plans.map((plan) => (
+                <div key={plan.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+                  <MapPin size={18} className="shrink-0 text-primary" />
+                  <button onClick={() => loadPlan(plan)} className="min-w-0 flex-1 text-left">
+                    <p className="truncate text-sm font-semibold">{plan.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {(() => { try { return JSON.parse(plan.waypoints || '[]').length; } catch { return 0; } })()} waypoints
+                      {plan.planned_date ? ` · ${new Date(plan.planned_date).toLocaleDateString()}` : ''}
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => { setSharePlan({ id: plan.id, title: plan.title }); setShareOpen(true); }}
+                    className="rounded-lg p-2 text-primary" aria-label="Share route"
+                  ><Share2 size={18} /></button>
+                  <button
+                    onClick={() => { if (confirm('Delete this route?')) deleteMutation.mutate(plan.id); }}
+                    className="rounded-lg p-2 text-destructive" aria-label="Delete route"
+                  ><Trash2 size={18} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ShareCodeSheet
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        title="Share Route"
+        code={shareLink || ''}
+        qrData={shareLink || ''}
+        description="Send this link to friends so they can load the route in MotoGo"
+      />
+    </div>
+  );
+}

@@ -38,6 +38,9 @@ import ResetPassword from '@/pages/ResetPassword';
 import Welcome from '@/pages/Welcome';
 import About from '@/pages/About';
 import Contact from '@/pages/Contact';
+import SafetyGuidelines from '@/pages/SafetyGuidelines';
+import SupportCenter from '@/pages/SupportCenter';
+import RidePlanner from '@/pages/RidePlanner';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
@@ -86,6 +89,8 @@ const AuthenticatedApp = () => {
       <Route path="/welcome" element={<Welcome />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
+      <Route path="/safety-guidelines" element={<SafetyGuidelines />} />
+      <Route path="/support" element={<SupportCenter />} />
       {/* Add your page Route elements here */}
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
@@ -103,6 +108,7 @@ const AuthenticatedApp = () => {
         <Route path="/location-sharing" element={<LocationSharing />} />
         <Route path="/legal/:doc" element={<Legal />} />
         <Route path="/fuel-tracker" element={<FuelTracker />} />
+        <Route path="/ride-planner" element={<RidePlanner />} />
         <Route path="/rider/:id" element={<RiderProfile />} />
         <Route path="/ride/group/:id" element={<ActiveGroupRide />} />
       </Route>
