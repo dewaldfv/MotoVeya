@@ -99,16 +99,7 @@
       }
     },
     "read": {
-      "$or": [
-        {
-          "id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+      "id": "{{user.id}}"
     },
     "update": {
       "$or": [
