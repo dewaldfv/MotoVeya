@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play } from 'lucide-react';
+import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -282,6 +282,20 @@ export default function Profile() {
             subtitle="Display, navigation and ride settings"
             delay={0.7}
             onClick={() => navigate('/settings')} />
+
+          <MenuCard
+            icon={Info}
+            title="About MotoGo"
+            subtitle="What we do and who we are"
+            delay={0.72}
+            onClick={() => navigate('/about')} />
+
+          <MenuCard
+            icon={MessageCircle}
+            title="Contact Us"
+            subtitle="Get in touch with the MotoGo team"
+            delay={0.74}
+            onClick={() => navigate('/contact')} />
           
         </div>
 
