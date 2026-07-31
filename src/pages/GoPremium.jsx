@@ -8,10 +8,7 @@ import { usePremium } from '@/hooks/usePremium';
 import PremiumBadge from '@/components/PremiumBadge';
 import { toast } from 'sonner';
 
-const STRIPE_PRICES = {
-  monthly: 'price_1Tp622A8s7qT3884MbxgxhlL',
-  annual: 'price_1Tp622A8s7qT3884IT9D4998',
-};
+
 
 const FEATURE_ICONS = {
   Navigation: '🧭', Shield: '🛡️', Phone: '📞', Users: '👥', Calendar: '📅',
@@ -78,8 +75,7 @@ export default function GoPremium() {
     }
     setProcessing(true);
     try {
-      const response = await base44.functions.invoke('create-checkout-session', {
-        price_id: STRIPE_PRICES[cycle],
+      const response = await base44.functions.invoke('create-paystack-checkout', {
         user_id: user?.id,
         user_email: user?.email,
         billing_cycle: cycle,

@@ -1,0 +1,84 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { secrets } from 'base44:runtime';
+
+async function verifyPaystackSignature(body, signatureHeader, secret) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-512' },
+    false,
+    ['sign']
+  );
+  const expected = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+  const expectedHex = Array.from(new Uint8Array(expected))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return expectedHex === signatureHeader;
+}
+
+export default async function(req) {
+  try {
+    const body = await req.text();
+    const signature = req.headers.get('x-paystack-signature');
+    const secret = secrets.get('PAYSTACK_SECRET_KEY');
+
+    if (!signature || !secret) {
+      return Response.json({ error: 'Missing signature or secret' }, { status: 400 });
+    }
+
+    const isValid = await verifyPaystackSignature(body, signature, secret);
+    if (!isValid) {
+      console.error('Paystack webhook signature verification failed');
+      return Response.json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    const event = JSON.parse(body);
+    const base44 = createClientFromRequest(req).asServiceRole;
+
+    if (event.event === 'charge.success') {
+      const data = event.data;
+      const metadata = data.metadata || {};
+      const userId = metadata.user_id;
+      const cycle = metadata.billing_cycle === 'annual' ? 'annual' : 'monthly';
+      const reference = data.reference;
+      const amount = data.amount / 100; // cents to ZAR
+      const paidAt = new Date(data.paid_at || Date.now());
+      const periodEnd = new Date(
+        paidAt.getTime() + (cycle === 'annual' ? 365 : 30) * 24 * 60 * 60 * 1000
+      );
+
+      // Avoid duplicate processing for the same reference
+      const existing = await base44.entities.Subscription.filter({ purchase_token: reference });
+      if (existing.length === 0) {
+        await base44.entities.Subscription.create({
+          user_id: userId,
+          plan: 'premium',
+          status: 'active',
+          billing_cycle: cycle,
+          amount_zar: amount,
+          purchase_date: paidAt.toISOString(),
+          renewal_date: periodEnd.toISOString(),
+          expiry_date: periodEnd.toISOString(),
+          purchase_token: reference,
+          payment_provider: 'paystack',
+          auto_renew: true,
+        });
+
+        if (userId) {
+          await base44.entities.User.update(userId, {
+            subscription_tier: 'premium',
+            subscription_status: 'active',
+            subscription_expiry: periodEnd.toISOString(),
+          });
+        }
+        console.log(`Premium activated for user ${userId} via Paystack (ref ${reference})`);
+      }
+    }
+
+    return Response.json({ received: true });
+  } catch (error) {
+    console.error('Webhook error:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
