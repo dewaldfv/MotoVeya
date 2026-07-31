@@ -20,6 +20,9 @@
     "avatar_url": {
       "type": "string"
     },
+    "cover_url": {
+      "type": "string"
+    },
     "bio": {
       "type": "string"
     },

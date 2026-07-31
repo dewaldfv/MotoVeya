@@ -177,6 +177,32 @@ export default function Profile() {
 
   const copyCode = () => {navigator.clipboard.writeText(user.id);setCopied(true);setTimeout(() => setCopied(false), 2000);};
 
+  const handleAvatarUpload = async (file) => {
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await base44.auth.updateMe({ avatar_url: file_url });
+      setUser((u) => ({ ...u, avatar_url: file_url }));
+      toast.success('Profile picture updated');
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not update profile picture');
+      throw e;
+    }
+  };
+
+  const handleCoverUpload = async (file) => {
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await base44.auth.updateMe({ cover_url: file_url });
+      setUser((u) => ({ ...u, cover_url: file_url }));
+      toast.success('Cover photo updated');
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not update cover photo');
+      throw e;
+    }
+  };
+
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!user) return <LoginPrompt />;
 
@@ -192,7 +218,9 @@ export default function Profile() {
           copied={copied}
           onCopy={copyCode}
           onShare={() => setShareOpen(true)}
-          onSettings={() => navigate('/settings')} />
+          onSettings={() => navigate('/settings')}
+          onAvatarUpload={handleAvatarUpload}
+          onCoverUpload={handleCoverUpload} />
         
 
         <StatGrid
