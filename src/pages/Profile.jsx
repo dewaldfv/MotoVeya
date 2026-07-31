@@ -223,15 +223,6 @@ export default function Profile() {
           <MenuCard icon={Fuel} title="Fuel Tracker" subtitle="Adaptive fuel consumption and refill history" delay={0.35} onClick={() => navigate('/fuel-tracker')} />
 
           <MenuCard
-            icon={BikeIcon}
-            title="My Motorcycles"
-            subtitle="Manage your motorcycles and riding statistics"
-            details={stats.primaryBike ? `${stats.primaryBike.make} ${stats.primaryBike.model} · ${stats.fuelEconomy} L/100km · ${stats.totalDistance} km · Next service: ${stats.nextService} km` : 'No bikes added yet'}
-            delay={0.4}
-            onClick={openAddBike} />
-          
-
-          <MenuCard
             icon={Route}
             title="Ride History"
             subtitle="View every ride you've completed"
