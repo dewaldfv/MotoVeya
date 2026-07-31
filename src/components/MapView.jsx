@@ -297,7 +297,7 @@ export default function MapView({
         {groupRiders.length > 0 && <GroupRiderMarkers participants={groupRiders} />}
 
         {popupItem && (
-          <InfoWindow position={{ lat: popupItem.lat, lng: popupItem.lng }} onCloseClick={() => setPopupItem(null)}>
+          <InfoWindow position={{ lat: popupItem.lat, lng: popupItem.lng }} onCloseClick={() => setPopupItem(null)} zIndex={99999} options={{ zIndex: 99999 }}>
             <MapPopupContent
               item={popupItem}
               onMoreInfo={() => { onMarkerClick?.(popupItem); setPopupItem(null); }}
