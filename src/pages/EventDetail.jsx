@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Calendar, MapPin, Phone, Mail, ExternalLink, Navigation, Tag } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, Phone, Mail, ExternalLink, Navigation, Tag, Bookmark } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import MapView from '@/components/MapView';
+import { toast } from 'sonner';
 import CalendarExportButton from '@/components/CalendarExportButton';
 
 export default function EventDetail() {
@@ -25,7 +25,6 @@ export default function EventDetail() {
   if (!event) return <div className="flex h-screen flex-col items-center justify-center gap-4"><p className="text-muted-foreground">Event not found</p><button onClick={() => navigate('/events')} className="text-primary">Back to events</button></div>;
 
   const date = new Date(event.event_date).toLocaleString('en-ZA', { dateStyle: 'full', timeStyle: 'short' });
-  const center = event.lat ? [event.lat, event.lng] : [-26.2041, 28.0473];
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -58,12 +57,6 @@ export default function EventDetail() {
 
         {event.description && <p className="mt-4 text-sm text-muted-foreground">{event.description}</p>}
 
-        {event.lat && (
-          <div className="mt-4 h-48 overflow-hidden rounded-2xl">
-            <MapView center={center} zoom={14} events={[event]} className="h-full w-full" />
-          </div>
-        )}
-
         <div className="mt-4 space-y-2">
           {event.contact_phone && <div className="flex items-center gap-2 text-sm"><Phone size={16} className="text-primary" /> {event.contact_phone}</div>}
           {event.contact_email && <div className="flex items-center gap-2 text-sm"><Mail size={16} className="text-primary" /> {event.contact_email}</div>}
@@ -71,8 +64,11 @@ export default function EventDetail() {
         </div>
 
         <div className="mt-6 flex gap-2">
+          <Button size="lg" variant="secondary" className="min-h-[56px] px-5" onClick={() => toast.success('Event saved to favourites')}>
+            <Bookmark size={18} className="mr-2" /> Save
+          </Button>
           <Button size="lg" className="min-h-[56px] flex-1 text-base" onClick={() => navigate('/ride/active', { state: { destination: { lat: event.lat, lng: event.lng, name: event.venue_name } } })}>
-            <Navigation size={18} className="mr-2" /> Get Directions
+            <Navigation size={18} className="mr-2" /> Navigate
           </Button>
           {event.booking_link && (
             <Button size="lg" variant="secondary" className="min-h-[56px] px-5" onClick={() => window.open(event.booking_link, '_blank')}>
