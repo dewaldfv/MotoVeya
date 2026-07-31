@@ -27,9 +27,22 @@ export default function GoPremium() {
     const params = new URLSearchParams(window.location.search);
     const status = params.get('status');
     if (status === 'success') {
-      toast.success('Payment successful! Premium is now active.');
-      refresh();
-      window.history.replaceState({}, '', '/premium');
+      const reference = params.get('reference') || params.get('trxref');
+      (async () => {
+        try {
+          if (reference) {
+            await base44.functions.invoke('verify-paystack-payment', { reference });
+          }
+          await refresh();
+          toast.success('Payment successful! Premium is now active.');
+        } catch (e) {
+          console.error(e);
+          toast.success('Payment received — your Premium will activate shortly.');
+          await refresh();
+        } finally {
+          window.history.replaceState({}, '', '/premium');
+        }
+      })();
     } else if (status === 'cancelled') {
       toast.error('Payment cancelled. You can try again anytime.');
       window.history.replaceState({}, '', '/premium');
