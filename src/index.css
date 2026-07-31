@@ -270,3 +270,34 @@
     min-width: 48px;
   }
 }
+
+/* === Screen orientation change handling === */
+.orientation-transition {
+  transition: padding 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* Smooth grid reflow when the screen rotates */
+.orientation-transition .grid {
+  transition: grid-template-columns 0.3s ease, gap 0.3s ease;
+}
+
+/* Smooth dimension transitions for cards and sheets during rotation */
+.orientation-transition [class*="grid-cols-"],
+.orientation-transition [class*="max-w-"],
+.orientation-transition [class*="max-h-"] {
+  transition: max-width 0.3s ease, max-height 0.3s ease, grid-template-columns 0.3s ease;
+}
+
+/* Landscape mode: add an extra grid column to common layouts to use the wider screen */
+@media (orientation: landscape) and (max-height: 500px) {
+  [data-orientation="landscape"] .grid-cols-1:not(.map-grid):not(.nav-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-orientation="landscape"] .grid-cols-2:not(.map-grid):not(.nav-grid) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  [data-orientation="landscape"] .grid-cols-3:not(.map-grid):not(.nav-grid) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

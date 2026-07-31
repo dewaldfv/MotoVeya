@@ -8,6 +8,7 @@ import VoiceChannelProvider from './voice/VoiceChannelProvider';
 import NotificationPopUp from './NotificationPopUp';
 import { getActiveRide } from '@/lib/rideCache';
 import { subscribeRideActive } from '@/lib/rideStatus';
+import { useScreenOrientation } from '@/hooks/useScreenOrientation';
 
 const pageVariants = {
   initial: { opacity: 0, x: '100%' },
@@ -36,10 +37,14 @@ export default function AppLayout() {
   }, []);
 
   useLocationBroadcast();
+  const { isLandscape } = useScreenOrientation();
 
   return (
     <VoiceChannelProvider>
-    <div className="relative min-h-screen bg-background">
+    <div
+      className="relative min-h-screen bg-background overflow-x-hidden orientation-transition"
+      data-orientation={isLandscape ? 'landscape' : 'portrait'}
+    >
       <NotificationPopUp />
       {hasActiveRide && !rideActive && <RideResumeBanner />}
       <AnimatePresence mode="wait" initial={false}>
