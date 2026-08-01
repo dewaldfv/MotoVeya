@@ -12,15 +12,11 @@ export default function GroupMembersDialog({ group, open, onOpenChange }) {
     if (!open || !group) return;
     let cancelled = false;
     setLoading(true);
-    base44.entities.GroupMember.filter({ group_id: group.id, status: 'active' })
-      .then((list) => {
+    base44.functions
+      .invoke('get-group-members-secure', { group_id: group.id })
+      .then((res) => {
         if (cancelled) return;
-        const sorted = (list || []).sort((a, b) => {
-          if (a.role === 'leader' && b.role !== 'leader') return -1;
-          if (a.role !== 'leader' && b.role === 'leader') return 1;
-          return 0;
-        });
-        setMembers(sorted);
+        setMembers(res?.data?.members || []);
       })
       .catch(() => { if (!cancelled) setMembers([]); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -39,7 +35,7 @@ export default function GroupMembersDialog({ group, open, onOpenChange }) {
         <p className="text-sm text-muted-foreground">
           {members.length}/{group?.max_members} riders
         </p>
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 space-y-3">
           {loading ? (
             <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" />
@@ -48,25 +44,44 @@ export default function GroupMembersDialog({ group, open, onOpenChange }) {
             <p className="py-8 text-center text-sm text-muted-foreground">No members found.</p>
           ) : (
             members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between rounded-xl bg-card p-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">
-                    {(m.user_name || m.user_nickname || '?').charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-medium">{m.user_name || 'Unknown rider'}</p>
-                    {m.user_nickname && m.user_nickname !== m.user_name && (
-                      <p className="text-xs text-muted-foreground">{m.user_nickname}</p>
-                    )}
-                  </div>
-                </div>
-                {m.role === 'leader' ? (
-                  <Badge className="bg-primary/10 text-primary">
-                    <Crown size={12} className="mr-1" /> Leader
-                  </Badge>
+              <div key={m.id} className="relative overflow-hidden rounded-2xl border border-border">
+                {m.cover_url ? (
+                  <div
+                    className="h-14 w-full bg-cover bg-center"
+                    style={{ backgroundImage: `url(${m.cover_url})` }}
+                  />
                 ) : (
-                  <Badge variant="secondary">Member</Badge>
+                  <div className="h-14 w-full bg-gradient-to-br from-primary/40 to-primary/10" />
                 )}
+                <div className="absolute inset-0 bg-black/55" />
+                <div className="relative flex items-center justify-between gap-2 px-3 pb-3 -mt-6">
+                  <div className="flex items-center gap-3">
+                    {m.avatar_url ? (
+                      <img
+                        src={m.avatar_url}
+                        alt={m.name}
+                        className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover shadow-md"
+                      />
+                    ) : (
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-white bg-primary text-white font-bold shadow-md">
+                        {(m.name || '?').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-white drop-shadow">{m.name || 'Unknown rider'}</p>
+                      {m.nickname && m.nickname !== m.name && (
+                        <p className="truncate text-xs text-white/75">{m.nickname}</p>
+                      )}
+                    </div>
+                  </div>
+                  {m.role === 'leader' ? (
+                    <Badge className="shrink-0 bg-primary/90 text-white">
+                      <Crown size={12} className="mr-1" /> Leader
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="shrink-0">Member</Badge>
+                  )}
+                </div>
               </div>
             ))
           )}
