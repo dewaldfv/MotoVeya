@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Bike as BikeIcon, Phone, Crown, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -10,16 +10,56 @@ import { toast } from 'sonner';
 
 const STEPS = ['Profile', 'Motorcycle', 'Emergency', 'Plan'];
 
+const EMPTY_FORM = {
+  nickname: '', motorcycle_club: '', bio: '',
+  make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '',
+  emergency_contact_name: '', emergency_contact_phone: '', medical_notes: '',
+  subscription: 'free',
+};
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    nickname: '', motorcycle_club: '', bio: '',
-    make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '',
-    emergency_contact_name: '', emergency_contact_phone: '', medical_notes: '',
-    subscription: 'free',
-  });
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState(EMPTY_FORM);
+
+  // Pre-load any data the user already saved (supports resume + profile sync)
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await base44.auth.me();
+        setForm((f) => ({
+          ...f,
+          nickname: me.nickname || f.nickname,
+          motorcycle_club: me.motorcycle_club || f.motorcycle_club,
+          bio: me.bio || f.bio,
+          emergency_contact_name: me.emergency_contact_name || f.emergency_contact_name,
+          emergency_contact_phone: me.emergency_contact_phone || f.emergency_contact_phone,
+          medical_notes: me.medical_notes || f.medical_notes,
+          subscription: me.subscription_tier === 'premium' ? 'premium' : f.subscription,
+        }));
+        // Load primary bike if it exists
+        const bikes = await base44.entities.Bike.filter({ created_by_id: me.id }, '-created_date', 20);
+        const primary = bikes.find((b) => b.is_primary) || bikes[0];
+        if (primary) {
+          setForm((f) => ({
+            ...f,
+            make: primary.make || f.make,
+            model: primary.model || f.model,
+            year: primary.year ? String(primary.year) : f.year,
+            engine_size_cc: primary.engine_size_cc ? String(primary.engine_size_cc) : f.engine_size_cc,
+            tank_capacity_l: primary.tank_capacity_l ? String(primary.tank_capacity_l) : f.tank_capacity_l,
+            fuel_consumption_l_per_100km: primary.fuel_consumption_l_per_100km ? String(primary.fuel_consumption_l_per_100km) : f.fuel_consumption_l_per_100km,
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to preload onboarding data', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const canNext = () => {
@@ -29,21 +69,67 @@ export default function Onboarding() {
     return true;
   };
 
+  // Persist the current step's data to the User entity before advancing
+  const saveStep = async (currentStep) => {
+    if (currentStep === 0) {
+      await base44.auth.updateMe({
+        nickname: form.nickname, motorcycle_club: form.motorcycle_club, bio: form.bio,
+      });
+    } else if (currentStep === 1) {
+      // Ensure a bike record exists (create or update primary)
+      const bikes = await base44.entities.Bike.filter({ created_by_id: (await base44.auth.me()).id }, '-created_date', 20);
+      const primary = bikes.find((b) => b.is_primary) || bikes[0];
+      const bikeData = {
+        make: form.make, model: form.model, year: Number(form.year) || undefined,
+        engine_size_cc: Number(form.engine_size_cc) || undefined, tank_capacity_l: Number(form.tank_capacity_l) || undefined,
+        fuel_consumption_l_per_100km: Number(form.fuel_consumption_l_per_100km) || undefined, is_primary: true,
+      };
+      if (primary) {
+        await base44.entities.Bike.update(primary.id, bikeData);
+      } else {
+        await base44.entities.Bike.create(bikeData);
+      }
+    } else if (currentStep === 2) {
+      await base44.auth.updateMe({
+        emergency_contact_name: form.emergency_contact_name,
+        emergency_contact_phone: form.emergency_contact_phone,
+        medical_notes: form.medical_notes,
+      });
+    }
+  };
+
+  const handleNext = async () => {
+    if (!canNext()) return;
+    setSaving(true);
+    try {
+      await saveStep(step);
+      setStep(step + 1);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleComplete = async () => {
     setSaving(true);
     try {
       await base44.auth.updateMe({
-        nickname: form.nickname, motorcycle_club: form.motorcycle_club, bio: form.bio,
-        emergency_contact_name: form.emergency_contact_name, emergency_contact_phone: form.emergency_contact_phone,
-        medical_notes: form.medical_notes, subscription_tier: form.subscription, subscription_status: form.subscription === 'premium' ? 'active' : 'none',
+        subscription_tier: form.subscription,
+        subscription_status: form.subscription === 'premium' ? 'active' : 'none',
         onboarding_completed: true,
       });
-      await base44.entities.Bike.create({
-        make: form.make, model: form.model, year: Number(form.year) || undefined,
-        engine_size_cc: Number(form.engine_size_cc) || undefined, tank_capacity_l: Number(form.tank_capacity_l) || undefined,
-        fuel_consumption_l_per_100km: Number(form.fuel_consumption_l_per_100km) || undefined, is_primary: true,
-      });
-      await base44.entities.Subscription.create({ plan: form.subscription, status: 'active', amount_zar: form.subscription === 'premium' ? 69.99 : 0, start_date: new Date().toISOString(), auto_renew: true });
+      // Create subscription record only if one doesn't exist yet
+      const me = await base44.auth.me();
+      const existing = await base44.entities.Subscription.filter({ user_id: me.id }, '-created_date', 5);
+      if (existing.length === 0) {
+        await base44.entities.Subscription.create({
+          plan: form.subscription, status: 'active',
+          amount_zar: form.subscription === 'premium' ? 69.99 : 0,
+          start_date: new Date().toISOString(), auto_renew: true,
+        });
+      }
       toast.success('Welcome to MotoGo!');
       navigate('/');
     } catch (e) {
@@ -52,6 +138,14 @@ export default function Onboarding() {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -119,7 +213,7 @@ export default function Onboarding() {
         <div className="mt-6 flex gap-2">
           {step > 0 && <Button variant="secondary" className="min-h-[56px] px-6" onClick={() => setStep(step - 1)}><ChevronLeft size={20} /></Button>}
           {step < STEPS.length - 1 ? (
-            <Button className="min-h-[56px] flex-1 text-base" disabled={!canNext()} onClick={() => setStep(step + 1)}>Next <ChevronRight size={20} /></Button>
+            <Button className="min-h-[56px] flex-1 text-base" disabled={!canNext() || saving} onClick={handleNext}>{saving ? 'Saving...' : 'Next'} <ChevronRight size={20} /></Button>
           ) : (
             <Button className="min-h-[56px] flex-1 text-base" disabled={saving} onClick={handleComplete}>{saving ? 'Saving...' : 'Start Riding'}</Button>
           )}
