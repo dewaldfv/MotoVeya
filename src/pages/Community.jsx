@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Ticket, LogOut, Siren, QrCode as QrIcon, Share2 } from 'lucide-react';
+import { Users, UserPlus, Ticket, Siren, QrCode as QrIcon, Share2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -273,9 +273,6 @@ export default function Community() {
                       <Button variant="ghost" size="sm" onClick={() => setShare({ title: g.name, code: g.invite_code, qrData: `motogo://group?code=${g.invite_code}`, description: 'Group invite code' })}>
                         <Share2 size={14} className="mr-1" /> Share
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleLeaveGroup(g.id)}>
-                        <LogOut size={14} className="mr-1" /> Leave
-                      </Button>
                     </div>
                   </div>
                 );
@@ -384,7 +381,7 @@ export default function Community() {
 
         <QrScanner open={scannerOpen} mode={scannerMode} onClose={() => setScannerOpen(false)} onScan={handleScan} />
         <ShareCodeSheet open={!!share} onClose={() => setShare(null)} title={share?.title} code={share?.code} qrData={share?.qrData} description={share?.description} />
-        <GroupMembersDialog group={membersGroup} open={!!membersGroup} onOpenChange={(v) => !v && setMembersGroup(null)} />
+        <GroupMembersDialog group={membersGroup} open={!!membersGroup} onOpenChange={(v) => !v && setMembersGroup(null)} onLeaveGroup={handleLeaveGroup} />
       </div>
     </PullToRefresh>
   );
