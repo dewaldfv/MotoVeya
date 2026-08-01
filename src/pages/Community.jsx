@@ -44,6 +44,13 @@ export default function Community() {
     if (location.state?.conversationId) setMessageConversationId(location.state.conversationId);
   }, [location.state]);
 
+  useEffect(() => {
+    const unsubscribe = base44.entities.GroupMember.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ['community'] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+
   const { data, isLoading } = useQuery({
     queryKey: ['community'],
     queryFn: async () => {
@@ -57,7 +64,15 @@ export default function Community() {
         base44.entities.Friend.filter({ recipient_id: me.id, status: 'pending' }, '-created_date', 20),
         base44.entities.Notification.filter({ recipient_id: me.id, type: 'ride_invite', is_read: false }, '-created_date', 20),
       ]);
-      return { user: me, groups: groups || [], friends: friends || [], memberships: memberships || [], pending: pending || [], invites: invites || [] };
+      const groupIds = (memberships || []).map((m) => m.group_id);
+      let groupMembers = [];
+      if (groupIds.length > 0) {
+        const results = await Promise.all(
+          groupIds.map((id) => base44.entities.GroupMember.filter({ group_id: id, status: 'active' }, '-created_date', 50))
+        );
+        groupMembers = results.flat();
+      }
+      return { user: me, groups: groups || [], friends: friends || [], memberships: memberships || [], groupMembers: groupMembers || [], pending: pending || [], invites: invites || [] };
     },
   });
 
@@ -65,6 +80,7 @@ export default function Community() {
   const groups = data?.groups ?? [];
   const friends = data?.friends ?? [];
   const memberships = data?.memberships ?? [];
+  const groupMembers = data?.groupMembers ?? [];
   const pendingReqs = data?.pending ?? [];
   const rideInvites = data?.invites ?? [];
 
@@ -232,7 +248,7 @@ export default function Community() {
               </div>
             ) : (
               myGroups.map((g) => {
-                const memberCount = memberships.filter((m) => m.group_id === g.id).length;
+                const memberCount = groupMembers.filter((m) => m.group_id === g.id).length;
                 return (
                   <div key={g.id} className="rounded-2xl bg-card p-4">
                     <button
