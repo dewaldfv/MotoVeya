@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Check, X, Users, Calendar, TrendingUp, AlertTriangle, Siren } from 'lucide-react';
+import { Shield, Check, X, Users, Calendar, TrendingUp, AlertTriangle, Siren, Crown } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
+import EditUserDialog from '@/components/admin/EditUserDialog';
 import { toast } from 'sonner';
 
 export default function Admin() {
@@ -20,6 +21,7 @@ export default function Admin() {
   const [distressAlerts, setDistressAlerts] = useState([]);
   const [rejectEvent, setRejectEvent] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [editUser, setEditUser] = useState(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -97,9 +99,11 @@ export default function Admin() {
                 <p className="text-xs text-muted-foreground">{u.email}</p>
               </div>
               <div className="flex items-center gap-2">
+                {u.subscription_tier === 'premium' && <Badge className="capitalize"><Crown size={12} className="mr-1" />Premium</Badge>}
                 <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="capitalize">{u.role}</Badge>
                 {u.role !== 'organizer' && <Button size="sm" variant="ghost" onClick={() => handleRoleChange(u.id, 'organizer')}>Make Organizer</Button>}
                 {u.role === 'organizer' && <Button size="sm" variant="ghost" onClick={() => handleRoleChange(u.id, 'user')}>Revoke</Button>}
+                <Button size="sm" variant="ghost" onClick={() => setEditUser(u)}>Edit</Button>
               </div>
             </div>
           ))}
@@ -146,6 +150,14 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {editUser && (
+        <EditUserDialog
+          user={editUser}
+          onClose={() => setEditUser(null)}
+          onSaved={loadAll}
+        />
+      )}
     </div>
   );
 }
