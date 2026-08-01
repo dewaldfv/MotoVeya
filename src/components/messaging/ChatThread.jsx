@@ -4,6 +4,7 @@ import { ArrowLeft, Send, Users } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { setActiveConversation } from '@/lib/messageNotifications';
 
 export default function ChatThread({ user, conversation, onBack }) {
   const queryClient = useQueryClient();
@@ -50,6 +51,11 @@ export default function ChatThread({ user, conversation, onBack }) {
     });
     return unsub;
   }, [convId, user.id, queryClient]);
+
+  useEffect(() => {
+    setActiveConversation(convId);
+    return () => setActiveConversation(null);
+  }, [convId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useOutlet, useLocation } from 'react-router-dom';
+import { useOutlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import BottomNav from './BottomNav';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
+import { useMessageNotifications } from '@/hooks/useMessageNotifications';
 import RideResumeBanner from './RideResumeBanner';
 import VoiceChannelProvider from './voice/VoiceChannelProvider';
 import NotificationPopUp from './NotificationPopUp';
@@ -38,7 +39,18 @@ export default function AppLayout() {
   }, []);
 
   useLocationBroadcast();
+  useMessageNotifications();
+  const navigate = useNavigate();
   const { isLandscape } = useScreenOrientation();
+
+  useEffect(() => {
+    const handler = (e) => {
+      const conversationId = e?.detail?.conversationId;
+      navigate('/community', { state: { tab: 'messages', conversationId } });
+    };
+    window.addEventListener('motogo:open-conversation', handler);
+    return () => window.removeEventListener('motogo:open-conversation', handler);
+  }, [navigate]);
 
   return (
     <VoiceChannelProvider>
