@@ -14,6 +14,7 @@ import PullToRefresh from '@/components/PullToRefresh';
 import ServicesTab from '@/components/services/ServicesTab';
 import QrScanner from '@/components/QrScanner';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
+import GroupMembersDialog from '@/components/community/GroupMembersDialog';
 import FriendsDashboard from '@/components/community/FriendsDashboard';
 import GroupRidesList from '@/components/grouprides/GroupRidesList';
 import MessagesTab from '@/components/messaging/MessagesTab';
@@ -36,6 +37,7 @@ export default function Community() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerMode, setScannerMode] = useState('auto');
   const [share, setShare] = useState(null);
+  const [membersGroup, setMembersGroup] = useState(null);
 
   useEffect(() => {
     if (location.state?.tab) setActiveTab(location.state.tab);
@@ -233,13 +235,17 @@ export default function Community() {
                 const memberCount = memberships.filter((m) => m.group_id === g.id).length;
                 return (
                   <div key={g.id} className="rounded-2xl bg-card p-4">
-                    <div className="flex items-start justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setMembersGroup(g)}
+                      className="flex w-full items-start justify-between text-left transition-opacity active:opacity-70"
+                    >
                       <div>
                         <h3 className="font-bold">{g.name}</h3>
-                        <p className="text-sm text-muted-foreground">{memberCount}/{g.max_members} riders</p>
+                        <p className="text-sm text-muted-foreground">{memberCount}/{g.max_members} riders · tap to view members</p>
                       </div>
                       <Badge variant="outline">{g.invite_code}</Badge>
-                    </div>
+                    </button>
                     <div className="mt-2 flex gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setShare({ title: g.name, code: g.invite_code, qrData: `motogo://group?code=${g.invite_code}`, description: 'Group invite code' })}>
                         <Share2 size={14} className="mr-1" /> Share
@@ -355,6 +361,7 @@ export default function Community() {
 
         <QrScanner open={scannerOpen} mode={scannerMode} onClose={() => setScannerOpen(false)} onScan={handleScan} />
         <ShareCodeSheet open={!!share} onClose={() => setShare(null)} title={share?.title} code={share?.code} qrData={share?.qrData} description={share?.description} />
+        <GroupMembersDialog group={membersGroup} open={!!membersGroup} onOpenChange={(v) => !v && setMembersGroup(null)} />
       </div>
     </PullToRefresh>
   );
