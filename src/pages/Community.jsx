@@ -238,13 +238,17 @@ export default function Community() {
                     <button
                       type="button"
                       onClick={() => setMembersGroup(g)}
-                      className="flex w-full items-start justify-between text-left transition-opacity active:opacity-70"
+                      className="flex w-full items-start justify-between gap-2 text-left transition-opacity active:opacity-70"
                     >
-                      <div>
+                      <div className="min-w-0">
                         <h3 className="font-bold">{g.name}</h3>
-                        <p className="text-sm text-muted-foreground">{memberCount}/{g.max_members} riders · tap to view members</p>
+                        <div className="mt-0.5 flex items-center gap-1.5">
+                          <Users size={14} className="shrink-0 text-primary" />
+                          <span className="text-sm font-semibold text-primary">{memberCount}</span>
+                          <span className="text-sm text-muted-foreground">/ {g.max_members} riders</span>
+                        </div>
                       </div>
-                      <Badge variant="outline">{g.invite_code}</Badge>
+                      <Badge variant="outline" className="shrink-0">{g.invite_code}</Badge>
                     </button>
                     <div className="mt-2 flex gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setShare({ title: g.name, code: g.invite_code, qrData: `motogo://group?code=${g.invite_code}`, description: 'Group invite code' })}>
