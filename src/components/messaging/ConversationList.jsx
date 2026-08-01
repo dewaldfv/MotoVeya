@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MessageCircle, Plus, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Plus, ArrowLeft, Users } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 
@@ -103,19 +103,27 @@ export default function ConversationList({ user, onSelect }) {
             onClick={() => onSelect(c)}
             className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left transition-transform active:scale-[0.98]"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-base font-bold text-primary">
-              {c.other_participant_name?.charAt(0)?.toUpperCase()}
-            </div>
+            {c.is_group ? (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Users size={20} className="text-primary" />
+              </div>
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-base font-bold text-primary">
+                {c.other_participant_name?.charAt(0)?.toUpperCase()}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
-                <span className="truncate font-semibold">{c.other_participant_name}</span>
+                <span className="truncate font-semibold">
+                  {c.is_group ? c.group_name : c.other_participant_name}
+                </span>
                 {c.last_message_at && (
                   <span className="ml-2 shrink-0 text-xs text-muted-foreground">{timeAgo(c.last_message_at)}</span>
                 )}
               </div>
               <p className="truncate text-sm text-muted-foreground">
                 {c.last_sender_id === user.id ? 'You: ' : ''}
-                {c.last_message_preview || 'Say hi!'}
+                {c.last_message_preview || (c.is_group ? 'Start the group chat' : 'Say hi!')}
               </p>
             </div>
           </button>

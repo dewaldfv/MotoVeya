@@ -27,7 +27,9 @@ export default function Community() {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => location.state?.tab || 'groups');
-  const [messageConversationId, setMessageConversationId] = useState(() => location.state?.conversationId || null);
+  const [initialConversation, setInitialConversation] = useState(
+    () => location.state?.initialConversation || (location.state?.conversationId ? { id: location.state.conversationId } : null)
+  );
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
@@ -41,7 +43,8 @@ export default function Community() {
 
   useEffect(() => {
     if (location.state?.tab) setActiveTab(location.state.tab);
-    if (location.state?.conversationId) setMessageConversationId(location.state.conversationId);
+    if (location.state?.initialConversation) setInitialConversation(location.state.initialConversation);
+    else if (location.state?.conversationId) setInitialConversation({ id: location.state.conversationId });
   }, [location.state]);
 
   useEffect(() => {
@@ -328,7 +331,7 @@ export default function Community() {
           </TabsContent>
 
           <TabsContent value="messages">
-            <MessagesTab user={user} initialConversationId={messageConversationId} />
+            <MessagesTab user={user} initialConversation={initialConversation} />
           </TabsContent>
 
           <TabsContent value="services">

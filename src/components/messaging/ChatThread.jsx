@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send, Users } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,12 @@ export default function ChatThread({ user, conversation, onBack }) {
   const queryClient = useQueryClient();
   const [text, setText] = useState('');
   const [convId, setConvId] = useState(conversation.id || null);
+  const isGroup = !!conversation.is_group || !!conversation.group_id;
   const recipient = useRef({
     id: conversation.other_participant_id,
     name: conversation.other_participant_name,
   });
+  const groupName = useRef(conversation.group_name || 'Group chat');
   const scrollRef = useRef(null);
 
   const { data: messages = [], isLoading } = useQuery({
@@ -58,7 +60,11 @@ export default function ChatThread({ user, conversation, onBack }) {
     if (!content) return;
     setText('');
     try {
-      const res = await base44.functions.invoke('messaging-secure', {
+      const res = await base44.functions.invoke('messaging-secure', isGroup ? {
+        action: 'send_group',
+        conversation_id: convId,
+        content,
+      } : {
         action: 'send',
         recipient_id: recipient.current.id,
         recipient_name: recipient.current.name,
@@ -81,7 +87,7 @@ export default function ChatThread({ user, conversation, onBack }) {
     }
   };
 
-  const name = conversation.other_participant_name || recipient.current.name || 'Rider';
+  const headerName = isGroup ? groupName.current : (conversation.other_participant_name || recipient.current.name || 'Rider');
 
   return (
     <div className="flex h-[calc(100vh-13rem)] flex-col">
@@ -90,10 +96,19 @@ export default function ChatThread({ user, conversation, onBack }) {
           <ArrowLeft size={20} />
         </Button>
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-            {name?.charAt(0)?.toUpperCase()}
+          {isGroup ? (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+              <Users size={18} className="text-primary" />
+            </div>
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+              {headerName?.charAt(0)?.toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <span className="block truncate font-bold">{headerName}</span>
+            {isGroup && <span className="block text-[11px] text-muted-foreground">Group chat</span>}
           </div>
-          <span className="truncate font-bold">{name}</span>
         </div>
       </div>
 
@@ -103,7 +118,9 @@ export default function ChatThread({ user, conversation, onBack }) {
             <div className="h-6 w-6 animate-spin rounded-full border-4 border-secondary border-t-primary" />
           </div>
         ) : messages.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Start the conversation — say hi!</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            {isGroup ? 'Send the first message to the group!' : 'Start the conversation — say hi!'}
+          </p>
         ) : (
           messages.map((m) => {
             const isMe = m.sender_id === user.id;
@@ -114,6 +131,9 @@ export default function ChatThread({ user, conversation, onBack }) {
                     isMe ? 'rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md bg-card text-card-foreground'
                   }`}
                 >
+                  {isGroup && !isMe && (
+                    <p className="mb-0.5 text-[11px] font-semibold text-primary">{m.sender_name || 'Rider'}</p>
+                  )}
                   {m.content}
                 </div>
               </div>
@@ -132,7 +152,7 @@ export default function ChatThread({ user, conversation, onBack }) {
           placeholder="Type a message..."
           className="flex-1"
         />
-        <Button size="icon" onClick={handleSend} disabled={!text.trim()} className="h-11 w-11 shrink-0">
+        <Button size="icon" onClick={handleSend} disabled={!text.trim() || (isGroup && !convId)} className="h-11 w-11 shrink-0">
           <Send size={18} />
         </Button>
       </div>

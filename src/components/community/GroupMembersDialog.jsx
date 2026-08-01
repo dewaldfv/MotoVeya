@@ -1,14 +1,40 @@
 import { useState, useEffect } from 'react';
-import { Users, Crown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Crown, MessageCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import MemberProfileDialog from '@/components/community/MemberProfileDialog';
 
 export default function GroupMembersDialog({ group, open, onOpenChange }) {
+  const navigate = useNavigate();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [starting, setStarting] = useState(false);
+
+  const handleMessageGroup = async () => {
+    if (!group) return;
+    setStarting(true);
+    try {
+      const res = await base44.functions.invoke('messaging-secure', { action: 'start_group', group_id: group.id });
+      const data = res?.data;
+      if (data?.error) { toast.error(data.error); return; }
+      onOpenChange(false);
+      navigate('/community', {
+        state: {
+          tab: 'messages',
+          initialConversation: { id: data.conversation_id, is_group: true, group_name: data.group_name || group.name },
+        },
+      });
+    } catch (e) {
+      toast.error('Could not open group chat');
+    } finally {
+      setStarting(false);
+    }
+  };
 
   useEffect(() => {
     if (!open || !group) return;
@@ -35,9 +61,14 @@ export default function GroupMembersDialog({ group, open, onOpenChange }) {
               {group?.name}
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {members.length}/{group?.max_members} riders · tap a rider to view their profile
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              {members.length}/{group?.max_members} riders · tap a rider to view their profile
+            </p>
+            <Button size="sm" onClick={handleMessageGroup} disabled={starting || members.length === 0}>
+              <MessageCircle size={14} className="mr-1" /> Message Group
+            </Button>
+          </div>
           <div className="mt-2 space-y-3">
             {loading ? (
               <div className="flex justify-center py-8">
@@ -89,7 +120,7 @@ export default function GroupMembersDialog({ group, open, onOpenChange }) {
           </div>
         </DialogContent>
       </Dialog>
-      <MemberProfileDialog member={selected} open={!!selected} onOpenChange={(o) => { if (!o) setSelected(null); }} />
+      <MemberProfileDialog member={selected} open={!!selected} onOpenChange={(o) => { if (!o) setSelected(null); }} onMessage={() => onOpenChange(false)} />
     </>
   );
 }

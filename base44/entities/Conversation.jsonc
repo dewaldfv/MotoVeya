@@ -29,6 +29,12 @@
     },
     "group_ride_id": {
       "type": "string"
+    },
+    "group_id": {
+      "type": "string"
+    },
+    "group_name": {
+      "type": "string"
     }
   },
   "required": [

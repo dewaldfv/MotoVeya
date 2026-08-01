@@ -1,13 +1,31 @@
 import { useState, useEffect } from 'react';
-import { Bike, Trophy, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bike, Trophy, X, MessageCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { computeAchievements } from '@/lib/riderStats';
 
-export default function MemberProfileDialog({ member, open, onOpenChange }) {
+export default function MemberProfileDialog({ member, open, onOpenChange, onMessage }) {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const handleMessage = () => {
+    if (!member?.user_id) return;
+    onOpenChange(false);
+    onMessage?.();
+    navigate('/community', {
+      state: {
+        tab: 'messages',
+        initialConversation: {
+          other_participant_id: member.user_id,
+          other_participant_name: profile?.nickname || member.name || 'Rider',
+        },
+      },
+    });
+  };
 
   useEffect(() => {
     if (!open || !member?.user_id) return;
@@ -84,6 +102,10 @@ export default function MemberProfileDialog({ member, open, onOpenChange }) {
                   No motorcycle added yet
                 </div>
               )}
+
+              <Button className="mt-4 w-full" onClick={handleMessage}>
+                <MessageCircle size={16} className="mr-2" /> Message {profile?.nickname || 'Rider'}
+              </Button>
 
               <div className="mt-4">
                 <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
