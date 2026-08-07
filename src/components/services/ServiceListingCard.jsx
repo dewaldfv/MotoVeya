@@ -10,8 +10,8 @@ export default function ServiceListingCard({ service, userPos, isFavorite, onFav
     <div className="rounded-2xl bg-card p-3 shadow-sm active:scale-[0.99] transition-transform" onClick={() => onSelect(service)}>
       <div className="flex gap-3">
         <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl" style={{ backgroundColor: cat.color + '20' }}>
-          {service.logo_url
-            ? <img src={service.logo_url} alt={service.name} className="h-full w-full object-cover" />
+          {service.logo_url || service.photo_urls?.[0]
+            ? <img src={service.logo_url || service.photo_urls[0]} alt={service.name} className="h-full w-full object-cover" />
             : <span className="text-2xl">{cat.emoji}</span>}
         </div>
         <div className="min-w-0 flex-1">

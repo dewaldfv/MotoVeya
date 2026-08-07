@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Check, X, Users, Calendar, TrendingUp, AlertTriangle, Siren, Crown } from 'lucide-react';
+import { Shield, Check, X, Users, Calendar, TrendingUp, AlertTriangle, Siren, Crown, Wrench } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,10 +16,11 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [pendingEvents, setPendingEvents] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
+  const [pendingServices, setPendingServices] = useState([]);
   const [users, setUsers] = useState([]);
   const [crashAlerts, setCrashAlerts] = useState([]);
   const [distressAlerts, setDistressAlerts] = useState([]);
-  const [rejectEvent, setRejectEvent] = useState(null);
+  const [rejectTarget, setRejectTarget] = useState(null); // { type: 'event'|'service', record }
   const [rejectReason, setRejectReason] = useState('');
   const [editUser, setEditUser] = useState(null);
 
@@ -32,13 +33,14 @@ export default function Admin() {
       const me = await base44.auth.me();
       setUser(me);
       if (me.role !== 'admin') { setLoading(false); return; }
-      const [pending, events, crashData, distressData] = await Promise.all([
+      const [pending, events, pendingSvc, crashData, distressData] = await Promise.all([
         base44.entities.Event.filter({ status: 'pending' }, '-created_date', 50),
         base44.entities.Event.list('-created_date', 20),
+        base44.entities.Service.filter({ status: 'pending' }, '-created_date', 50),
         base44.entities.CrashAlert.list('-created_date', 20),
         base44.entities.DistressAlert.list('-created_date', 20),
       ]);
-      setPendingEvents(pending || []); setAllEvents(events || []); setCrashAlerts(crashData || []); setDistressAlerts(distressData || []);
+      setPendingEvents(pending || []); setAllEvents(events || []); setPendingServices(pendingSvc || []); setCrashAlerts(crashData || []); setDistressAlerts(distressData || []);
       try { const userData = await base44.entities.User.list('-created_date', 50); setUsers(userData || []); } catch (e) { console.error(e); }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -47,7 +49,10 @@ export default function Admin() {
   const notifyOrganizer = (eventId, status, reason) =>
     base44.functions.invoke('messaging-secure', { action: 'notify_event', event_id: eventId, status, reason }).catch((e) => console.error('notify_event', e));
 
-  const handleApprove = async (id) => {
+  const notifyServiceSubmitter = (serviceId, status, reason) =>
+    base44.functions.invoke('messaging-secure', { action: 'notify_service', service_id: serviceId, status, reason }).catch((e) => console.error('notify_service', e));
+
+  const handleApproveEvent = async (id) => {
     try {
       await base44.entities.Event.update(id, { status: 'approved' });
       toast.success('Event approved — organizer notified');
@@ -56,15 +61,30 @@ export default function Admin() {
     } catch (e) { console.error(e); toast.error('Could not approve event'); }
   };
 
+  const handleApproveService = async (id) => {
+    try {
+      await base44.entities.Service.update(id, { status: 'approved' });
+      toast.success('Service approved — submitter notified');
+      notifyServiceSubmitter(id, 'approved');
+      loadAll();
+    } catch (e) { console.error(e); toast.error('Could not approve service'); }
+  };
+
   const handleReject = async () => {
     try {
-      await base44.entities.Event.update(rejectEvent.id, { status: 'rejected', rejection_reason: rejectReason });
-      toast.success('Event rejected — organizer notified');
-      notifyOrganizer(rejectEvent.id, 'rejected', rejectReason);
-      setRejectEvent(null);
+      if (rejectTarget?.type === 'service') {
+        await base44.entities.Service.update(rejectTarget.record.id, { status: 'rejected', rejection_reason: rejectReason });
+        toast.success('Service rejected — submitter notified');
+        notifyServiceSubmitter(rejectTarget.record.id, 'rejected', rejectReason);
+      } else {
+        await base44.entities.Event.update(rejectTarget.record.id, { status: 'rejected', rejection_reason: rejectReason });
+        toast.success('Event rejected — organizer notified');
+        notifyOrganizer(rejectTarget.record.id, 'rejected', rejectReason);
+      }
+      setRejectTarget(null);
       setRejectReason('');
       loadAll();
-    } catch (e) { console.error(e); toast.error('Could not reject event'); }
+    } catch (e) { console.error(e); toast.error('Could not reject'); }
   };
   const handleRoleChange = async (userId, newRole) => { try { await base44.entities.User.update(userId, { role: newRole }); toast.success('Role updated'); loadAll(); } catch (e) { console.error(e); } };
 
@@ -82,12 +102,13 @@ export default function Admin() {
       <div className="mb-4 grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-card p-3 text-center"><Users size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{users.length}</div><div className="text-[10px] text-muted-foreground">Users</div></div>
         <div className="rounded-2xl bg-card p-3 text-center"><Calendar size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{allEvents.length}</div><div className="text-[10px] text-muted-foreground">Events</div></div>
-        <div className="rounded-2xl bg-card p-3 text-center"><TrendingUp size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{pendingEvents.length}</div><div className="text-[10px] text-muted-foreground">Pending</div></div>
+        <div className="rounded-2xl bg-card p-3 text-center"><Wrench size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{pendingServices.length}</div><div className="text-[10px] text-muted-foreground">Services</div></div>
       </div>
 
       <Tabs defaultValue="events">
         <TabsList className="mb-4 w-full">
           <TabsTrigger value="events" className="flex-1">Events ({pendingEvents.length})</TabsTrigger>
+          <TabsTrigger value="services" className="flex-1">Services ({pendingServices.length})</TabsTrigger>
           <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
           <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>
         </TabsList>
@@ -104,8 +125,33 @@ export default function Admin() {
                 </div>
               </div>
               <div className="mt-3 flex gap-2">
-                <Button size="sm" className="flex-1" onClick={() => handleApprove(ev.id)}><Check size={16} className="mr-1" /> Approve</Button>
-                <Button size="sm" variant="destructive" onClick={() => setRejectEvent(ev)}><X size={16} className="mr-1" /> Reject</Button>
+                <Button size="sm" className="flex-1" onClick={() => handleApproveEvent(ev.id)}><Check size={16} className="mr-1" /> Approve</Button>
+                <Button size="sm" variant="destructive" onClick={() => setRejectTarget({ type: 'event', record: ev })}><X size={16} className="mr-1" /> Reject</Button>
+              </div>
+            </div>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="services" className="space-y-3">
+          {pendingServices.length === 0 ? <p className="py-8 text-center text-muted-foreground">No pending services.</p> : pendingServices.map((svc) => (
+            <div key={svc.id} className="rounded-2xl bg-card p-4">
+              <div className="flex items-start gap-3">
+                {svc.photo_urls?.[0] || svc.logo_url ? (
+                  <img src={svc.photo_urls?.[0] || svc.logo_url} alt={svc.name} className="h-16 w-16 shrink-0 rounded-xl object-cover" />
+                ) : (
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-secondary text-2xl"><Wrench size={24} className="text-muted-foreground" /></div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <Badge variant="secondary" className="mb-1 capitalize">{svc.category?.replace('_', ' ')}</Badge>
+                  <h3 className="font-bold">{svc.name}</h3>
+                  <p className="text-sm text-muted-foreground">{[svc.town, svc.province].filter(Boolean).join(', ') || svc.address}</p>
+                  {svc.description && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{svc.description}</p>}
+                  {svc.submitter_notes && <p className="mt-1 text-xs italic text-muted-foreground">Notes: {svc.submitter_notes}</p>}
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button size="sm" className="flex-1" onClick={() => handleApproveService(svc.id)}><Check size={16} className="mr-1" /> Approve</Button>
+                <Button size="sm" variant="destructive" onClick={() => setRejectTarget({ type: 'service', record: svc })}><X size={16} className="mr-1" /> Reject</Button>
               </div>
             </div>
           ))}
@@ -157,16 +203,16 @@ export default function Admin() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!rejectEvent} onOpenChange={(o) => { if (!o) { setRejectEvent(null); setRejectReason(''); } }}>
+      <Dialog open={!!rejectTarget} onOpenChange={(o) => { if (!o) { setRejectTarget(null); setRejectReason(''); } }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Reject Event</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Reject {rejectTarget?.type === 'service' ? 'Service' : 'Event'}</DialogTitle></DialogHeader>
           <div className="space-y-2">
             <Label>Reason for rejection</Label>
-            <Input value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="e.g. Incomplete details, not a motorcycle event" />
+            <Input value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="e.g. Incomplete details, not a motorcycle service" />
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { setRejectEvent(null); setRejectReason(''); }}>Cancel</Button>
-            <Button variant="destructive" onClick={handleReject}>Reject Event</Button>
+            <Button variant="ghost" onClick={() => { setRejectTarget(null); setRejectReason(''); }}>Cancel</Button>
+            <Button variant="destructive" onClick={handleReject}>Reject</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

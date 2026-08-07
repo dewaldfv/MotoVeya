@@ -4,11 +4,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, SlidersHorizontal, ChevronLeft, X, Loader2, Wrench } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import ServiceCategoryGrid from './ServiceCategoryGrid';
 import ServiceListingCard from './ServiceListingCard';
 import ServiceDetailSheet from './ServiceDetailSheet';
 import ServiceFilters from './ServiceFilters';
+import ServiceSubmitDialog from './ServiceSubmitDialog';
 import { getServiceCategory, haversine, isOpenNow } from '@/lib/serviceCategories';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ServicesTab({ user }) {
@@ -18,6 +21,7 @@ export default function ServicesTab({ user }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedService, setSelectedService] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
   const [filters, setFilters] = useState({ distance: null, rating: null, openNow: false, verified: false, premiumPartner: false });
   const [userPos, setUserPos] = useState(null);
 
@@ -113,6 +117,10 @@ export default function ServicesTab({ user }) {
         </button>
       </div>
 
+      <Button onClick={() => setSubmitOpen(true)} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl">
+        <Plus size={18} /> Submit a Service
+      </Button>
+
       {activeCategory && !searchQuery && (
         <p className="text-sm font-semibold text-muted-foreground">{activeCategory.emoji} {activeCategory.label}</p>
       )}
@@ -142,6 +150,12 @@ export default function ServicesTab({ user }) {
         onFavorite={handleFavorite} onNavigate={handleNavigate} onClose={() => setSelectedService(null)} />
 
       <ServiceFilters open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} />
+
+      <ServiceSubmitDialog
+        open={submitOpen}
+        onOpenChange={setSubmitOpen}
+        onSubmitted={() => queryClient.invalidateQueries({ queryKey: ['services'] })}
+      />
     </div>
   );
 }
