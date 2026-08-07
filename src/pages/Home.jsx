@@ -120,6 +120,12 @@ export default function Home() {
     refetchInterval: 10000
   });
 
+  const { data: eventFavoriteIds = [] } = useQuery({
+    queryKey: ['event-favorites'],
+    queryFn: async () => (await base44.entities.EventFavorite.filter({})).map((f) => f.event_id),
+    enabled: !!me?.id
+  });
+
   const groupRiders = useMemo(() => {
     if (!activeGroupRide?.active) return [];
     return (activeGroupRide.participants || []).
@@ -319,6 +325,7 @@ export default function Home() {
         onSavePin={handleSavePin}
         onNavigatePin={handleNavigatePin}
         groupRiders={groupRiders}
+        favoriteEventIds={eventFavoriteIds}
         userPos={session.userPos}
         riders={session.userPos ? [{ id: 'me', lat: session.userPos[0], lng: session.userPos[1], heading: session.heading, accuracy: session.accuracy }] : []}
         navActive={isActive}

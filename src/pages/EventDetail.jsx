@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Calendar, MapPin, Phone, Mail, ExternalLink, Navigation, Tag, Bookmark } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ChevronLeft, Calendar, MapPin, Phone, Mail, ExternalLink, Navigation, Tag, Heart } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +11,12 @@ import CalendarExportButton from '@/components/CalendarExportButton';
 export default function EventDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favId, setFavId] = useState(null);
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -20,6 +25,39 @@ export default function EventDetail() {
       finally { setLoading(false); }
     })();
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      try {
+        const authed = await base44.auth.isAuthenticated();
+        if (!authed) return;
+        const favs = await base44.entities.EventFavorite.filter({ event_id: id });
+        if (favs.length > 0) { setIsFavorite(true); setFavId(favs[0].id); }
+      } catch (e) { /* ignore */ }
+    })();
+  }, [id]);
+
+  const toggleFavorite = async () => {
+    if (toggling) return;
+    setToggling(true);
+    try {
+      if (isFavorite && favId) {
+        await base44.entities.EventFavorite.delete(favId);
+        setIsFavorite(false); setFavId(null);
+        toast.success('Removed from favourites');
+      } else {
+        const rec = await base44.entities.EventFavorite.create({ event_id: id, event_title: event?.title });
+        setIsFavorite(true); setFavId(rec.id);
+        toast.success('Event saved to favourites');
+      }
+      queryClient.invalidateQueries({ queryKey: ['event-favorites'] });
+    } catch (e) {
+      toast.error('Could not update favourite');
+    } finally {
+      setToggling(false);
+    }
+  };
 
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!event) return <div className="flex h-screen flex-col items-center justify-center gap-4"><p className="text-muted-foreground">Event not found</p><button onClick={() => navigate('/events')} className="text-primary">Back to events</button></div>;
@@ -64,8 +102,8 @@ export default function EventDetail() {
         </div>
 
         <div className="mt-6 flex gap-2">
-          <Button size="lg" variant="secondary" className="min-h-[56px] px-5" onClick={() => toast.success('Event saved to favourites')}>
-            <Bookmark size={18} className="mr-2" /> Save
+          <Button size="lg" variant={isFavorite ? 'default' : 'secondary'} className="min-h-[56px] px-5" onClick={toggleFavorite} disabled={toggling}>
+            <Heart size={18} className="mr-2" fill={isFavorite ? 'currentColor' : 'none'} /> {isFavorite ? 'Favourited' : 'Save'}
           </Button>
           <Button size="lg" className="min-h-[56px] flex-1 text-base" onClick={() => navigate('/ride/active', { state: { destination: { lat: event.lat, lng: event.lng, name: event.venue_name } } })}>
             <Navigation size={18} className="mr-2" /> Navigate
