@@ -1,6 +1,6 @@
 /* global google */
 import { useEffect, useRef } from 'react';
-import { GoogleMap, Polyline, useGoogleMap } from '@react-google-maps/api';
+import { GoogleMap, Marker, Polyline, useGoogleMap } from '@react-google-maps/api';
 import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
 import { getMapOptions, getLayerStyles } from '@/lib/mapLayers';
 import CustomMapMarker from '@/components/CustomMapMarker';
@@ -31,7 +31,7 @@ function FitWaypoints({ waypoints }) {
     waypoints.forEach((w) => bounds.extend({ lat: w.lat, lng: w.lng }));
     map.fitBounds(bounds, 80);
     done.current = true;
-  }, [map, waypoints.length, waypoints.map((w) => `${w.lat},${w.lng}`).join('|')]);
+  }, [map, waypoints.length]);
   return null;
 }
 
@@ -43,7 +43,16 @@ function wpColor(i, total) {
 
 const STOP_ICON = { fuel: '⛽', food: '🍻' };
 
-export default function RidePlannerMap({ waypoints = [], suggestedStops = [] }) {
+function wpIcon(color, number) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34"><circle cx="17" cy="17" r="14" fill="${color}" stroke="white" stroke-width="3"/><text x="17" y="22" font-size="14" font-weight="800" fill="white" text-anchor="middle" font-family="Inter,Arial,sans-serif">${number}</text></svg>`;
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(34, 34),
+    anchor: new google.maps.Point(17, 17),
+  };
+}
+
+export default function RidePlannerMap({ waypoints = [], suggestedStops = [], onWaypointDrag }) {
   const isLoaded = useGoogleMapsLoaded();
   const center = waypoints[0] ? [waypoints[0].lat, waypoints[0].lng] : SA_CENTER;
   const initialCenterRef = useRef(null);
@@ -72,15 +81,14 @@ export default function RidePlannerMap({ waypoints = [], suggestedStops = [] }) 
           </>
         )}
         {waypoints.map((w, i) => (
-          <CustomMapMarker key={`${w.lat},${w.lng}-${i}`} position={[w.lat, w.lng]} anchor="center" zIndex={100 + i}>
-            <div style={{
-              width: 30, height: 30, borderRadius: '50%',
-              background: wpColor(i, waypoints.length), color: 'white',
-              border: '3px solid white', boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, fontWeight: 800,
-            }}>{i + 1}</div>
-          </CustomMapMarker>
+          <Marker
+            key={`wp-${i}`}
+            position={{ lat: w.lat, lng: w.lng }}
+            draggable
+            icon={wpIcon(wpColor(i, waypoints.length), i + 1)}
+            zIndex={100 + i}
+            onDragEnd={(e) => onWaypointDrag?.(i, { lat: e.latLng.lat(), lng: e.latLng.lng() })}
+          />
         ))}
         {suggestedStops.map((s) => (
           <CustomMapMarker

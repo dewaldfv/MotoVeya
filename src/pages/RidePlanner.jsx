@@ -166,6 +166,10 @@ export default function RidePlanner() {
     setWaypoints((prev) => [...prev, { name: loc.name, lat: loc.lat, lng: loc.lng }]);
   };
 
+  const updateWaypoint = (i, loc) => {
+    setWaypoints((prev) => prev.map((w, idx) => (idx === i ? { ...w, lat: loc.lat, lng: loc.lng } : w)));
+  };
+
   const removeWaypoint = (i) => setWaypoints((prev) => prev.filter((_, idx) => idx !== i));
   const moveUp = (i) => i > 0 && setWaypoints((prev) => {
     const next = [...prev]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; return next;
@@ -267,7 +271,7 @@ export default function RidePlanner() {
 
         {waypoints.length > 0 && (
           <>
-            <RidePlannerMap waypoints={waypoints} suggestedStops={suggestedStops} />
+            <RidePlannerMap waypoints={waypoints} suggestedStops={suggestedStops} onWaypointDrag={updateWaypoint} />
             <WeatherCard weather={weather} loading={weatherLoading} plannedDate={plannedDate} />
             <RangeWarning waypoints={waypoints} />
             <StopSuggestions
