@@ -44,8 +44,28 @@ export default function Admin() {
     finally { setLoading(false); }
   };
 
-  const handleApprove = async (id) => { try { await base44.entities.Event.update(id, { status: 'approved' }); toast.success('Event approved'); loadAll(); } catch (e) { console.error(e); } };
-  const handleReject = async () => { try { await base44.entities.Event.update(rejectEvent.id, { status: 'rejected', rejection_reason: rejectReason }); setRejectEvent(null); setRejectReason(''); loadAll(); } catch (e) { console.error(e); } };
+  const notifyOrganizer = (eventId, status, reason) =>
+    base44.functions.invoke('messaging-secure', { action: 'notify_event', event_id: eventId, status, reason }).catch((e) => console.error('notify_event', e));
+
+  const handleApprove = async (id) => {
+    try {
+      await base44.entities.Event.update(id, { status: 'approved' });
+      toast.success('Event approved — organizer notified');
+      notifyOrganizer(id, 'approved');
+      loadAll();
+    } catch (e) { console.error(e); toast.error('Could not approve event'); }
+  };
+
+  const handleReject = async () => {
+    try {
+      await base44.entities.Event.update(rejectEvent.id, { status: 'rejected', rejection_reason: rejectReason });
+      toast.success('Event rejected — organizer notified');
+      notifyOrganizer(rejectEvent.id, 'rejected', rejectReason);
+      setRejectEvent(null);
+      setRejectReason('');
+      loadAll();
+    } catch (e) { console.error(e); toast.error('Could not reject event'); }
+  };
   const handleRoleChange = async (userId, newRole) => { try { await base44.entities.User.update(userId, { role: newRole }); toast.success('Role updated'); loadAll(); } catch (e) { console.error(e); } };
 
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
