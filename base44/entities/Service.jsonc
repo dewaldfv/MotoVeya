@@ -72,6 +72,21 @@
       "type": "boolean",
       "default": false
     },
+    "price_range": {
+      "type": "string"
+    },
+    "service_menu": {
+      "type": "string"
+    },
+    "social_links": {
+      "type": "string"
+    },
+    "submitter_notes": {
+      "type": "string"
+    },
+    "rejection_reason": {
+      "type": "string"
+    },
     "rating": {
       "type": "number"
     },
@@ -115,20 +130,41 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "read": null,
     "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     }
   }
 }
