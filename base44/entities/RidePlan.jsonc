@@ -14,6 +14,9 @@
     "planned_date": {
       "type": "string",
       "format": "date-time"
+    },
+    "weather": {
+      "type": "string"
     }
   },
   "required": [

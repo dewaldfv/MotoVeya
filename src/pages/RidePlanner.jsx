@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, MapPin, Route, Loader2, Calendar } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, MapPin, Route, Loader2, Calendar, CloudSun } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import LocationSearchInput from '@/components/rides/LocationSearchInput';
 import RidePlannerMap from '@/components/ride-planner/RidePlannerMap';
+import WeatherCard from '@/components/ride-planner/WeatherCard';
+import RangeWarning from '@/components/ride-planner/RangeWarning';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
+import { getRouteWeather } from '@/lib/weather';
 import { toast } from 'sonner';
 
 const STORAGE_KEY = 'motogo_ride_plan_draft';
@@ -22,7 +25,10 @@ export default function RidePlanner() {
   const [waypoints, setWaypoints] = useState([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [sharePlan, setSharePlan] = useState(null);
+  const [weather, setWeather] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
+  // Load from shared link or local draft
   useEffect(() => {
     (async () => {
       try {
@@ -54,9 +60,30 @@ export default function RidePlanner() {
     })();
   }, []);
 
+  // Persist draft locally
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, notes, plannedDate, waypoints }));
   }, [title, notes, plannedDate, waypoints]);
+
+  // Fetch weather whenever waypoints or date change (debounced)
+  const weatherKey = useMemo(
+    () => `${plannedDate}|${waypoints.map((w) => `${w.lat},${w.lng}`).join('|')}`,
+    [plannedDate, waypoints]
+  );
+  useEffect(() => {
+    if (waypoints.length === 0) { setWeather(null); return; }
+    let cancelled = false;
+    setWeatherLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const w = await getRouteWeather(waypoints, plannedDate);
+        if (!cancelled) setWeather(w);
+      } catch (e) { /* ignore */ } finally {
+        if (!cancelled) setWeatherLoading(false);
+      }
+    }, 700);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [weatherKey]);
 
   const { data: plans = [], isLoading: plansLoading } = useQuery({
     queryKey: ['ride-plans'],
@@ -94,6 +121,7 @@ export default function RidePlanner() {
         waypoints: JSON.stringify(waypoints),
         notes: notes.trim(),
         planned_date: plannedDate ? new Date(plannedDate).toISOString() : undefined,
+        weather: weather ? JSON.stringify(weather) : undefined,
       });
       toast.success('Route saved');
       setSharePlan({ id: plan.id, title: title.trim() });
@@ -112,18 +140,21 @@ export default function RidePlanner() {
       setPlannedDate(plan.planned_date ? plan.planned_date.slice(0, 10) : '');
       setWaypoints(wp);
       toast.success('Route loaded — edit and re-save to update');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) { toast.error('Could not load route'); }
   };
 
   const shareLink = sharePlan ? `${window.location.origin}/ride-planner?load=${sharePlan.id}` : '';
 
   return (
-    <div className="min-h-screen bg-background pb-12">
+    <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-10 flex items-center gap-3 bg-background/95 p-4 backdrop-blur-lg" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
         <button onClick={() => navigate(-1)} className="glove-target flex items-center justify-center rounded-full bg-card" aria-label="Back">
           <ChevronLeft size={24} />
         </button>
-        <h1 className="text-lg font-bold">Ride Planner</h1>
+        <h1 className="flex items-center gap-2 text-lg font-bold">
+          <CloudSun size={20} className="text-primary" /> Plan Ride
+        </h1>
       </div>
 
       <div className="mx-auto max-w-2xl space-y-4 p-4">
@@ -150,7 +181,13 @@ export default function RidePlanner() {
           <LocationSearchInput placeholder="Search for a place..." onSelect={addWaypoint} />
         </div>
 
-        {waypoints.length > 0 && <RidePlannerMap waypoints={waypoints} />}
+        {waypoints.length > 0 && (
+          <>
+            <RidePlannerMap waypoints={waypoints} />
+            <WeatherCard weather={weather} loading={weatherLoading} plannedDate={plannedDate} />
+            <RangeWarning waypoints={waypoints} />
+          </>
+        )}
 
         {waypoints.length > 0 && (
           <div className="overflow-hidden rounded-3xl border border-border bg-card">
@@ -177,7 +214,7 @@ export default function RidePlanner() {
           className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl text-base font-bold"
         >
           {saveMutation.isPending ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
-          Save & Share Route
+          Save Plan
         </Button>
 
         <div>
