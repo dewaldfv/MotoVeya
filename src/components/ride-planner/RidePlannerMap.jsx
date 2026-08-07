@@ -41,7 +41,9 @@ function wpColor(i, total) {
   return '#FF6F00';
 }
 
-export default function RidePlannerMap({ waypoints = [] }) {
+const STOP_ICON = { fuel: '⛽', food: '🍻' };
+
+export default function RidePlannerMap({ waypoints = [], suggestedStops = [] }) {
   const isLoaded = useGoogleMapsLoaded();
   const center = waypoints[0] ? [waypoints[0].lat, waypoints[0].lng] : SA_CENTER;
   const initialCenterRef = useRef(null);
@@ -78,6 +80,27 @@ export default function RidePlannerMap({ waypoints = [] }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 13, fontWeight: 800,
             }}>{i + 1}</div>
+          </CustomMapMarker>
+        ))}
+        {suggestedStops.map((s) => (
+          <CustomMapMarker
+            key={`sug-${s.key}`}
+            position={[s.lat, s.lng]}
+            anchor="center"
+            zIndex={50}
+          >
+            <div style={{
+              width: 34, height: 34, borderRadius: '50%',
+              background: s.type === 'fuel' ? '#f59e0b' : '#8b5cf6',
+              color: 'white',
+              border: '2px dashed white',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 16,
+              opacity: 0.92,
+            }} title={`Suggested ${s.type === 'fuel' ? 'fuel stop' : 'pub / food stop'}`}>
+              {STOP_ICON[s.type] || '📍'}
+            </div>
           </CustomMapMarker>
         ))}
       </GoogleMap>

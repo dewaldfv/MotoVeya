@@ -10,6 +10,7 @@ import LocationSearchInput from '@/components/rides/LocationSearchInput';
 import RidePlannerMap from '@/components/ride-planner/RidePlannerMap';
 import WeatherCard from '@/components/ride-planner/WeatherCard';
 import RangeWarning from '@/components/ride-planner/RangeWarning';
+import StopSuggestions from '@/components/ride-planner/StopSuggestions';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
 import { getRouteWeather } from '@/lib/weather';
 import { toast } from 'sonner';
@@ -27,6 +28,7 @@ export default function RidePlanner() {
   const [sharePlan, setSharePlan] = useState(null);
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [suggestedStops, setSuggestedStops] = useState([]);
 
   // Load from shared link or local draft
   useEffect(() => {
@@ -112,6 +114,17 @@ export default function RidePlanner() {
     const next = [...prev]; [next[i + 1], next[i]] = [next[i], next[i + 1]]; return next;
   });
 
+  // Insert a suggested stop as a real waypoint, placed right after the leg's start.
+  const addSuggestedStop = (loc, legIndex) => {
+    setWaypoints((prev) => {
+      const next = [...prev];
+      const insertAt = Math.min(legIndex + 1, next.length);
+      next.splice(insertAt, 0, { name: loc.name, lat: loc.lat, lng: loc.lng });
+      return next;
+    });
+    toast.success(`Added "${loc.name}" to your route`);
+  };
+
   const handleSave = async () => {
     if (!title.trim()) { toast.error('Give your route a title'); return; }
     if (waypoints.length < 2) { toast.error('Add at least two waypoints'); return; }
@@ -183,9 +196,14 @@ export default function RidePlanner() {
 
         {waypoints.length > 0 && (
           <>
-            <RidePlannerMap waypoints={waypoints} />
+            <RidePlannerMap waypoints={waypoints} suggestedStops={suggestedStops} />
             <WeatherCard weather={weather} loading={weatherLoading} plannedDate={plannedDate} />
             <RangeWarning waypoints={waypoints} />
+            <StopSuggestions
+              waypoints={waypoints}
+              onAddStop={addSuggestedStop}
+              onSuggestChange={setSuggestedStops}
+            />
           </>
         )}
 

@@ -1,46 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import { Fuel, AlertTriangle, Bike } from 'lucide-react';
-
-function haversineKm(a, b) {
-  const R = 6371;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
+import { useBikeRange, haversineKm } from '@/lib/stopSuggestions';
 
 export default function RangeWarning({ waypoints = [] }) {
-  const { data: bike } = useQuery({
-    queryKey: ['primary-bike'],
-    queryFn: async () => {
-      const list = await base44.entities.Bike.filter({ is_primary: true }, '-created_date', 1);
-      if (list && list.length) return list[0];
-      const all = await base44.entities.Bike.list('-created_date', 1);
-      return all && all.length ? all[0] : null;
-    },
-  });
+  const { bike, rangeKm, safeRange } = useBikeRange();
 
-  const { data: profile } = useQuery({
-    queryKey: ['fuel-profile', bike?.id],
-    enabled: !!bike?.id,
-    queryFn: async () => {
-      const list = await base44.entities.FuelProfile.filter({ bike_id: bike.id }, '-last_calculated', 1);
-      return list && list.length ? list[0] : null;
-    },
-  });
-
-  if (waypoints.length < 2 || !bike) return null;
-
-  // Estimate range: prefer FuelProfile.estimated_range_km, else compute from tank + consumption.
-  let rangeKm = profile?.estimated_range_km;
-  if (!rangeKm && bike.tank_capacity_l && bike.fuel_consumption_l_per_100km) {
-    rangeKm = (bike.tank_capacity_l / bike.fuel_consumption_l_per_100km) * 100;
-  }
-  if (!rangeKm) return null;
-
-  const safeRange = rangeKm * 0.8;
+  if (waypoints.length < 2 || !bike || !rangeKm) return null;
   const legs = [];
   let totalKm = 0;
   for (let i = 0; i < waypoints.length - 1; i++) {
