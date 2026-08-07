@@ -15,6 +15,7 @@ import { useMapOverlays, POI_OVERLAY_MAP } from '@/lib/mapOverlays';
 import { useRideSession } from '@/hooks/useRideSession';
 import { useIdleMapUi, revealMapUi } from '@/hooks/useIdleMapUi';
 import NavigationOverlay from '@/components/NavigationOverlay';
+import TutorialWalkthrough from '@/components/TutorialWalkthrough';
 import { setRideActive } from '@/lib/rideStatus';
 import { getPendingNavigation, clearPendingNavigation } from '@/lib/rideCache';
 import { toast } from 'sonner';
@@ -44,6 +45,7 @@ export default function Home() {
   const [layersOpen, setLayersOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
+  const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('motogo_show_tutorial') === 'true' && localStorage.getItem('motogo_tutorial_done') !== 'true');
   const [layer, setLayer] = useMapLayer();
   const { overlays, toggle: toggleOverlay } = useMapOverlays();
   const [headingUp, setHeadingUp] = useState(true);
@@ -304,6 +306,8 @@ export default function Home() {
     session.navigateTo({ lat: service.lat, lng: service.lng, name: service.name });
   };
 
+  const handleCloseTutorial = () => setShowTutorial(false);
+
   return (
     <div className="relative h-screen w-full overflow-hidden" onClick={handleScreenTap}>
       <MapView
@@ -471,6 +475,8 @@ export default function Home() {
         setSelectedFriend(null);
         session.navigateTo({ lat: f.lat, lng: f.lng, name: f.name });
       }} />
+
+      <TutorialWalkthrough open={showTutorial} onClose={handleCloseTutorial} />
     </div>);
 
 }

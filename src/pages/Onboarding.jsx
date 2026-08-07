@@ -131,6 +131,8 @@ export default function Onboarding() {
         });
       }
       toast.success('Welcome to MotoGo!');
+      localStorage.setItem('motogo_show_tutorial', 'true');
+      localStorage.removeItem('motogo_tutorial_done');
       navigate('/');
     } catch (e) {
       console.error(e);
