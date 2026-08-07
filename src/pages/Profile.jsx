@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle, LifeBuoy, HelpCircle, MapPinned, Wrench, Gauge } from 'lucide-react';
+import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle, LifeBuoy, HelpCircle, MapPinned, Wrench, Gauge, Store } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -315,6 +315,13 @@ export default function Profile() {
             subtitle="Log maintenance and workshop visits"
             delay={0.725}
             onClick={() => navigate('/service-history')} />
+
+          <MenuCard
+            icon={Store}
+            title="Provider Dashboard"
+            subtitle="Manage your shop listings, contact info and views"
+            delay={0.726}
+            onClick={() => navigate('/provider-dashboard')} />
 
           <MenuCard
             icon={Gauge}

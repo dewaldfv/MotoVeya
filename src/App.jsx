@@ -45,6 +45,7 @@ import BikeGarage from '@/pages/BikeGarage';
 import ServiceHistory from '@/pages/ServiceHistory';
 import SafetyDashboard from '@/pages/SafetyDashboard';
 import Achievements from '@/pages/Achievements';
+import ServiceProviderDashboard from '@/pages/ServiceProviderDashboard';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
@@ -117,6 +118,7 @@ const AuthenticatedApp = () => {
         <Route path="/service-history" element={<ServiceHistory />} />
         <Route path="/safety-dashboard" element={<SafetyDashboard />} />
         <Route path="/achievements" element={<Achievements />} />
+        <Route path="/provider-dashboard" element={<ServiceProviderDashboard />} />
         <Route path="/rider/:id" element={<RiderProfile />} />
         <Route path="/ride/group/:id" element={<ActiveGroupRide />} />
       </Route>

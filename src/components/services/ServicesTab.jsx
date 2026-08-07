@@ -91,6 +91,13 @@ export default function ServicesTab({ user }) {
     navigate('/ride/active', { state: { destination: { lat: service.lat, lng: service.lng, name: service.name } } });
   };
 
+  const handleSelect = (service) => {
+    setSelectedService(service);
+    if (service?.id) {
+      base44.functions.invoke('increment-service-view', { service_id: service.id }).catch(() => {});
+    }
+  };
+
   const handleBack = () => { setSelectedCategory(null); setSearchQuery(''); };
   const hasSearchOrCategory = !!selectedCategory || !!searchQuery.trim();
   const activeCategory = selectedCategory ? getServiceCategory(selectedCategory) : null;
@@ -140,7 +147,7 @@ export default function ServicesTab({ user }) {
                   {filteredServices.map((service) => (
                     <ServiceListingCard key={service.id} service={service} userPos={userPos}
                       isFavorite={favoriteIds.has(service.id)} onFavorite={handleFavorite}
-                      onSelect={setSelectedService} onNavigate={handleNavigate} />
+                      onSelect={handleSelect} onNavigate={handleNavigate} />
                   ))}
                 </div>
               </>}
