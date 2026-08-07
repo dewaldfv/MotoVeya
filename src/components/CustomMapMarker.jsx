@@ -12,13 +12,18 @@ export default function CustomMapMarker({ position, children, onClick, zIndex = 
   if (!position) return null;
   const lat = Array.isArray(position) ? position[0] : position.lat;
   const lng = Array.isArray(position) ? position[1] : position.lng;
-  const transform = anchor === 'bottom' ? 'translate(-50%, -100%)' : 'translate(-50%, -50%)';
+  const transform = anchor === 'bottom'
+    ? 'translate3d(-50%, -100%, 0)'
+    : 'translate3d(-50%, -50%, 0)';
   return (
     <OverlayView position={{ lat, lng }} mapPaneName="floatPane">
       <div
         onClick={onClick}
         style={{
           transform,
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
           cursor: onClick ? 'pointer' : 'default',
           zIndex,
           position: 'relative',
