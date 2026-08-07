@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, MapPin, Route, Loader2, Calendar, CloudSun } from 'lucide-react';
@@ -29,6 +29,62 @@ export default function RidePlanner() {
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [suggestedStops, setSuggestedStops] = useState([]);
+  const [currentPlanId, setCurrentPlanId] = useState(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // idle | saving | saved | error
+  const lastSavedSnapshot = useRef('');
+
+  const planSnapshot = useMemo(
+    () => JSON.stringify({ title, notes, plannedDate, waypoints }),
+    [title, notes, plannedDate, waypoints]
+  );
+
+  const buildPayload = useCallback(() => ({
+    title: title.trim(),
+    waypoints: JSON.stringify(waypoints),
+    notes: notes.trim(),
+    planned_date: plannedDate ? new Date(plannedDate).toISOString() : undefined,
+    weather: weather ? JSON.stringify(weather) : undefined,
+  }), [title, waypoints, notes, plannedDate, weather]);
+
+  const autoSave = useCallback(async (createIfMissing) => {
+    if (!title.trim() || waypoints.length < 2) return;
+    setAutoSaveStatus('saving');
+    try {
+      let id = currentPlanId;
+      if (id) {
+        await base44.entities.RidePlan.update(id, buildPayload());
+      } else if (createIfMissing) {
+        const plan = await base44.entities.RidePlan.create(buildPayload());
+        id = plan.id;
+        setCurrentPlanId(id);
+      } else {
+        setAutoSaveStatus('idle');
+        return;
+      }
+      lastSavedSnapshot.current = planSnapshot;
+      setAutoSaveStatus('saved');
+      queryClient.invalidateQueries({ queryKey: ['ride-plans'] });
+    } catch (e) {
+      console.error(e);
+      setAutoSaveStatus('error');
+    }
+  }, [title, waypoints, currentPlanId, planSnapshot, buildPayload, queryClient]);
+
+  // Debounced auto-save while building the trip
+  useEffect(() => {
+    if (planSnapshot === lastSavedSnapshot.current) return;
+    if (!title.trim() || waypoints.length < 2) return;
+    setAutoSaveStatus('saving');
+    const t = setTimeout(() => { autoSave(true); }, 6000);
+    return () => clearTimeout(t);
+  }, [planSnapshot, autoSave]);
+
+  // Flush pending changes when the tab is hidden / user navigates away
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') autoSave(false); };
+    document.addEventListener('visibilitychange', onHide);
+    return () => document.removeEventListener('visibilitychange', onHide);
+  }, [autoSave]);
 
   // Load from shared link or local draft
   useEffect(() => {
@@ -44,7 +100,10 @@ export default function RidePlanner() {
             setNotes(plan.notes || '');
             setPlannedDate(plan.planned_date ? plan.planned_date.slice(0, 10) : '');
             setWaypoints(wp);
-            toast.success('Shared route loaded');
+            setCurrentPlanId(plan.id);
+            lastSavedSnapshot.current = JSON.stringify({ title: plan.title || '', notes: plan.notes || '', plannedDate: plan.planned_date ? plan.planned_date.slice(0, 10) : '', waypoints: wp });
+            setAutoSaveStatus('idle');
+            toast.success('Shared route loaded — edits auto-save');
             window.history.replaceState({}, '', '/ride-planner');
             return;
           }
@@ -57,6 +116,7 @@ export default function RidePlanner() {
           setNotes(draft.notes || '');
           setPlannedDate(draft.plannedDate || '');
           setWaypoints(Array.isArray(draft.waypoints) ? draft.waypoints : []);
+          lastSavedSnapshot.current = JSON.stringify({ title: draft.title || '', notes: draft.notes || '', plannedDate: draft.plannedDate || '', waypoints: Array.isArray(draft.waypoints) ? draft.waypoints : [] });
         }
       } catch (e) { /* ignore */ }
     })();
@@ -129,15 +189,20 @@ export default function RidePlanner() {
     if (!title.trim()) { toast.error('Give your route a title'); return; }
     if (waypoints.length < 2) { toast.error('Add at least two waypoints'); return; }
     try {
-      const plan = await saveMutation.mutateAsync({
-        title: title.trim(),
-        waypoints: JSON.stringify(waypoints),
-        notes: notes.trim(),
-        planned_date: plannedDate ? new Date(plannedDate).toISOString() : undefined,
-        weather: weather ? JSON.stringify(weather) : undefined,
-      });
+      const payload = buildPayload();
+      let id = currentPlanId;
+      if (id) {
+        await base44.entities.RidePlan.update(id, payload);
+      } else {
+        const plan = await saveMutation.mutateAsync(payload);
+        id = plan.id;
+        setCurrentPlanId(id);
+      }
+      lastSavedSnapshot.current = planSnapshot;
+      setAutoSaveStatus('saved');
+      queryClient.invalidateQueries({ queryKey: ['ride-plans'] });
       toast.success('Route saved');
-      setSharePlan({ id: plan.id, title: title.trim() });
+      setSharePlan({ id, title: title.trim() });
       setShareOpen(true);
     } catch (e) {
       console.error(e);
@@ -152,7 +217,10 @@ export default function RidePlanner() {
       setNotes(plan.notes || '');
       setPlannedDate(plan.planned_date ? plan.planned_date.slice(0, 10) : '');
       setWaypoints(wp);
-      toast.success('Route loaded — edit and re-save to update');
+      setCurrentPlanId(plan.id);
+      lastSavedSnapshot.current = JSON.stringify({ title: plan.title, notes: plan.notes || '', plannedDate: plan.planned_date ? plan.planned_date.slice(0, 10) : '', waypoints: wp });
+      setAutoSaveStatus('idle');
+      toast.success('Route loaded — edits auto-save');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) { toast.error('Could not load route'); }
   };
@@ -167,6 +235,9 @@ export default function RidePlanner() {
         </button>
         <h1 className="flex items-center gap-2 text-lg font-bold">
           <CloudSun size={20} className="text-primary" /> Plan Ride
+          {autoSaveStatus === 'saving' && <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground"><Loader2 size={12} className="animate-spin" /> Saving…</span>}
+          {autoSaveStatus === 'saved' && <span className="text-xs font-normal text-emerald-500">Saved</span>}
+          {autoSaveStatus === 'error' && <span className="text-xs font-normal text-destructive">Save failed</span>}
         </h1>
       </div>
 
@@ -260,7 +331,7 @@ export default function RidePlanner() {
                     className="rounded-lg p-2 text-primary" aria-label="Share route"
                   ><Share2 size={18} /></button>
                   <button
-                    onClick={() => { if (confirm('Delete this route?')) deleteMutation.mutate(plan.id); }}
+                    onClick={() => { if (confirm('Delete this route?')) { deleteMutation.mutate(plan.id); if (plan.id === currentPlanId) { setCurrentPlanId(null); setAutoSaveStatus('idle'); } } }}
                     className="rounded-lg p-2 text-destructive" aria-label="Delete route"
                   ><Trash2 size={18} /></button>
                 </div>
