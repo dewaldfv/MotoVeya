@@ -10,14 +10,14 @@ const navItems = [
 { key: 'profile', icon: User, label: 'Profile' }];
 
 
-export default function BottomNav() {
+export default function BottomNav({ hidden = false }) {
   const { currentTab, switchToTab } = useTabHistory();
   const keyboardVisible = useKeyboardVisible();
 
   return (
     <nav
-      className={`fixed left-4 right-4 z-40 rounded-[20px] border border-border backdrop-blur-lg transition-transform duration-200 opacity-100 ${
-      keyboardVisible ? 'translate-y-full' : 'translate-y-0'}`
+      className={`fixed left-4 right-4 z-40 rounded-[20px] border border-border backdrop-blur-lg transition-all duration-300 ${
+      (keyboardVisible || hidden) ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`
       }
       style={{
         bottom: 'calc(env(safe-area-inset-bottom) + 8px)',

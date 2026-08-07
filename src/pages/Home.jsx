@@ -13,6 +13,7 @@ import ServiceDetailSheet from '@/components/services/ServiceDetailSheet';
 import FriendInfoSheet from '@/components/friends/FriendInfoSheet';
 import { useMapOverlays, POI_OVERLAY_MAP } from '@/lib/mapOverlays';
 import { useRideSession } from '@/hooks/useRideSession';
+import { useIdleMapUi, revealMapUi } from '@/hooks/useIdleMapUi';
 import NavigationOverlay from '@/components/NavigationOverlay';
 import { setRideActive } from '@/lib/rideStatus';
 import { getPendingNavigation, clearPendingNavigation } from '@/lib/rideCache';
@@ -48,6 +49,17 @@ export default function Home() {
   const [headingUp, setHeadingUp] = useState(true);
   const [notifyFriends, setNotifyFriends] = useState(true);
   const userPosRef = useRef(null);
+  const { visible: mapUiVisible, toggle: toggleMapUi, arm: armMapUiHide } = useIdleMapUi();
+
+  useEffect(() => { armMapUiHide(); }, []);
+
+  const handleScreenTap = (e) => {
+    if (e.target.closest('button, a, [role="button"], [data-ui-control], .fixed, [data-sheet]')) {
+      revealMapUi();
+      return;
+    }
+    toggleMapUi();
+  };
 
   const { data: me } = useQuery({
     queryKey: ['me'],
@@ -287,7 +299,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative h-screen w-full overflow-hidden">
+    <div className="relative h-screen w-full overflow-hidden" onClick={handleScreenTap}>
       <MapView
         center={session.userPos || SA_CENTER}
         zoom={12}
@@ -321,7 +333,7 @@ export default function Home() {
         className="absolute inset-0 z-0 h-full w-full" />
       
 
-      {showIdleControls &&
+      {showIdleControls && mapUiVisible &&
       <>
           <button
           onClick={() => setMenuOpen(true)}

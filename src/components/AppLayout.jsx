@@ -12,6 +12,7 @@ import OrientationPermissionPrompt from './OrientationPermissionPrompt';
 import { getActiveRide } from '@/lib/rideCache';
 import { subscribeRideActive } from '@/lib/rideStatus';
 import { useScreenOrientation } from '@/hooks/useScreenOrientation';
+import { useIdleMapUi } from '@/hooks/useIdleMapUi';
 
 const pageVariants = {
   initial: { opacity: 0, x: '100%' },
@@ -44,6 +45,9 @@ export default function AppLayout() {
   usePushNotifications();
   const navigate = useNavigate();
   const { isLandscape } = useScreenOrientation();
+  const { visible: mapUiVisible } = useIdleMapUi();
+  const isHome = location.pathname === '/';
+  const navHidden = isHome && !mapUiVisible;
 
   useEffect(() => {
     const handler = (e) => {
@@ -75,7 +79,7 @@ export default function AppLayout() {
           {outlet}
         </motion.div>
       </AnimatePresence>
-      {!rideActive && <BottomNav />}
+      {!rideActive && <BottomNav hidden={navHidden} />}
     </div>
     </VoiceChannelProvider>
   );
