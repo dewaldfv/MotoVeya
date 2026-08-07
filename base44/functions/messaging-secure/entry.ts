@@ -1,4 +1,62 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { secrets } from 'base44:runtime';
+import webpush from 'npm:web-push@3.6.7';
+
+let vapidConfigured = false;
+function ensureVapid() {
+  if (vapidConfigured) return;
+  const publicKey = secrets.get('VAPID_PUBLIC_KEY');
+  const privateKey = secrets.get('VAPID_PRIVATE_KEY');
+  if (!publicKey || !privateKey) {
+    throw new Error('VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY not set');
+  }
+  webpush.setVapidDetails('mailto:support@motogo.app', publicKey, privateKey);
+  vapidConfigured = true;
+}
+
+// Send a Web Push notification to every stored subscription owned by the
+// given user ids. `svc` is a base44 service-role client (bypasses RLS so we
+// can read other users' subscriptions). Expired/invalid subscriptions are
+// pruned automatically.
+async function sendPushToUsers(svc, userIds, payload) {
+  const ids = (userIds || []).filter(Boolean);
+  if (ids.length === 0) return { sent: 0 };
+  try {
+    ensureVapid();
+  } catch (e) {
+    console.error('webPush ensureVapid', e.message);
+    return { sent: 0, error: e.message };
+  }
+  let subs = [];
+  try {
+    subs = await svc.entities.PushSubscription.list('-created_date', 500);
+  } catch (e) {
+    console.error('webPush list subs', e.message);
+    return { sent: 0, error: e.message };
+  }
+  const idSet = new Set(ids);
+  const mine = (subs || []).filter((s) => idSet.has(s.user_id));
+  if (mine.length === 0) return { sent: 0 };
+  const payloadStr = JSON.stringify(payload || {});
+  let sent = 0;
+  await Promise.all(
+    mine.map((s) =>
+      webpush
+        .sendNotification(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh_key, auth: s.auth_key } },
+          payloadStr
+        )
+        .then(() => { sent += 1; })
+        .catch(async (err) => {
+          const status = err && err.statusCode;
+          if (status === 404 || status === 410) {
+            try { await svc.entities.PushSubscription.delete(s.id); } catch (e) {}
+          }
+        })
+    )
+  );
+  return { sent };
+}
 
 Deno.serve(async (req) => {
   try {
@@ -111,6 +169,17 @@ Deno.serve(async (req) => {
         is_read: false,
       });
 
+      try {
+        await sendPushToUsers(svc, [recipient_id], {
+          title: user.full_name || 'Rider',
+          body: preview,
+          conversationId: conv.id,
+          isGroup: false,
+        });
+      } catch (e) {
+        console.error('push send', e.message);
+      }
+
       return Response.json({ message, conversation_id: conv.id });
     }
 
@@ -196,6 +265,17 @@ Deno.serve(async (req) => {
           data: JSON.stringify({ conversation_id, sender_id: user.id, is_group: true }),
           is_read: false,
         }).catch(() => {});
+      }
+
+      try {
+        await sendPushToUsers(svc, others, {
+          title: conv.group_name || 'Group chat',
+          body: `${user.full_name || 'Rider'}: ${preview}`,
+          conversationId,
+          isGroup: true,
+        });
+      } catch (e) {
+        console.error('push send group', e.message);
       }
 
       return Response.json({ message, conversation_id });

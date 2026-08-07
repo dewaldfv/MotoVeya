@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import BottomNav from './BottomNav';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { useMessageNotifications } from '@/hooks/useMessageNotifications';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import RideResumeBanner from './RideResumeBanner';
 import VoiceChannelProvider from './voice/VoiceChannelProvider';
 import NotificationPopUp from './NotificationPopUp';
@@ -40,6 +41,7 @@ export default function AppLayout() {
 
   useLocationBroadcast();
   useMessageNotifications();
+  usePushNotifications();
   const navigate = useNavigate();
   const { isLandscape } = useScreenOrientation();
 
