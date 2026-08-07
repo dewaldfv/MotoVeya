@@ -338,6 +338,52 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // Notify the user who submitted a service that it was approved or rejected.
+    if (action === 'notify_service') {
+      const { service_id, status, reason } = body;
+      if (!service_id || !status) return Response.json({ error: 'Missing service_id or status' }, { status: 400 });
+      const svc = await svc.entities.Service.get(service_id).catch(() => null);
+      if (!svc) return Response.json({ error: 'Service not found' }, { status: 404 });
+      const submitterId = svc.created_by_id;
+      if (!submitterId) return Response.json({ error: 'No submitter for service' }, { status: 400 });
+
+      const isApproved = status === 'approved';
+      const title = isApproved ? 'Service Approved 🎉' : 'Service Rejected';
+      const notifBody = isApproved
+        ? `Your service "${svc.name}" has been approved and is now listed on MotoGo.`
+        : `Your service "${svc.name}" was denied${reason ? `. Reason: ${reason}` : '.'}`;
+
+      await svc.entities.Notification.create({
+        type: 'event_reminder',
+        title,
+        body: notifBody,
+        recipient_id: submitterId,
+        is_read: false,
+        data: JSON.stringify({ service_id: svc.id, status }),
+        action_url: '/community',
+      }).catch(() => {});
+
+      try {
+        await sendPushToUsers(svc, [submitterId], {
+          title,
+          body: notifBody,
+        });
+      } catch (e) { console.error('service push', e.message); }
+
+      try {
+        const sub = await svc.entities.User.get(submitterId).catch(() => null);
+        if (sub?.email) {
+          await base44.integrations.Core.SendEmail({
+            to: sub.email,
+            subject: title,
+            body: `${notifBody}\n\nView it in MotoGo under Community → Services.\n\n— The MotoGo Team`,
+          });
+        }
+      } catch (e) { console.error('service email', e.message); }
+
+      return Response.json({ success: true });
+    }
+
     return Response.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
     console.error('messaging-secure error', error);
