@@ -194,7 +194,9 @@ export default function Home() {
         base44.entities.Event.filter({ status: 'approved' }, '-event_date', 50)]
         );
         setPois(poiData || []);
-        setEvents(eventData || []);
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        setEvents((eventData || []).filter((e) => new Date(e.event_date) >= startOfToday));
       } catch (e) {
         console.error(e);
       } finally {

@@ -23,7 +23,10 @@ export default function Events() {
       let me = null;
       if (authed) me = await base44.auth.me();
       const events = await base44.entities.Event.filter({ status: 'approved' }, 'event_date', 50);
-      return { user: me, events: events || [] };
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const upcoming = (events || []).filter((e) => new Date(e.event_date) >= startOfToday);
+      return { user: me, events: upcoming };
     },
   });
 
