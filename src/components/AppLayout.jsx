@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '@/lib/AuthContext';
 import BottomNav from './BottomNav';
 import { useLocationBroadcast } from '@/hooks/useLocationBroadcast';
 import { useMessageNotifications } from '@/hooks/useMessageNotifications';
@@ -44,6 +45,14 @@ export default function AppLayout() {
   useMessageNotifications();
   usePushNotifications();
   const navigate = useNavigate();
+  const { user, isLoadingAuth } = useAuth();
+
+  useEffect(() => {
+    if (!isLoadingAuth && user && user.onboarding_completed === false) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [user, isLoadingAuth, navigate]);
+
   const { isLandscape } = useScreenOrientation();
   const { visible: mapUiVisible } = useIdleMapUi();
   const isHome = location.pathname === '/';
@@ -58,10 +67,14 @@ export default function AppLayout() {
     return () => window.removeEventListener('motogo:open-conversation', handler);
   }, [navigate]);
 
+  if (!isLoadingAuth && user && user.onboarding_completed === false) {
+    return null;
+  }
+
   return (
     <VoiceChannelProvider>
-    <div
-      className="relative min-h-screen bg-background overflow-x-hidden orientation-transition"
+      <div
+        className="relative min-h-screen bg-background overflow-x-hidden orientation-transition"
       data-orientation={isLandscape ? 'landscape' : 'portrait'}
     >
       <NotificationPopUp />
