@@ -284,7 +284,7 @@ export default function Home() {
   const distressToShow = useMemo(() => (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [], [distressAlerts, activeCat, overlays]);
   const servicesToShow = useMemo(() => (overlays.services ? services : []), [services, overlays]);
   const friendsToShow = useMemo(() => (overlays.friends ? friends : []), [friends, overlays]);
-  const eventsToShow = useMemo(() => (overlays.events ? (Array.isArray(eventData) ? eventData : []).filter((e) => e.lat != null && e.lng != null) : []), [eventData, overlays]);
+  const eventsToShow = useMemo(() => (overlays.events ? (eventData || []).filter((e) => e.lat != null && e.lng != null) : []), [eventData, overlays]);
   const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
 
   const previewRoute = !isActive && session.routeData?.coordinates ? session.routeData.coordinates : null;
