@@ -6,8 +6,9 @@
       "type": "string",
       "enum": [
         "admin",
-        "user",
-        "organizer"
+        "moderator",
+        "organizer",
+        "user"
       ],
       "default": "user"
     },
