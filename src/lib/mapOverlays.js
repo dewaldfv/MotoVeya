@@ -8,8 +8,8 @@ export const MAP_OVERLAYS = [
   { key: 'fuel', label: 'Fuel Stations', emoji: '⛽', default: true },
   { key: 'food', label: 'Restaurants & Cafés', emoji: '🍔', default: true },
   { key: 'distress', label: 'Rider in Distress', emoji: '🚨', default: true, premium: true },
-  { key: 'friends', label: 'Friends & Groups', emoji: '👥', default: false },
-  { key: 'saved', label: 'Saved Locations', emoji: '📍', default: false },
+  { key: 'friends', label: 'Friends & Groups', emoji: '👥', default: true },
+  { key: 'saved', label: 'Saved Locations', emoji: '📍', default: true },
 ];
 
 const DEFAULTS = MAP_OVERLAYS.reduce((acc, o) => { acc[o.key] = o.default; return acc; }, {});
