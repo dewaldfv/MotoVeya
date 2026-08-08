@@ -6,10 +6,8 @@ import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
 import { MAP_LAYERS, getLayerStyles, getLayerBackground, getMapOptions } from '@/lib/mapLayers';
 import { getEventMarkerUrl } from '@/lib/eventMarkers';
 import CustomMapMarker from './CustomMapMarker';
-import RiderMarker from './RiderMarker';
 import ServiceMarkers from './ServiceMarkers';
-import FriendMarkers from './FriendMarkers';
-import GroupRiderMarkers from './GroupRiderMarkers';
+import LiveMarkers from './map/LiveMarkers';
 import MapPopupContent from './MapPopupContent';
 
 const SA_CENTER = [-26.2041, 28.0473];
@@ -191,7 +189,6 @@ export default function MapView({
   showServices = false,
   onServiceClick,
   friends = [],
-  showFriends = false,
   onFriendClick,
   groupRiders = [],
   userPos = null,
@@ -220,19 +217,15 @@ export default function MapView({
     initialCenterRef.current = { lat: center[0], lng: center[1] };
   }
 
-  const validRiders = useMemo(() => riders.filter((r) => isValid(r.lat, r.lng)), [riders]);
-
   // Coarsen the user position to ~1.1km buckets so the service proximity filter only
   // recomputes when the rider actually crosses a bucket boundary — not on every GPS tick.
-  // This stops the service pins from redrawing (and jittering) once per second.
   const coarseUserPos = useMemo(() => {
     if (!userPos) return null;
     return [Math.round(userPos[0] * 100) / 100, Math.round(userPos[1] * 100) / 100];
   }, [userPos?.[0], userPos?.[1]]);
 
-  // Memoize the static pin JSX so these subtrees keep stable element identity across
-  // session/location-driven re-renders — this prevents the pins from re-rendering (and
-  // the underlying OverlayView re-positioning) every tick, which caused panning jitter.
+  // Static pins (POIs, events, distress, services) stay as memoized React overlays —
+  // their positions never change, so they only render once.
   const poiMarkers = useMemo(
     () => pois.filter((p) => isValid(p.lat, p.lng)).map((poi) => (
       <CustomMapMarker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} onClick={() => setPopupItem(poi)}>
@@ -257,29 +250,11 @@ export default function MapView({
     )),
     [distressAlerts]
   );
-  const riderMarkers = useMemo(
-    () => validRiders.map((r) => (
-      <RiderMarker key={`rider-${r.id}`} position={[r.lat, r.lng]} heading={r.heading} accuracy={r.accuracy} zIndex={1200} />
-    )),
-    [validRiders]
-  );
   const serviceMarkers = useMemo(
     () => showServices ? (
       <ServiceMarkers services={services} userPos={coarseUserPos} onMarkerClick={onServiceClick} />
     ) : null,
     [showServices, services, coarseUserPos, onServiceClick]
-  );
-  const friendMarkers = useMemo(
-    () => showFriends ? (
-      <FriendMarkers friends={friends} onSelect={onFriendClick} />
-    ) : null,
-    [showFriends, friends, onFriendClick]
-  );
-  const groupRiderMarkers = useMemo(
-    () => groupRiders.length > 0 ? (
-      <GroupRiderMarkers participants={groupRiders} />
-    ) : null,
-    [groupRiders]
   );
 
   if (!isLoaded) {
@@ -344,13 +319,14 @@ export default function MapView({
 
         {distressMarkers}
 
-        {riderMarkers}
-
         {serviceMarkers}
 
-        {friendMarkers}
-
-        {groupRiderMarkers}
+        <LiveMarkers
+          rider={riders[0] || null}
+          friends={friends}
+          groupRiders={groupRiders}
+          onFriendClick={onFriendClick}
+        />
 
         {popupItem && (
           <InfoWindow position={{ lat: popupItem.lat, lng: popupItem.lng }} onCloseClick={() => setPopupItem(null)} zIndex={99999} options={{ zIndex: 99999 }}>
