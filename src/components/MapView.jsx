@@ -1,8 +1,10 @@
 /* global google */
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { GoogleMap, Polyline, InfoWindow, useGoogleMap } from '@react-google-maps/api';
+import { Heart } from 'lucide-react';
 import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
 import { MAP_LAYERS, getLayerStyles, getLayerBackground, getMapOptions } from '@/lib/mapLayers';
+import { getEventMarkerUrl } from '@/lib/eventMarkers';
 import CustomMapMarker from './CustomMapMarker';
 import RiderMarker from './RiderMarker';
 import ServiceMarkers from './ServiceMarkers';
@@ -32,6 +34,21 @@ function PoiVisual({ category }) {
   return (
     <div style={{ width: 36, height: 36, background: config.color, borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <span style={{ transform: 'rotate(45deg)', fontSize: 16 }}>{config.emoji}</span>
+    </div>
+  );
+}
+
+function EventVisual({ iconUrl, isFavorite }) {
+  return (
+    <div style={{ position: 'relative', width: 44, height: 44 }}>
+      <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', border: '3px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+        <img src={iconUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+      </div>
+      {isFavorite && (
+        <div style={{ position: 'absolute', top: -6, left: -6, width: 20, height: 20, borderRadius: '50%', background: '#ef4444', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+          <Heart size={11} className="text-white" fill="white" strokeWidth={0} />
+        </div>
+      )}
     </div>
   );
 }
@@ -160,6 +177,7 @@ export default function MapView({
   center = SA_CENTER,
   zoom = 12,
   pois = [],
+  events = [],
   riders = [],
   distressAlerts = [],
   route = null,
@@ -186,7 +204,12 @@ export default function MapView({
   completedRoute = null,
   remainingRoute = null,
   destination = null,
+  favoriteEventIds = null,
 }) {
+  const favoriteSet = useMemo(
+    () => (favoriteEventIds instanceof Set ? favoriteEventIds : new Set(favoriteEventIds || [])),
+    [favoriteEventIds]
+  );
   const isLoaded = useGoogleMapsLoaded();
   const [popupItem, setPopupItem] = useState(null);
   const bgColor = getLayerBackground(layer);
@@ -209,6 +232,14 @@ export default function MapView({
       </CustomMapMarker>
     )),
     [pois]
+  );
+  const eventMarkers = useMemo(
+    () => events.filter((e) => isValid(e.lat, e.lng)).map((ev) => (
+      <CustomMapMarker key={`event-${ev.id}`} position={[ev.lat, ev.lng]} onClick={() => setPopupItem(ev)}>
+        <EventVisual iconUrl={ev.markerIcon || getEventMarkerUrl(ev.category)} isFavorite={favoriteSet.has(ev.id)} />
+      </CustomMapMarker>
+    )),
+    [events, favoriteSet]
   );
   const distressMarkers = useMemo(
     () => distressAlerts.filter((d) => isValid(d.lat, d.lng)).map((d) => (
@@ -276,6 +307,8 @@ export default function MapView({
         )}
 
         {poiMarkers}
+
+        {eventMarkers}
 
         {distressMarkers}
 

@@ -3,6 +3,7 @@ import { useState } from 'react';
 const STORAGE_KEY = 'motogo_map_overlays';
 
 export const MAP_OVERLAYS = [
+  { key: 'events', label: 'Motorcycle Events', emoji: '🏁', default: true },
   { key: 'services', label: 'Motorcycle Services', emoji: '🔧', default: true },
   { key: 'fuel', label: 'Fuel Stations', emoji: '⛽', default: true },
   { key: 'food', label: 'Restaurants & Cafés', emoji: '🍔', default: true },

@@ -93,6 +93,22 @@ export default function Home() {
     queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || []
   });
 
+  const { data: eventData = null } = useQuery({
+    queryKey: ['events'],
+    queryFn: async () => {
+      const events = await base44.entities.Event.filter({ status: 'approved' }, 'event_date', 50);
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      return (events || []).filter((e) => new Date(e.event_date) >= startOfToday);
+    }
+  });
+
+  const { data: eventFavoriteIds = [] } = useQuery({
+    queryKey: ['event-favorites'],
+    queryFn: async () => (await base44.entities.EventFavorite.filter({})).map((f) => f.event_id),
+    enabled: !!me?.id
+  });
+
   const { data: friends = [] } = useQuery({
     queryKey: ['map-friends'],
     queryFn: async () => {
@@ -268,6 +284,7 @@ export default function Home() {
   const distressToShow = useMemo(() => (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [], [distressAlerts, activeCat, overlays]);
   const servicesToShow = useMemo(() => (overlays.services ? services : []), [services, overlays]);
   const friendsToShow = useMemo(() => (overlays.friends ? friends : []), [friends, overlays]);
+  const eventsToShow = useMemo(() => (overlays.events ? (eventData || []).filter((e) => e.lat != null && e.lng != null) : []), [eventData, overlays]);
   const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
 
   const previewRoute = !isActive && session.routeData?.coordinates ? session.routeData.coordinates : null;
@@ -302,6 +319,8 @@ export default function Home() {
         recenterSignal={recenterSignal}
         fitRouteSignal={fitRouteSignal}
         pois={poisToShow}
+        events={eventsToShow}
+        favoriteEventIds={eventFavoriteIds}
         distressAlerts={distressToShow}
         services={servicesToShow}
         showServices={overlays.services}
