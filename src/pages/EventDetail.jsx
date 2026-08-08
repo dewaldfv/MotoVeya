@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import CalendarExportButton from '@/components/CalendarExportButton';
+import { formatEventDateRange } from '@/lib/eventDate';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -62,7 +63,7 @@ export default function EventDetail() {
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!event) return <div className="flex h-screen flex-col items-center justify-center gap-4"><p className="text-muted-foreground">Event not found</p><button onClick={() => navigate('/events')} className="text-primary">Back to events</button></div>;
 
-  const date = new Date(event.event_date).toLocaleString('en-ZA', { dateStyle: 'full', timeStyle: 'short' });
+  const date = formatEventDateRange(event, 'full');
 
   return (
     <div className="min-h-screen bg-background pb-24">

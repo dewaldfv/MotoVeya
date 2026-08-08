@@ -41,8 +41,8 @@ function foldLine(line) {
 
 function buildVEvent(ev, now) {
   const start = new Date(ev.event_date);
-  // No end time stored — default to a 3-hour block, typical for ride gatherings.
-  const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
+  // Use the stored end_date (multi-day rallies) or default to a 3-hour block.
+  const end = ev.end_date ? new Date(ev.end_date) : new Date(start.getTime() + 3 * 60 * 60 * 1000);
   const lines = [
     'BEGIN:VEVENT',
     `UID:${ev.id}@motogo.app`,

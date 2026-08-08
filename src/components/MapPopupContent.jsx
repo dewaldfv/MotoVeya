@@ -1,4 +1,5 @@
 import { Navigation, Bookmark, Info } from 'lucide-react';
+import { formatEventDateRange } from '@/lib/eventDate';
 
 export default function MapPopupContent({ item, onMoreInfo, onSave, onNavigate }) {
   const title = item.name || item.title || item.rider_name || 'Location';
@@ -14,7 +15,7 @@ export default function MapPopupContent({ item, onMoreInfo, onSave, onNavigate }
         {item.venue_name && <p className="text-xs text-muted-foreground">{item.venue_name}</p>}
         {item.event_date && (
           <p className="text-xs text-muted-foreground">
-            {new Date(item.event_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {formatEventDateRange(item)}
           </p>
         )}
         {item.address && <p className="text-xs text-muted-foreground">{item.address}</p>}

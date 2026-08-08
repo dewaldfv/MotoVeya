@@ -12,6 +12,10 @@
       "type": "string",
       "format": "date-time"
     },
+    "end_date": {
+      "type": "string",
+      "format": "date-time"
+    },
     "venue_name": {
       "type": "string"
     },

@@ -27,6 +27,8 @@ const REMOTE_CATS = {
   atm: { query: 'atm', category: 'atm' }
 };
 
+import { formatEventDateRange } from '@/lib/eventDate';
+
 const formatDate = (d) => new Date(d).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function Home() {
@@ -446,7 +448,7 @@ export default function Home() {
             <div className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {selected.contact_phone}</div>
             }
               {selected.event_date &&
-            <div className="flex items-center gap-2 text-muted-foreground"><Calendar size={16} /> {formatDate(selected.event_date)}</div>
+            <div className="flex items-center gap-2 text-muted-foreground"><Calendar size={16} /> {formatEventDateRange(selected)}</div>
             }
               {selected.entry_fee_zar != null &&
             <div className="flex items-center gap-2 text-muted-foreground"><BadgeCheck size={16} /> {selected.entry_fee_zar === 0 ? 'Free entry' : `R${selected.entry_fee_zar} entry`}</div>

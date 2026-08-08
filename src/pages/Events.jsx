@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
 import CalendarExportButton from '@/components/CalendarExportButton';
 import PullToRefresh from '@/components/PullToRefresh';
+import { formatEventDateRange } from '@/lib/eventDate';
 
 const CATS = ['all', 'rally', 'breakfast_run', 'pub_ride', 'birthday_bash', 'camping', 'track_day', 'charity_ride', 'bike_night', 'scenic_ride', 'day_jol', 'other'];
 
@@ -34,7 +35,7 @@ export default function Events() {
   const events = data?.events ?? [];
   const canSubmit = user && (user.role === 'organizer' || user.role === 'admin');
   const filtered = activeCat === 'all' ? events : events.filter((e) => e.category === activeCat);
-  const fmtDate = (d) => new Date(d).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+  const fmtDate = (ev) => formatEventDateRange(ev);
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -90,7 +91,7 @@ export default function Events() {
                   </div>
                   <h3 className="font-bold">{ev.title}</h3>
                   <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1"><Calendar size={14} /> {fmtDate(ev.event_date)}</span>
+                    <span className="flex items-center gap-1"><Calendar size={14} /> {fmtDate(ev)}</span>
                     <span className="flex items-center gap-1"><MapPin size={14} /> {ev.venue_name}</span>
                   </div>
                 </div>

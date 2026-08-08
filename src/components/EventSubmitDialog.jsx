@@ -17,7 +17,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
   const [uploading, setUploading] = useState(false);
   const [uploadingMarker, setUploadingMarker] = useState(false);
   const [customMarker, setCustomMarker] = useState(null);
-  const [form, setForm] = useState({ title: '', description: '', event_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
+  const [form, setForm] = useState({ title: '', description: '', event_date: '', end_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -59,12 +59,15 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
 
   const handleSubmit = async () => {
     if (!form.title || !form.event_date || !form.venue_name) { toast.error('Please fill in all required fields'); return; }
+    if (form.category === 'rally' && !form.end_date) { toast.error('Rallies span a weekend — please add an end date'); return; }
+    if (form.category === 'rally' && form.end_date && new Date(form.end_date) <= new Date(form.event_date)) { toast.error('End date must be after the start date'); return; }
     setSaving(true);
     try {
       await base44.entities.Event.create({
         ...form,
         markerIcon: customMarker || getEventMarkerUrl(form.category),
         event_date: new Date(form.event_date).toISOString(),
+        end_date: form.category === 'rally' && form.end_date ? new Date(form.end_date).toISOString() : undefined,
         lat: form.lat ? Number(form.lat) : undefined,
         lng: form.lng ? Number(form.lng) : undefined,
         entry_fee_zar: form.entry_fee_zar ? Number(form.entry_fee_zar) : 0,
@@ -74,7 +77,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
       onOpenChange(false);
       onSubmitted?.();
       setCustomMarker(null);
-      setForm({ title: '', description: '', event_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
+      setForm({ title: '', description: '', event_date: '', end_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
     } catch (e) {
       console.error(e);
       toast.error('Failed to submit event');
@@ -94,7 +97,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
           <div><Label>Event Title *</Label><Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Sunday Breakfast Run" className="min-h-[48px]" /></div>
           <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Tell riders about your event" rows={3} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Date & Time *</Label><Input type="datetime-local" value={form.event_date} onChange={(e) => set('event_date', e.target.value)} className="min-h-[48px]" /></div>
+            <div><Label>{form.category === 'rally' ? 'From Date & Time *' : 'Date & Time *'}</Label><Input type="datetime-local" value={form.event_date} onChange={(e) => set('event_date', e.target.value)} className="min-h-[48px]" /></div>
             <div>
               <Label>Category</Label>
               <Drawer open={categoryDrawerOpen} onOpenChange={setCategoryDrawerOpen}>
@@ -122,6 +125,9 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
               </Drawer>
             </div>
           </div>
+          {form.category === 'rally' && (
+            <div><Label>To Date & Time * (rally weekend end)</Label><Input type="datetime-local" value={form.end_date} onChange={(e) => set('end_date', e.target.value)} className="min-h-[48px]" /></div>
+          )}
           <div><Label>Venue Name *</Label><Input value={form.venue_name} onChange={(e) => set('venue_name', e.target.value)} placeholder="Kyalami Circuit" className="min-h-[48px]" /></div>
           <div>
             <Label>Location</Label>
