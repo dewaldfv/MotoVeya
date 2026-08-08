@@ -50,9 +50,9 @@ export default function Home() {
   const [headingUp, setHeadingUp] = useState(true);
   const [notifyFriends, setNotifyFriends] = useState(true);
   const userPosRef = useRef(null);
-  const { visible: mapUiVisible, toggle: toggleMapUi, arm: armMapUiHide } = useIdleMapUi();
+  const { visible: mapUiVisible, toggle: toggleMapUi } = useIdleMapUi();
 
-  useEffect(() => { armMapUiHide(); }, []);
+  useEffect(() => { revealMapUi(); }, []);
 
   const handleScreenTap = (e) => {
     if (e.target.closest('button, a, [role="button"], [data-ui-control], .fixed, [data-sheet]')) {
