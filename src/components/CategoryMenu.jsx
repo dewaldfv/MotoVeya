@@ -1,4 +1,4 @@
-import { Fuel, UtensilsCrossed, Beer, Flag, Bike, Wrench, Bed, Hospital, Banknote, Mountain, Siren, LayoutGrid } from 'lucide-react';
+import { Fuel, UtensilsCrossed, Beer, Bike, Wrench, Bed, Hospital, Banknote, Mountain, Siren, LayoutGrid } from 'lucide-react';
 import BottomSheet from '@/components/BottomSheet';
 
 export const MAP_CATEGORIES = [
@@ -6,7 +6,6 @@ export const MAP_CATEGORIES = [
   { key: 'fuel', label: 'Fuel', icon: Fuel },
   { key: 'food', label: 'Food', icon: UtensilsCrossed },
   { key: 'pub', label: 'Pubs', icon: Beer },
-  { key: 'event', label: 'Events', icon: Flag },
   { key: 'dealership', label: 'Dealers', icon: Bike },
   { key: 'workshop', label: 'Mechanics', icon: Wrench },
   { key: 'accommodation', label: 'Accommodation', icon: Bed },

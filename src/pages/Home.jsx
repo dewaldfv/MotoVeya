@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Navigation, Phone, MapPin, Calendar, ExternalLink, BadgeCheck, Menu, LocateFixed, Layers, X, Compass } from 'lucide-react';
+import { Navigation, Phone, MapPin, ExternalLink, Menu, LocateFixed, Layers, X, Compass } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,14 +27,11 @@ const REMOTE_CATS = {
   atm: { query: 'atm', category: 'atm' }
 };
 
-import { formatEventDateRange } from '@/lib/eventDate';
-
 const formatDate = (d) => new Date(d).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function Home() {
   const queryClient = useQueryClient();
   const [pois, setPois] = useState([]);
-  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [activeCat, setActiveCat] = useState('all');
@@ -124,12 +121,6 @@ export default function Home() {
     refetchInterval: 10000
   });
 
-  const { data: eventFavoriteIds = [] } = useQuery({
-    queryKey: ['event-favorites'],
-    queryFn: async () => (await base44.entities.EventFavorite.filter({})).map((f) => f.event_id),
-    enabled: !!me?.id
-  });
-
   const groupRiders = useMemo(() => {
     if (!activeGroupRide?.active) return [];
     return (activeGroupRide.participants || []).
@@ -211,14 +202,8 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       try {
-        const [poiData, eventData] = await Promise.all([
-        base44.entities.POI.list('-created_date', 100),
-        base44.entities.Event.filter({ status: 'approved' }, '-event_date', 50)]
-        );
+        const poiData = await base44.entities.POI.list('-created_date', 100);
         setPois(poiData || []);
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        setEvents((eventData || []).filter((e) => new Date(e.event_date) >= startOfToday));
       } catch (e) {
         console.error(e);
       } finally {
@@ -277,10 +262,9 @@ export default function Home() {
     activeCat === 'all'
       ? pois.filter((p) => { const k = POI_OVERLAY_MAP[p.category]; return !k || overlays[k]; })
       : isRemoteCat ? remotePois
-      : (activeCat === 'event' || activeCat === 'distress') ? []
+      : activeCat === 'distress' ? []
       : pois.filter((p) => p.category === activeCat),
     [pois, remotePois, activeCat, isRemoteCat, overlays]);
-  const eventsToShow = useMemo(() => (activeCat === 'all' ? overlays.events : activeCat === 'event') ? events : [], [events, activeCat, overlays]);
   const distressToShow = useMemo(() => (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [], [distressAlerts, activeCat, overlays]);
   const servicesToShow = useMemo(() => (overlays.services ? services : []), [services, overlays]);
   const friendsToShow = useMemo(() => (overlays.friends ? friends : []), [friends, overlays]);
@@ -318,7 +302,6 @@ export default function Home() {
         recenterSignal={recenterSignal}
         fitRouteSignal={fitRouteSignal}
         pois={poisToShow}
-        events={eventsToShow}
         distressAlerts={distressToShow}
         services={servicesToShow}
         showServices={overlays.services}
@@ -330,7 +313,6 @@ export default function Home() {
         onSavePin={handleSavePin}
         onNavigatePin={handleNavigatePin}
         groupRiders={groupRiders}
-        favoriteEventIds={eventFavoriteIds}
         userPos={session.userPos}
         riders={session.userPos ? [{ id: 'me', lat: session.userPos[0], lng: session.userPos[1], heading: session.heading, accuracy: session.accuracy }] : []}
         navActive={isActive}
@@ -445,12 +427,6 @@ export default function Home() {
             }
               {selected.contact_phone &&
             <div className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {selected.contact_phone}</div>
-            }
-              {selected.event_date &&
-            <div className="flex items-center gap-2 text-muted-foreground"><Calendar size={16} /> {formatEventDateRange(selected)}</div>
-            }
-              {selected.entry_fee_zar != null &&
-            <div className="flex items-center gap-2 text-muted-foreground"><BadgeCheck size={16} /> {selected.entry_fee_zar === 0 ? 'Free entry' : `R${selected.entry_fee_zar} entry`}</div>
             }
             </div>
             <div className="flex gap-2 pt-2">
