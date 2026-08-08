@@ -2,8 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
 
 const AMOUNT_CENTS = {
-  monthly: 6900,   // R69.00
-  annual: 69000,   // R690.00
+  monthly: 8999,   // R89.99
+  annual: 89990,   // R899.90
 };
 
 export default async function(req) {

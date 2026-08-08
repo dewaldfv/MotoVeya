@@ -135,7 +135,7 @@ export default function Onboarding() {
       if (existing.length === 0) {
         await base44.entities.Subscription.create({
           plan: form.subscription, status: 'active',
-          amount_zar: form.subscription === 'premium' ? 69.99 : 0,
+          amount_zar: form.subscription === 'premium' ? 89.99 : 0,
           start_date: new Date().toISOString(), auto_renew: true,
         });
       }
