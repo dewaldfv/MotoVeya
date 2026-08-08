@@ -220,7 +220,15 @@ export default function MapView({
     initialCenterRef.current = { lat: center[0], lng: center[1] };
   }
 
-  const validRiders = riders.filter((r) => isValid(r.lat, r.lng));
+  const validRiders = useMemo(() => riders.filter((r) => isValid(r.lat, r.lng)), [riders]);
+
+  // Coarsen the user position to ~1.1km buckets so the service proximity filter only
+  // recomputes when the rider actually crosses a bucket boundary — not on every GPS tick.
+  // This stops the service pins from redrawing (and jittering) once per second.
+  const coarseUserPos = useMemo(() => {
+    if (!userPos) return null;
+    return [Math.round(userPos[0] * 100) / 100, Math.round(userPos[1] * 100) / 100];
+  }, [userPos?.[0], userPos?.[1]]);
 
   // Memoize the static pin JSX so these subtrees keep stable element identity across
   // session/location-driven re-renders — this prevents the pins from re-rendering (and
@@ -248,6 +256,30 @@ export default function MapView({
       </CustomMapMarker>
     )),
     [distressAlerts]
+  );
+  const riderMarkers = useMemo(
+    () => validRiders.map((r) => (
+      <RiderMarker key={`rider-${r.id}`} position={[r.lat, r.lng]} heading={r.heading} accuracy={r.accuracy} zIndex={1200} />
+    )),
+    [validRiders]
+  );
+  const serviceMarkers = useMemo(
+    () => showServices ? (
+      <ServiceMarkers services={services} userPos={coarseUserPos} onMarkerClick={onServiceClick} />
+    ) : null,
+    [showServices, services, coarseUserPos, onServiceClick]
+  );
+  const friendMarkers = useMemo(
+    () => showFriends ? (
+      <FriendMarkers friends={friends} onSelect={onFriendClick} />
+    ) : null,
+    [showFriends, friends, onFriendClick]
+  );
+  const groupRiderMarkers = useMemo(
+    () => groupRiders.length > 0 ? (
+      <GroupRiderMarkers participants={groupRiders} />
+    ) : null,
+    [groupRiders]
   );
 
   if (!isLoaded) {
@@ -312,15 +344,13 @@ export default function MapView({
 
         {distressMarkers}
 
-        {validRiders.map((r) => (
-          <RiderMarker key={`rider-${r.id}`} position={[r.lat, r.lng]} heading={r.heading} accuracy={r.accuracy} zIndex={1200} />
-        ))}
+        {riderMarkers}
 
-        {showServices && <ServiceMarkers services={services} userPos={userPos} onMarkerClick={onServiceClick} />}
+        {serviceMarkers}
 
-        {showFriends && <FriendMarkers friends={friends} onSelect={onFriendClick} />}
+        {friendMarkers}
 
-        {groupRiders.length > 0 && <GroupRiderMarkers participants={groupRiders} />}
+        {groupRiderMarkers}
 
         {popupItem && (
           <InfoWindow position={{ lat: popupItem.lat, lng: popupItem.lng }} onCloseClick={() => setPopupItem(null)} zIndex={99999} options={{ zIndex: 99999 }}>
