@@ -271,20 +271,19 @@ export default function Home() {
   const hasDestination = !!session.destination;
   const showIdleControls = !isActive && !hasDestination;
 
-  const poisToShow = activeCat === 'all' ?
-  pois.filter((p) => {
-    const overlayKey = POI_OVERLAY_MAP[p.category];
-    return !overlayKey || overlays[overlayKey];
-  }) :
-  isRemoteCat ?
-  remotePois :
-  activeCat === 'event' || activeCat === 'distress' ?
-  [] :
-  pois.filter((p) => p.category === activeCat);
-  const eventsToShow = (activeCat === 'all' ? overlays.events : activeCat === 'event') ? events : [];
-  const distressToShow = (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [];
-  const servicesToShow = overlays.services ? services : [];
-  const friendsToShow = overlays.friends ? friends : [];
+  // Memoize the marker datasets so they keep a stable reference across the frequent
+  // session/location re-renders — this stops static map pins from re-rendering on every tick.
+  const poisToShow = useMemo(() =>
+    activeCat === 'all'
+      ? pois.filter((p) => { const k = POI_OVERLAY_MAP[p.category]; return !k || overlays[k]; })
+      : isRemoteCat ? remotePois
+      : (activeCat === 'event' || activeCat === 'distress') ? []
+      : pois.filter((p) => p.category === activeCat),
+    [pois, remotePois, activeCat, isRemoteCat, overlays]);
+  const eventsToShow = useMemo(() => (activeCat === 'all' ? overlays.events : activeCat === 'event') ? events : [], [events, activeCat, overlays]);
+  const distressToShow = useMemo(() => (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [], [distressAlerts, activeCat, overlays]);
+  const servicesToShow = useMemo(() => (overlays.services ? services : []), [services, overlays]);
+  const friendsToShow = useMemo(() => (overlays.friends ? friends : []), [friends, overlays]);
   const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
 
   const previewRoute = !isActive && session.routeData?.coordinates ? session.routeData.coordinates : null;

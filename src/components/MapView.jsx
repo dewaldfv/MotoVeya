@@ -220,10 +220,35 @@ export default function MapView({
     initialCenterRef.current = { lat: center[0], lng: center[1] };
   }
 
-  const validPois = pois.filter((p) => isValid(p.lat, p.lng));
-  const validEvents = events.filter((e) => isValid(e.lat, e.lng));
-  const validDistress = distressAlerts.filter((d) => isValid(d.lat, d.lng));
   const validRiders = riders.filter((r) => isValid(r.lat, r.lng));
+
+  // Memoize the static pin JSX so these subtrees keep stable element identity across
+  // session/location-driven re-renders — this prevents the pins from re-rendering (and
+  // the underlying OverlayView re-positioning) every tick, which caused panning jitter.
+  const poiMarkers = useMemo(
+    () => pois.filter((p) => isValid(p.lat, p.lng)).map((poi) => (
+      <CustomMapMarker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} onClick={() => setPopupItem(poi)}>
+        <PoiVisual category={poi.category} />
+      </CustomMapMarker>
+    )),
+    [pois]
+  );
+  const eventMarkers = useMemo(
+    () => events.filter((e) => isValid(e.lat, e.lng)).map((ev) => (
+      <CustomMapMarker key={`event-${ev.id}`} position={[ev.lat, ev.lng]} onClick={() => setPopupItem(ev)}>
+        <EventVisual iconUrl={ev.markerIcon || getEventMarkerUrl(ev.category)} isFavorite={favoriteSet.has(ev.id)} />
+      </CustomMapMarker>
+    )),
+    [events, favoriteSet]
+  );
+  const distressMarkers = useMemo(
+    () => distressAlerts.filter((d) => isValid(d.lat, d.lng)).map((d) => (
+      <CustomMapMarker key={`distress-${d.id}`} position={[d.lat, d.lng]} onClick={() => setPopupItem(d)}>
+        <PoiVisual category="distress" />
+      </CustomMapMarker>
+    )),
+    [distressAlerts]
+  );
 
   if (!isLoaded) {
     return <div className={`absolute inset-0 ${className}`} style={{ background: bgColor }} />;
@@ -281,23 +306,11 @@ export default function MapView({
           </CustomMapMarker>
         )}
 
-        {validPois.map((poi) => (
-          <CustomMapMarker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} onClick={() => setPopupItem(poi)}>
-            <PoiVisual category={poi.category} />
-          </CustomMapMarker>
-        ))}
+        {poiMarkers}
 
-        {validEvents.map((ev) => (
-          <CustomMapMarker key={`event-${ev.id}`} position={[ev.lat, ev.lng]} onClick={() => setPopupItem(ev)}>
-            <EventVisual iconUrl={ev.markerIcon || getEventMarkerUrl(ev.category)} isFavorite={favoriteSet.has(ev.id)} />
-          </CustomMapMarker>
-        ))}
+        {eventMarkers}
 
-        {validDistress.map((d) => (
-          <CustomMapMarker key={`distress-${d.id}`} position={[d.lat, d.lng]} onClick={() => setPopupItem(d)}>
-            <PoiVisual category="distress" />
-          </CustomMapMarker>
-        ))}
+        {distressMarkers}
 
         {validRiders.map((r) => (
           <RiderMarker key={`rider-${r.id}`} position={[r.lat, r.lng]} heading={r.heading} accuracy={r.accuracy} zIndex={1200} />
