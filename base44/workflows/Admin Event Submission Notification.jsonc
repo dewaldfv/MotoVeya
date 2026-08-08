@@ -1,0 +1,41 @@
+{
+  "description": "Emails the admin when a new Event is submitted for review",
+  "name": "Admin Event Submission Notification",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "admin_event_submission_notification",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "notify_admin": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notify-admin-submission",
+            "args": {
+              "entity_name": "Event",
+              "entity_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Notify admin",
+            "description": "Email admin about new event submission"
+          }
+        }
+      }
+    ]
+  },
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Event"
+    }
+  }
+}
