@@ -6,6 +6,7 @@ import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
 import { MAP_LAYERS, getLayerStyles, getLayerBackground, getMapOptions } from '@/lib/mapLayers';
 import { getEventMarkerUrl } from '@/lib/eventMarkers';
 import CustomMapMarker from './CustomMapMarker';
+import EventMarker from './EventMarker';
 import RiderMarker from './RiderMarker';
 import ServiceMarkers from './ServiceMarkers';
 import FriendMarkers from './FriendMarkers';
@@ -243,9 +244,7 @@ export default function MapView({
   );
   const eventMarkers = useMemo(
     () => events.filter((e) => isValid(e.lat, e.lng)).map((ev) => (
-      <CustomMapMarker key={`event-${ev.id}`} position={[ev.lat, ev.lng]} onClick={() => setPopupItem(ev)}>
-        <EventVisual iconUrl={ev.markerIcon || getEventMarkerUrl(ev.category)} isFavorite={favoriteSet.has(ev.id)} />
-      </CustomMapMarker>
+      <EventMarker key={`event-${ev.id}`} event={ev} isFavorite={favoriteSet.has(ev.id)} onClick={setPopupItem} />
     )),
     [events, favoriteSet]
   );
