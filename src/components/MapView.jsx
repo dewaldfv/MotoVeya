@@ -66,6 +66,20 @@ function MapResizer() {
   return null;
 }
 
+// Tracks the map's live zoom level so static marker layers can be gated by zoom
+// (services are only shown once the user zooms in close enough to avoid clutter).
+function ZoomTracker({ onZoom }) {
+  const map = useGoogleMap();
+  useEffect(() => {
+    if (!map) return;
+    const emit = () => onZoom(map.getZoom());
+    emit();
+    const listener = map.addListener('zoom_changed', emit);
+    return () => google.maps.event.removeListener(listener);
+  }, [map, onZoom]);
+  return null;
+}
+
 function Recenter({ center, zoom, signal }) {
   const map = useGoogleMap();
   const firstRef = useRef(true);
@@ -189,7 +203,11 @@ export default function MapView({
 }) {
   const isLoaded = useGoogleMapsLoaded();
   const [popupItem, setPopupItem] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(zoom);
   const bgColor = getLayerBackground(layer);
+  // Services are dense — only render their markers once the user zooms in
+  // past this threshold, so the map stays clean at city/region level.
+  const SERVICE_MIN_ZOOM = 13;
   const rotating = navActive && heading != null && !isNaN(heading) && headingUp;
   const navRot = rotating ? `${-heading}deg` : '0deg';
   const initialCenterRef = useRef(null);
@@ -222,11 +240,12 @@ export default function MapView({
     )),
     [distressAlerts]
   );
+  const servicesVisible = showServices && zoomLevel >= SERVICE_MIN_ZOOM;
   const serviceMarkers = useMemo(
-    () => showServices ? (
+    () => servicesVisible ? (
       <ServiceMarkers services={services} userPos={coarseUserPos} onMarkerClick={onServiceClick} />
     ) : null,
-    [showServices, services, coarseUserPos, onServiceClick]
+    [servicesVisible, services, coarseUserPos, onServiceClick]
   );
 
   if (!isLoaded) {
@@ -246,6 +265,7 @@ export default function MapView({
       >
         <LayerController layer={layer} />
         <MapResizer />
+        <ZoomTracker onZoom={setZoomLevel} />
 
         {navActive ? (
           <NavCamera
