@@ -142,6 +142,11 @@
           "user_condition": {
             "role": "admin"
           }
+        },
+        {
+          "user_condition": {
+            "role": "moderator"
+          }
         }
       ]
     },
@@ -154,6 +159,11 @@
         {
           "user_condition": {
             "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "moderator"
           }
         }
       ]
