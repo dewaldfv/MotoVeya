@@ -7,7 +7,7 @@ export default function LayersSheet({ open, onClose, layer, onSelect, overlays, 
   return (
     <BottomSheet open={open} onClose={onClose} title="Map Type">
       <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 no-scrollbar">
-        {MAP_LAYERS.map((l) => {
+        {MAP_LAYERS.filter((l) => !['satellite', 'terrain'].includes(l.key)).map((l) => {
           const isActive = layer === l.key;
           return (
             <button
