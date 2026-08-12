@@ -13,10 +13,10 @@ import LocationPickerMap from '@/components/LocationPickerMap';
 import { SERVICE_CATEGORIES, getServiceCategory } from '@/lib/serviceCategories';
 
 const PRICE_OPTIONS = [
-  { value: 'R', label: 'R — Budget' },
-  { value: 'RR', label: 'RR — Mid-range' },
-  { value: 'RRR', label: 'RRR — Premium' },
-];
+{ value: 'R', label: 'R — Budget' },
+{ value: 'RR', label: 'RR — Mid-range' },
+{ value: 'RRR', label: 'RRR — Premium' }];
+
 
 const EMPTY = {
   name: '', category: 'maintenance_repair', description: '',
@@ -26,7 +26,7 @@ const EMPTY = {
   opening_hours: '', is_open_24h: false,
   price_range: '', service_menu: '', social_links: '',
   submitter_notes: '',
-  logo_url: '', photo_urls: [],
+  logo_url: '', photo_urls: []
 };
 
 export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted }) {
@@ -75,8 +75,8 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
   };
 
   const handleSubmit = async () => {
-    if (!form.name) { toast.error('Please enter a business name'); return; }
-    if (!form.lat || !form.lng) { toast.error('Please set the location on the map'); return; }
+    if (!form.name) {toast.error('Please enter a business name');return;}
+    if (!form.lat || !form.lng) {toast.error('Please set the location on the map');return;}
     setSaving(true);
     try {
       await base44.entities.Service.create({
@@ -99,7 +99,7 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
         submitter_notes: form.submitter_notes.trim() || undefined,
         logo_url: form.logo_url || undefined,
         photo_urls: form.photo_urls || [],
-        status: 'pending',
+        status: 'pending'
       });
       toast.success('Service submitted! Awaiting admin approval.');
       onOpenChange(false);
@@ -134,16 +134,16 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
               <DrawerContent>
                 <DrawerHeader><DrawerTitle>Select Category</DrawerTitle></DrawerHeader>
                 <div className="p-4 pb-8">
-                  {SERVICE_CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.key}
-                      onClick={() => { set('category', cat.key); setCategoryDrawerOpen(false); }}
-                      className={`flex min-h-[48px] w-full items-center justify-between rounded-xl px-4 text-left ${form.category === cat.key ? 'bg-primary/10 text-primary' : 'hover:bg-secondary'}`}
-                    >
+                  {SERVICE_CATEGORIES.map((cat) =>
+                  <button
+                    key={cat.key}
+                    onClick={() => {set('category', cat.key);setCategoryDrawerOpen(false);}}
+                    className={`flex min-h-[48px] w-full items-center justify-between rounded-xl px-4 text-left ${form.category === cat.key ? 'bg-primary/10 text-primary' : 'hover:bg-secondary'}`}>
+                    
                       <span>{cat.emoji} {cat.label}</span>
                       {form.category === cat.key && <Check size={18} className="text-primary" />}
                     </button>
-                  ))}
+                  )}
                 </div>
               </DrawerContent>
             </Drawer>
@@ -155,24 +155,24 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
             <Label>Location *</Label>
             <LocationPickerMap
               value={form.lat && form.lng ? { lat: Number(form.lat), lng: Number(form.lng) } : null}
-              onChange={(lat, lng) => { set('lat', String(lat)); set('lng', String(lng)); }}
+              onChange={(lat, lng) => {set('lat', String(lat));set('lng', String(lng));}}
               onImportInfo={(info) => {
                 if (info.name && !form.address) set('address', info.address || info.name);
                 if (info.town && !form.town) set('town', info.town || '');
-              }}
-            />
-            {form.lat && form.lng ? (
-              <p className="mt-1 text-xs text-muted-foreground">{Number(form.lat).toFixed(4)}, {Number(form.lng).toFixed(4)}</p>
-            ) : (
-              <p className="mt-1 text-xs text-muted-foreground">Import from Google Maps or tap the map to set the location.</p>
-            )}
+              }} />
+            
+            {form.lat && form.lng ?
+            <p className="mt-1 text-xs text-muted-foreground">{Number(form.lat).toFixed(4)}, {Number(form.lng).toFixed(4)}</p> :
+
+            <p className="mt-1 text-xs text-muted-foreground">Import from Google Maps or tap the map to set the location.</p>
+            }
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Address</Label><Input value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="123 Main Rd" className="min-h-[48px]" /></div>
-            <div><Label>Town</Label><Input value={form.town} onChange={(e) => set('town', e.target.value)} placeholder="Centurion" className="min-h-[48px]" /></div>
+            <div className="hidden"><Label className="hidden">Address</Label><Input value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="123 Main Rd" className="min-h-[48px] hidden" /></div>
+            <div className="hidden"><Label>Town</Label><Input value={form.town} onChange={(e) => set('town', e.target.value)} placeholder="Centurion" className="min-h-[48px]" /></div>
           </div>
-          <div><Label>Province</Label><Input value={form.province} onChange={(e) => set('province', e.target.value)} placeholder="Gauteng" className="min-h-[48px]" /></div>
+          <div className="hidden"><Label>Province</Label><Input value={form.province} onChange={(e) => set('province', e.target.value)} placeholder="Gauteng" className="min-h-[48px]" /></div>
 
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Phone</Label><Input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+27 82 123 4567" className="min-h-[48px]" /></div>
@@ -191,16 +191,16 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
           <div>
             <Label>Price Range</Label>
             <div className="mt-1 flex gap-2">
-              {PRICE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => set('price_range', form.price_range === opt.value ? '' : opt.value)}
-                  className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${form.price_range === opt.value ? 'border-primary bg-primary/10 text-primary' : 'border-input text-muted-foreground'}`}
-                >
+              {PRICE_OPTIONS.map((opt) =>
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => set('price_range', form.price_range === opt.value ? '' : opt.value)}
+                className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${form.price_range === opt.value ? 'border-primary bg-primary/10 text-primary' : 'border-input text-muted-foreground'}`}>
+                
                   {opt.value}
                 </button>
-              ))}
+              )}
             </div>
           </div>
 
@@ -210,12 +210,12 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
 
           <div>
             <Label>Logo (optional)</Label>
-            {form.logo_url && (
-              <div className="relative mb-2 h-20 w-20 overflow-hidden rounded-lg">
+            {form.logo_url &&
+            <div className="relative mb-2 h-20 w-20 overflow-hidden rounded-lg">
                 <img src={form.logo_url} alt="Logo" className="h-full w-full object-cover" />
                 <button type="button" onClick={() => set('logo_url', '')} className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white"><X size={12} /></button>
               </div>
-            )}
+            }
             <label className="flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input text-sm text-muted-foreground hover:bg-secondary">
               {uploadingLogo ? <><Loader2 size={16} className="animate-spin" /> Uploading...</> : <><ImagePlus size={16} /> Upload Logo</>}
               <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
@@ -224,16 +224,16 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
 
           <div>
             <Label>Photos</Label>
-            {form.photo_urls?.length > 0 && (
-              <div className="mb-2 flex gap-2 overflow-x-auto no-scrollbar">
-                {form.photo_urls.map((url, idx) => (
-                  <div key={idx} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg">
+            {form.photo_urls?.length > 0 &&
+            <div className="mb-2 flex gap-2 overflow-x-auto no-scrollbar">
+                {form.photo_urls.map((url, idx) =>
+              <div key={idx} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg">
                     <img src={url} alt="Service" className="h-full w-full object-cover" />
                     <button type="button" onClick={() => handleRemoveImage(idx)} className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white"><X size={12} /></button>
                   </div>
-                ))}
+              )}
               </div>
-            )}
+            }
             <label className="flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input text-sm text-muted-foreground hover:bg-secondary">
               {uploading ? <><Loader2 size={16} className="animate-spin" /> Uploading...</> : <><ImagePlus size={16} /> Add Photos</>}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
@@ -249,6 +249,6 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
           <Button disabled={saving} onClick={handleSubmit}>{saving ? 'Submitting...' : 'Submit Service'}</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }
