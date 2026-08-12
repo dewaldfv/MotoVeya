@@ -7,6 +7,7 @@ import EmergencyOverlay from '@/components/EmergencyOverlay';
 import AutoStopCountdown from '@/components/AutoStopCountdown';
 import RideInviteToggle from '@/components/RideInviteToggle';
 import RideHud from '@/components/RideHud';
+import NextTurnArrow from '@/components/NextTurnArrow';
 import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
 import { haversine } from '@/lib/navigation';
 
@@ -101,6 +102,13 @@ export default function NavigationOverlay({
           <Loader2 size={20} className="animate-spin text-primary" />
           <span className="text-sm font-medium">Calculating route...</span>
         </div>
+      )}
+
+      {navProgress?.nextStep?.maneuver && (
+        <NextTurnArrow
+          maneuver={navProgress.nextStep.maneuver}
+          distanceToManeuver={navProgress.distanceToManeuver}
+        />
       )}
 
       {nearbyService && (
