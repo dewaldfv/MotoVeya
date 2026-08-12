@@ -48,7 +48,7 @@ export default function AppLayout() {
   const { user, isLoadingAuth } = useAuth();
 
   useEffect(() => {
-    if (!isLoadingAuth && user && user.onboarding_completed === false) {
+    if (!isLoadingAuth && user && user.onboarding_completed !== true) {
       navigate('/onboarding', { replace: true });
     }
   }, [user, isLoadingAuth, navigate]);
@@ -67,7 +67,7 @@ export default function AppLayout() {
     return () => window.removeEventListener('motogo:open-conversation', handler);
   }, [navigate]);
 
-  if (!isLoadingAuth && user && user.onboarding_completed === false) {
+  if (!isLoadingAuth && user && user.onboarding_completed !== true) {
     return null;
   }
 
