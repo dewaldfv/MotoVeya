@@ -169,10 +169,10 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="hidden"><Label className="hidden">Address</Label><Input value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="123 Main Rd" className="min-h-[48px] hidden" /></div>
-            <div className="hidden"><Label>Town</Label><Input value={form.town} onChange={(e) => set('town', e.target.value)} placeholder="Centurion" className="min-h-[48px]" /></div>
+            
+            
           </div>
-          <div className="hidden"><Label>Province</Label><Input value={form.province} onChange={(e) => set('province', e.target.value)} placeholder="Gauteng" className="min-h-[48px]" /></div>
+          
 
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Phone</Label><Input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+27 82 123 4567" className="min-h-[48px]" /></div>
