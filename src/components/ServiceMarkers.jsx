@@ -2,10 +2,10 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useGoogleMap } from '@react-google-maps/api';
 import { haversine, getServiceCategory } from '@/lib/serviceCategories';
-import CustomMapMarker from './CustomMapMarker';
 
 const SERVICE_ZOOM_THRESHOLD = 13;
 const SERVICE_DISTANCE_KM = 10;
+const MARKER_SIZE = 40;
 
 function clusterServices(services, zoom) {
   const precision = zoom >= 15 ? 5 : zoom >= 14 ? 4 : 3;
@@ -23,18 +23,25 @@ function clusterServices(services, zoom) {
   });
 }
 
+function emojiIconUrl(emoji) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${MARKER_SIZE}" height="${MARKER_SIZE}">
+    <text x="50%" y="54%" font-size="28" text-anchor="middle" dominant-baseline="middle">${emoji}</text>
+  </svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+}
+
 /**
- * ServiceMarkers — renders service pins as HTML overlays using the same
- * `.motogo-event-pin__body` teardrop style as event markers. When a service
- * has an uploaded logo_url, the logo image is clipped into the pin body;
- * otherwise the category emoji is used as a fallback. Keeps the existing
- * zoom threshold (>=13) and 10km proximity filtering for services.
+ * ServiceMarkers — renders service pins as native google.maps.Marker instances
+ * (imperative, outside React's reconciliation) to avoid the floatPane jitter
+ * that HTML overlays exhibit during pan/zoom. Same zoom threshold (>=13) and
+ * 10km proximity filtering as before. Click triggers the onMarkerClick callback.
  */
 export default function ServiceMarkers({ services, userPos, onMarkerClick }) {
   const map = useGoogleMap();
   const [zoom, setZoom] = useState(map?.getZoom() || SERVICE_ZOOM_THRESHOLD);
   const cbRef = useRef(onMarkerClick);
   cbRef.current = onMarkerClick;
+  const markersRef = useRef(new Map());
 
   useEffect(() => {
     if (!map) return;
@@ -48,64 +55,67 @@ export default function ServiceMarkers({ services, userPos, onMarkerClick }) {
     if (zoom < SERVICE_ZOOM_THRESHOLD) return [];
     const filtered = userPos
       ? services.filter((s) =>
-          s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng) &&
-          haversine(userPos[0], userPos[1], s.lat, s.lng) <= SERVICE_DISTANCE_KM)
+           s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng) &&
+           haversine(userPos[0], userPos[1], s.lat, s.lng) <= SERVICE_DISTANCE_KM)
       : services.filter((s) => s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng));
     return clusterServices(filtered, zoom);
   }, [services, userPos, zoom]);
 
-  return (
-    <>
-      {items.map((item) => {
-        if (item.type === 'single') {
-          const s = item.service;
-          const cat = getServiceCategory(s.category);
-          return (
-            <CustomMapMarker
-              key={`svc-${s.id}`}
-              position={[s.lat, s.lng]}
-              zIndex={400}
-              onClick={() => cbRef.current?.(s)}
-            >
-              {s.logo_url ? (
-                <img
-                  src={s.logo_url}
-                  alt={s.name}
-                  style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }}
-                />
-              ) : (
-                <span style={{ fontSize: 28, lineHeight: 1, display: 'inline-flex' }}>{cat.emoji}</span>
-              )}
-            </CustomMapMarker>
-          );
+  useEffect(() => {
+    if (!map || !window.google) return;
+    const g = window.google;
+    const markers = markersRef.current;
+    const seen = new Set();
+
+    items.forEach((item) => {
+      const isSingle = item.type === 'single';
+      const id = isSingle ? `svc-${item.service.id}` : `svc-cluster-${item.lat.toFixed(5)}-${item.lng.toFixed(5)}`;
+      seen.add(id);
+      const latLng = new g.maps.LatLng(isSingle ? item.service.lat : item.lat, isSingle ? item.service.lng : item.lng);
+
+      let icon;
+      if (isSingle) {
+        const s = item.service;
+        const cat = getServiceCategory(s.category);
+        icon = {
+          url: s.logo_url || emojiIconUrl(cat.emoji),
+          scaledSize: new g.maps.Size(MARKER_SIZE, MARKER_SIZE),
+          anchor: new g.maps.Point(MARKER_SIZE / 2, MARKER_SIZE / 2),
+        };
+      } else {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44">
+          <circle cx="22" cy="22" r="19" fill="#FF6F00" stroke="#fff" stroke-width="3"/>
+          <text x="50%" y="55%" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle" dominant-baseline="middle">${item.count}</text>
+        </svg>`;
+        icon = {
+          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+          scaledSize: new g.maps.Size(44, 44),
+          anchor: new g.maps.Point(22, 22),
+        };
+      }
+
+      let m = markers.get(id);
+      if (!m) {
+        m = new g.maps.Marker({ position: latLng, map, icon, zIndex: 400, optimized: true });
+        if (isSingle) {
+          m.addListener('click', () => cbRef.current?.(item.service));
         }
-        return (
-          <CustomMapMarker
-            key={`svc-cluster-${item.lat}-${item.lng}`}
-            position={[item.lat, item.lng]}
-            zIndex={400}
-          >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: '50%',
-                background: '#FF6F00',
-                border: '3px solid #fff',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                fontWeight: 'bold',
-                fontSize: 16,
-              }}
-            >
-              {item.count}
-            </div>
-          </CustomMapMarker>
-        );
-      })}
-    </>
-  );
+        markers.set(id, m);
+      } else {
+        m.setPosition(latLng);
+        m.setIcon(icon);
+      }
+    });
+
+    for (const [id, m] of markers) {
+      if (!seen.has(id)) { m.setMap(null); markers.delete(id); }
+    }
+  }, [map, items]);
+
+  useEffect(() => () => {
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current.clear();
+  }, []);
+
+  return null;
 }
