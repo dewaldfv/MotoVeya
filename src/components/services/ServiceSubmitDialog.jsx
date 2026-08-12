@@ -169,10 +169,10 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            
-            
+            <div className="hidden"><Label className="hidden">Address</Label><Input value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="123 Main Rd" className="min-h-[48px] hidden" /></div>
+            <div className="hidden"><Label>Town</Label><Input value={form.town} onChange={(e) => set('town', e.target.value)} placeholder="Centurion" className="min-h-[48px]" /></div>
           </div>
-          
+          <div className="hidden"><Label>Province</Label><Input value={form.province} onChange={(e) => set('province', e.target.value)} placeholder="Gauteng" className="min-h-[48px]" /></div>
 
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Phone</Label><Input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+27 82 123 4567" className="min-h-[48px]" /></div>
@@ -190,18 +190,13 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
 
           <div>
             <Label>Price Range</Label>
-            <div className="mt-1 flex gap-2">
-              {PRICE_OPTIONS.map((opt) =>
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => set('price_range', form.price_range === opt.value ? '' : opt.value)}
-                className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${form.price_range === opt.value ? 'border-primary bg-primary/10 text-primary' : 'border-input text-muted-foreground'}`}>
-                
-                  {opt.value}
-                </button>
-              )}
-            </div>
+            <Input
+              value={form.price_range}
+              onChange={(e) => set('price_range', e.target.value)}
+              placeholder="e.g. R1500 - R10 000"
+              className="min-h-[48px]"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">Enter a price range (e.g. R1500 - R10 000).</p>
           </div>
 
           <div><Label>Services Offered</Label><Textarea value={form.service_menu} onChange={(e) => set('service_menu', e.target.value)} placeholder="Oil changes, tyre fitting, chain replacement..." rows={3} /></div>
