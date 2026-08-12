@@ -54,6 +54,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const [dismissedServiceIds, setDismissedServiceIds] = useState(new Set());
   const [fuelRemaining, setFuelRemaining] = useState(null);
   const [fuelRange, setFuelRange] = useState(null);
+  const [recalculating, setRecalculating] = useState(false);
 
   const lastPosRef = useRef(null);
   const positionsRef = useRef([]);
@@ -328,17 +329,24 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     return getRouteProgress(routeData, userPos);
   }, [routeData, userPos]);
 
-  // Off-route recalculation
+  // Off-route recalculation — detects when the rider drifts from the route
+  // and fetches a fresh route from OSRM. Uses a speed-adaptive threshold and
+  // a throttle window to avoid hammering the router on every GPS tick.
   useEffect(() => {
     if (rideStatus !== 'active' || !routeData || !destination || !userPos) return;
     const route = routeData.coordinates;
+    if (!route || route.length < 2) return;
+    // Find the nearest point on the route to the rider.
     let minDist = Infinity;
-    for (let i = 0; i < route.length; i += 3) {
+    for (let i = 0; i < route.length; i++) {
       const d = haversine(userPos[0], userPos[1], route[i][0], route[i][1]);
       if (d < minDist) minDist = d;
     }
-    if (minDist > 0.2 && Date.now() - lastRecalcRef.current > 30000) {
+    // Wider tolerance at higher speeds (GPS jitter + wider roads), tighter when slow.
+    const threshold = speed > 60 ? 0.4 : speed > 20 ? 0.25 : 0.15;
+    if (minDist > threshold && Date.now() - lastRecalcRef.current > 20000 && !recalculating) {
       lastRecalcRef.current = Date.now();
+      setRecalculating(true);
       (async () => {
         try {
           const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true`);
@@ -347,10 +355,14 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
             setRouteData(processRouteData(data));
             toast.info('Off route — recalculating...');
           }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setRecalculating(false);
+        }
       })();
     }
-  }, [userPos, rideStatus, routeData, destination]);
+  }, [userPos, rideStatus, routeData, destination, speed, recalculating]);
 
   // Nearby service on route
   useEffect(() => {
@@ -637,7 +649,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     autoStopCountdown, gpsWeak, ending, speedLimit, beacon,
     emergencyContactsNotified, nearbyRidersNotified, crashIndicators,
     nearbyService, voiceSupported, voiceListening,
-    isActive, rideMode,
+    isActive, rideMode, recalculating,
     setDestInput, setDestination, setAutoStopCountdown, clearDestination,
     handleDestination, handleAddStop, handleDismissService,
     handleSimulateCrash, handleCancelCrash, handleResolveEmergency,

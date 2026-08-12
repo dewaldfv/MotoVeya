@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { Navigation, X, Fuel, Loader2 } from 'lucide-react';
+import { Navigation, X, Loader2 } from 'lucide-react';
 import NavigationCard from '@/components/NavigationCard';
 import { useVoiceNavigation } from '@/hooks/useVoiceNavigation';
-import Speedometer from '@/components/Speedometer';
 import NavActionButtons from '@/components/NavActionButtons';
-import SpeedLimitBadge from '@/components/SpeedLimitBadge';
 import EmergencyOverlay from '@/components/EmergencyOverlay';
 import AutoStopCountdown from '@/components/AutoStopCountdown';
 import RideInviteToggle from '@/components/RideInviteToggle';
+import RideHud from '@/components/RideHud';
 import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
 import { haversine } from '@/lib/navigation';
 
@@ -20,10 +19,11 @@ export default function NavigationOverlay({
 }) {
   const {
     isActive, rideMode, speed, speedLimit, navProgress, destination,
-    routeLoading, nearbyService, gpsWeak, fuelRange, lowFuel, distressActive, ending,
+    routeLoading, nearbyService, gpsWeak, fuelRange, lowFuel, fuelRemaining, distressActive, ending,
     crashPhase, crashCountdown, severity, autoStopCountdown,
     emergencyContactsNotified, nearbyRidersNotified, beacon,
     voiceSupported, voiceListening, batteryLevel, heading, userPos,
+    recalculating,
     startRide, endRide, handleDistress, handleSimulateCrash,
     handleCancelCrash, handleResolveEmergency,
     handleAddStop, handleDismissService, setAutoStopCountdown, clearDestination,
@@ -119,19 +119,18 @@ export default function NavigationOverlay({
         </div>
       )}
 
-      <div className="absolute z-20 flex flex-col items-center gap-1.5" style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}>
-        <div className="flex items-end gap-2">
-          <Speedometer speed={speed} limit={speedLimit} />
-          <SpeedLimitBadge limit={speedLimit} speed={speed} />
-        </div>
-        {gpsWeak && (
-          <div className="flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-xs font-bold text-white shadow-lg">GPS Weak</div>
-        )}
-        {fuelRange !== null && (
-          <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold shadow-lg ${lowFuel ? 'bg-destructive text-white animate-pulse' : 'bg-card/95 text-foreground'}`}>
-            <Fuel size={10} /> {fuelRange}km
-          </div>
-        )}
+      <div className="absolute z-20" style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}>
+        <RideHud
+          speed={speed}
+          heading={heading}
+          roadName={navProgress?.nextStep?.name || destination?.name}
+          fuelRange={fuelRange}
+          fuelRemaining={fuelRemaining}
+          lowFuel={lowFuel}
+          recalculating={recalculating}
+          gpsWeak={gpsWeak}
+          speedLimit={speedLimit}
+        />
       </div>
 
       <div className="absolute z-20" style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}>
