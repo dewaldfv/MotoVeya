@@ -55,6 +55,10 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
   const accuracyRef = useRef(null);
   const cbRef = useRef(onFriendClick);
   cbRef.current = onFriendClick;
+  // Smooth rider-marker interpolation state.
+  const riderAnimRef = useRef(null);
+  const riderDisplayRef = useRef(null);
+  const easeInOutQuad = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
   useEffect(() => {
     if (!map || !window.google) return;
@@ -64,7 +68,7 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
     const data = dataRef.current;
     const seen = new Set();
 
-    // --- Rider (self) ---
+    // --- Rider (self) with smooth interpolation ---
     if (rider && !isNaN(rider.lat) && !isNaN(rider.lng)) {
       const id = 'rider-self';
       seen.add(id);
@@ -74,9 +78,27 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       if (!m) {
         m = new g.maps.Marker({ position: latLng, map, icon, zIndex: 1200 });
         markers.set(id, m);
+        riderDisplayRef.current = { lat: rider.lat, lng: rider.lng };
       } else {
-        m.setPosition(latLng);
         m.setIcon(icon);
+        // Glide from the currently displayed position toward the new GPS fix.
+        if (riderAnimRef.current) cancelAnimationFrame(riderAnimRef.current);
+        const start = riderDisplayRef.current || { lat: rider.lat, lng: rider.lng };
+        const target = { lat: rider.lat, lng: rider.lng };
+        const startTime = performance.now();
+        const duration = 700;
+        const step = (now) => {
+          const t = Math.min(1, (now - startTime) / duration);
+          const eased = easeInOutQuad(t);
+          riderDisplayRef.current = {
+            lat: start.lat + (target.lat - start.lat) * eased,
+            lng: start.lng + (target.lng - start.lng) * eased,
+          };
+          if (m.getMap()) m.setPosition(new g.maps.LatLng(riderDisplayRef.current.lat, riderDisplayRef.current.lng));
+          if (t < 1) riderAnimRef.current = requestAnimationFrame(step);
+          else riderAnimRef.current = null;
+        };
+        riderAnimRef.current = requestAnimationFrame(step);
       }
       if (rider.accuracy && rider.accuracy > 0) {
         if (!accuracyRef.current) {
@@ -164,6 +186,7 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
 
   // Cleanup on unmount
   useEffect(() => () => {
+    if (riderAnimRef.current) cancelAnimationFrame(riderAnimRef.current);
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current.clear();
     infoWindowsRef.current.forEach((w) => w.close());

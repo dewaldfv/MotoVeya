@@ -8,6 +8,7 @@ import ServiceMarkers from './ServiceMarkers';
 import LiveMarkers from './map/LiveMarkers';
 import NativeEventMarkers from './map/NativeEventMarkers';
 import MapPopupContent from './MapPopupContent';
+import { useMapCamera } from '@/hooks/useMapCamera';
 
 const SA_CENTER = [-26.2041, 28.0473];
 
@@ -110,54 +111,7 @@ function FitRoute({ route, signal }) {
 
 function NavCamera({ userPos, heading, speed, nextManeuverDistance, recenterToken, headingUp }) {
   const map = useGoogleMap();
-  const failCountRef = useRef(0);
-  const targetZoom = useMemo(() => {
-    if (nextManeuverDistance != null && nextManeuverDistance < 200) return 17;
-    if (speed > 80) return 14;
-    if (speed > 40) return 16;
-    return 16;
-  }, [speed, nextManeuverDistance]);
-
-  useEffect(() => {
-    if (!map) return;
-    map.setOptions({ draggable: false, scrollwheel: false, disableDoubleClickZoom: true, gestureHandling: 'none' });
-    return () => {
-      map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'auto' });
-    };
-  }, [map]);
-
-  useEffect(() => {
-    if (!map || !userPos) return;
-    try {
-      if (headingUp && heading != null && !isNaN(heading)) {
-        const projection = map.getProjection();
-        if (!projection) throw new Error('No projection');
-        const headingRad = (heading * Math.PI) / 180;
-        const containerEl = map.getDiv();
-        const offsetPx = (containerEl.offsetHeight || 600) * 0.30;
-        const scale = Math.pow(2, map.getZoom());
-        const riderPoint = projection.fromLatLngToPoint(new google.maps.LatLng(userPos[0], userPos[1]));
-        const offsetX = (offsetPx * Math.sin(headingRad)) / scale;
-        const offsetY = (-offsetPx * Math.cos(headingRad)) / scale;
-        const centerPoint = new google.maps.Point(riderPoint.x + offsetX, riderPoint.y + offsetY);
-        const centerLatLng = projection.fromPointToLatLng(centerPoint);
-        map.setCenter(centerLatLng);
-        map.setZoom(targetZoom);
-      } else {
-        map.setCenter({ lat: userPos[0], lng: userPos[1] });
-        map.setZoom(targetZoom);
-      }
-      failCountRef.current = 0;
-    } catch (e) {
-      failCountRef.current++;
-      if (failCountRef.current >= 2) {
-        map.setCenter({ lat: userPos[0], lng: userPos[1] });
-        map.setZoom(targetZoom);
-        failCountRef.current = 0;
-      }
-    }
-  }, [userPos?.[0], userPos?.[1], heading, targetZoom, map, recenterToken, headingUp]);
-
+  useMapCamera({ map, userPos, heading, headingUp, speed, nextManeuverDistance, recenterToken });
   return null;
 }
 
