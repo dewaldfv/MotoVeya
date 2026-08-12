@@ -67,25 +67,15 @@ export default function ServiceMarkers({ services, userPos, onMarkerClick }) {
               zIndex={400}
               onClick={() => cbRef.current?.(s)}
             >
-              <div className="motogo-event-pin">
-                <div className="motogo-event-pin__body" style={{ overflow: 'hidden' }}>
-                  {s.logo_url ? (
-                    <img
-                      src={s.logo_url}
-                      alt=""
-                      style={{
-                        transform: 'rotate(45deg)',
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        display: 'block',
-                      }}
-                    />
-                  ) : (
-                    <span style={{ transform: 'rotate(45deg)' }}>{cat.emoji}</span>
-                  )}
-                </div>
-              </div>
+              {s.logo_url ? (
+                <img
+                  src={s.logo_url}
+                  alt={s.name}
+                  style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }}
+                />
+              ) : (
+                <span style={{ fontSize: 28, lineHeight: 1, display: 'inline-flex' }}>{cat.emoji}</span>
+              )}
             </CustomMapMarker>
           );
         }
