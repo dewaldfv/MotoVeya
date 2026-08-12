@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
     });
 
     let contactNotified = false;
+    let contactMessaged = false;
     const contactEmail = user.emergency_contact_email;
     if (contactEmail) {
       try {
@@ -80,6 +81,71 @@ This is an automated emergency alert from MotoVeya.`,
         });
         contactNotified = true;
       } catch (e) { console.error('Failed to send emergency email:', e); }
+    }
+
+    // Auto-message the rider's designated emergency contact (in-app message + push)
+    // when the contact is a registered MotoVeya user, matched by phone number.
+    const ecPhone = user.emergency_contact_phone;
+    if (ecPhone) {
+      try {
+        const normalizePhone = (p) => String(p || '').replace(/\D/g, '').slice(-9);
+        const ecNorm = normalizePhone(ecPhone);
+        if (ecNorm) {
+          const allUsers = await base44.asServiceRole.entities.User.list('-created_date', 500);
+          const contact = (allUsers || []).find(
+            (u) => u.id !== user.id && normalizePhone(u.phone) === ecNorm
+          );
+          if (contact) {
+            const svc = base44.asServiceRole;
+            const crashMsg = `🆘 EMERGENCY: ${riderName} may have been in a motorcycle crash (${severity} severity). Time: ${localTime}. Live location: ${trackingLink}`;
+            const preview = crashMsg.substring(0, 120);
+            const nowIso = new Date().toISOString();
+            const key = [user.id, contact.id].sort().join('_');
+            const existing = await svc.entities.Conversation.filter({ conversation_key: key });
+            let conv = existing[0];
+            const sortedParticipants = [
+              { id: user.id, name: riderName },
+              { id: contact.id, name: contact.full_name || contact.nickname || 'Rider' },
+            ].sort((a, b) => a.id.localeCompare(b.id));
+
+            if (!conv) {
+              conv = await svc.entities.Conversation.create({
+                conversation_key: key,
+                participant_ids: sortedParticipants.map((p) => p.id),
+                participant_names: sortedParticipants.map((p) => p.name),
+                last_message_preview: preview,
+                last_message_at: nowIso,
+                last_sender_id: user.id,
+              });
+            } else {
+              conv = await svc.entities.Conversation.update(conv.id, {
+                last_message_preview: preview,
+                last_message_at: nowIso,
+                last_sender_id: user.id,
+              });
+            }
+
+            await svc.entities.Message.create({
+              conversation_id: conv.id,
+              sender_id: user.id,
+              sender_name: riderName,
+              content: crashMsg,
+            });
+
+            await svc.entities.Notification.create({
+              type: 'crash_alert',
+              title: 'Rider in Distress',
+              body: preview,
+              is_read: false,
+              recipient_id: contact.id,
+              action_url: trackingLink,
+              data: JSON.stringify({ conversation_id: conv.id, sender_id: user.id, crash: true }),
+            });
+
+            contactMessaged = true;
+          }
+        }
+      } catch (e) { console.error('Failed to auto-message emergency contact:', e); }
     }
 
     try {
@@ -125,14 +191,16 @@ This is an automated emergency alert from MotoVeya.`,
       } catch (e) { console.error('Failed to notify nearby riders:', e); }
     }
 
+    const contactReached = contactNotified || contactMessaged;
     const updated = await base44.entities.CrashAlert.update(alert.id, {
-      notified_emergency_contact: contactNotified,
+      notified_emergency_contact: contactReached,
       notified_nearby_riders: nearbyNotified > 0,
     });
 
     return Response.json({
       alert: updated,
-      contact_notified: contactNotified,
+      contact_notified: contactReached,
+      contact_messaged: contactMessaged,
       nearby_notified: nearbyNotified,
       tracking_link: trackingLink,
     });
