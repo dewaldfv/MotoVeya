@@ -35,10 +35,6 @@ export default function Onboarding() {
     (async () => {
       try {
         const me = await base44.auth.me();
-        if (me.onboarding_completed) {
-          navigate('/', { replace: true });
-          return;
-        }
         setForm((f) => ({
           ...f,
           nickname: me.nickname || f.nickname,
