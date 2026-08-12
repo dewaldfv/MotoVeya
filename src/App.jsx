@@ -42,6 +42,7 @@ import Contact from '@/pages/Contact';
 import SafetyGuidelines from '@/pages/SafetyGuidelines';
 import SupportCenter from '@/pages/SupportCenter';
 import RidePlanner from '@/pages/RidePlanner';
+import SavedRoutes from '@/pages/SavedRoutes';
 import BikeGarage from '@/pages/BikeGarage';
 import ServiceHistory from '@/pages/ServiceHistory';
 import SafetyDashboard from '@/pages/SafetyDashboard';
@@ -116,6 +117,7 @@ const AuthenticatedApp = () => {
         <Route path="/legal/:doc" element={<Legal />} />
         <Route path="/fuel-tracker" element={<FuelTracker />} />
         <Route path="/ride-planner" element={<RidePlanner />} />
+        <Route path="/rides/saved" element={<SavedRoutes />} />
         <Route path="/bike-garage" element={<BikeGarage />} />
         <Route path="/service-history" element={<ServiceHistory />} />
         <Route path="/safety-dashboard" element={<SafetyDashboard />} />

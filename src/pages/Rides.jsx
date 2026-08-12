@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CloudSun, ChevronRight } from 'lucide-react';
+import { CloudSun, ChevronRight, Route } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import NavigationBanner from '@/components/rides/NavigationBanner';
 import RideHistoryBanner from '@/components/rides/RideHistoryBanner';
@@ -47,6 +47,19 @@ export default function Rides() {
             <p className="text-xs text-white/80">Build a route with weather & fuel-range checks</p>
           </div>
           <ChevronRight className="text-white/80" size={20} />
+        </button>
+        <button
+          onClick={() => navigate('/rides/saved')}
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+            <Route size={24} className="text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-base font-bold text-foreground">Saved Routes</p>
+            <p className="text-xs text-muted-foreground">Load, share, or delete your planned routes</p>
+          </div>
+          <ChevronRight className="text-muted-foreground" size={20} />
         </button>
         <NavigationBanner />
         <RideHistoryBanner stats={stats} lastRideDate={lastRideDate} />

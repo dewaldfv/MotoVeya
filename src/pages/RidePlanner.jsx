@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, MapPin, Route, Loader2, Calendar, CloudSun } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, Loader2, Calendar, CloudSun } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -309,40 +309,6 @@ export default function RidePlanner() {
           {saveMutation.isPending ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
           Save Plan
         </Button>
-
-        <div>
-          <div className="mb-2 flex items-center gap-2 px-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">
-            <Route size={16} /> Saved Routes
-          </div>
-          {plansLoading ? (
-            <div className="rounded-3xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">Loading…</div>
-          ) : plans.length === 0 ? (
-            <div className="rounded-3xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">No saved routes yet. Plan your first one above.</div>
-          ) : (
-            <div className="space-y-2">
-              {plans.map((plan) => (
-                <div key={plan.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-                  <MapPin size={18} className="shrink-0 text-primary" />
-                  <button onClick={() => loadPlan(plan)} className="min-w-0 flex-1 text-left">
-                    <p className="truncate text-sm font-semibold">{plan.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {(() => { try { return JSON.parse(plan.waypoints || '[]').length; } catch { return 0; } })()} waypoints
-                      {plan.planned_date ? ` · ${new Date(plan.planned_date).toLocaleDateString()}` : ''}
-                    </p>
-                  </button>
-                  <button
-                    onClick={() => { setSharePlan({ id: plan.id, title: plan.title }); setShareOpen(true); }}
-                    className="rounded-lg p-2 text-primary" aria-label="Share route"
-                  ><Share2 size={18} /></button>
-                  <button
-                    onClick={() => { if (confirm('Delete this route?')) { deleteMutation.mutate(plan.id); if (plan.id === currentPlanId) { setCurrentPlanId(null); setAutoSaveStatus('idle'); } } }}
-                    className="rounded-lg p-2 text-destructive" aria-label="Delete route"
-                  ><Trash2 size={18} /></button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       <ShareCodeSheet
