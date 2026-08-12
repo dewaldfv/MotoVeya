@@ -1,8 +1,8 @@
 /* global google */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGoogleMap } from '@react-google-maps/api';
-import CustomMapMarker from './CustomMapMarker';
-import { getServiceCategory, haversine } from '@/lib/serviceCategories';
+import { haversine } from '@/lib/serviceCategories';
+import { getServiceMarkerUrl, getClusterMarkerUrl } from '@/lib/serviceMarkers';
 
 const SERVICE_ZOOM_THRESHOLD = 13;
 const SERVICE_DISTANCE_KM = 10;
@@ -23,54 +23,68 @@ function clusterServices(services, zoom) {
   });
 }
 
-function ServicePin({ service, onClick }) {
-  const cat = getServiceCategory(service.category);
-  return (
-    <CustomMapMarker position={[service.lat, service.lng]} onClick={onClick}>
-      <div style={{ width: 36, height: 36, background: cat.color, borderRadius: '50%', border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-        {cat.emoji}
-      </div>
-    </CustomMapMarker>
-  );
-}
-
-function ClusterPin({ count, lat, lng, onClick }) {
-  return (
-    <CustomMapMarker position={[lat, lng]} onClick={onClick}>
-      <div style={{ width: 40, height: 40, background: '#FF6F00', borderRadius: '50%', border: '3px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 'bold', color: 'white' }}>
-        {count}
-      </div>
-    </CustomMapMarker>
-  );
-}
-
+/**
+ * ServiceMarkers — renders service pins as native google.maps.Marker instances with
+ * per-category custom image icons (matching the NativeEventMarkers approach), so
+ * services share the same custom-marker styling as events. Zoom-gated to >= 13 and
+ * distance-filtered to the rider; co-located services collapse into a count cluster.
+ */
 export default function ServiceMarkers({ services, userPos, onMarkerClick }) {
   const map = useGoogleMap();
   const [zoom, setZoom] = useState(map?.getZoom() || 13);
+  const markersRef = useRef(new Map());
+  const cbRef = useRef(onMarkerClick);
+  cbRef.current = onMarkerClick;
 
   useEffect(() => {
     if (!map) return;
+    setZoom(map.getZoom());
     const onZoom = () => setZoom(map.getZoom());
     const id = map.addListener('zoom_changed', onZoom);
     return () => google.maps.event.removeListener(id);
   }, [map]);
 
-  if (zoom < SERVICE_ZOOM_THRESHOLD) return null;
+  useEffect(() => {
+    if (!map || !window.google) return;
+    const g = window.google;
+    const markers = markersRef.current;
+    markers.forEach((m) => m.setMap(null));
+    markers.clear();
 
-  const filtered = userPos
-    ? services.filter((s) => haversine(userPos[0], userPos[1], s.lat, s.lng) <= SERVICE_DISTANCE_KM)
-    : services;
+    if (zoom < SERVICE_ZOOM_THRESHOLD) return;
 
-  const clusters = clusterServices(filtered, zoom);
+    const filtered = userPos
+      ? services.filter((s) => haversine(userPos[0], userPos[1], s.lat, s.lng) <= SERVICE_DISTANCE_KM)
+      : services;
 
-  return (
-    <>
-      {clusters.map((item, i) => {
-        if (item.type === 'single') {
-          return <ServicePin key={`svc-${item.service.id}`} service={item.service} onClick={() => onMarkerClick?.(item.service)} />;
-        }
-        return <ClusterPin key={`svc-cluster-${i}`} count={item.count} lat={item.lat} lng={item.lng} />;
-      })}
-    </>
-  );
+    clusterServices(filtered, zoom).forEach((item) => {
+      if (item.type === 'single') {
+        const s = item.service;
+        if (s.lat == null || s.lng == null || isNaN(s.lat) || isNaN(s.lng)) return;
+        const icon = {
+          url: getServiceMarkerUrl(s.category),
+          scaledSize: new g.maps.Size(44, 44),
+          anchor: new g.maps.Point(22, 22),
+        };
+        const m = new g.maps.Marker({ position: new g.maps.LatLng(s.lat, s.lng), map, icon, zIndex: 400 });
+        m.addListener('click', () => cbRef.current?.(s));
+        markers.set(`svc-${s.id}`, m);
+      } else {
+        const icon = {
+          url: getClusterMarkerUrl(item.count),
+          scaledSize: new g.maps.Size(44, 44),
+          anchor: new g.maps.Point(22, 22),
+        };
+        const m = new g.maps.Marker({ position: new g.maps.LatLng(item.lat, item.lng), map, icon, zIndex: 400 });
+        markers.set(`svc-cluster-${item.lat}-${item.lng}`, m);
+      }
+    });
+  }, [map, services, userPos, zoom]);
+
+  useEffect(() => () => {
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current.clear();
+  }, []);
+
+  return null;
 }
