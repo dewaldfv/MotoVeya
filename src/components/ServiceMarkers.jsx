@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGoogleMap } from '@react-google-maps/api';
 import { haversine } from '@/lib/serviceCategories';
-import { getServiceMarkerUrl, getClusterMarkerUrl, getLogoMarkerUrl } from '@/lib/serviceMarkers';
+import { getServiceMarkerUrl, getClusterMarkerUrl } from '@/lib/serviceMarkers';
 
 const SERVICE_ZOOM_THRESHOLD = 13;
 const SERVICE_DISTANCE_KM = 10;
@@ -69,16 +69,6 @@ export default function ServiceMarkers({ services, userPos, onMarkerClick }) {
         const m = new g.maps.Marker({ position: new g.maps.LatLng(s.lat, s.lng), map, icon, zIndex: 400 });
         m.addListener('click', () => cbRef.current?.(s));
         markers.set(`svc-${s.id}`, m);
-        // Upgrade the pin to the service's logo when available (falls back to the category pin).
-        if (s.logo_url) {
-          getLogoMarkerUrl(s.logo_url)
-            .then((url) => {
-              if (markers.get(`svc-${s.id}`) === m) {
-                m.setIcon({ url, scaledSize: new g.maps.Size(44, 44), anchor: new g.maps.Point(22, 22) });
-              }
-            })
-            .catch(() => {});
-        }
       } else {
         const icon = {
           url: getClusterMarkerUrl(item.count),
