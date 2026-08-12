@@ -1,8 +1,8 @@
 /* global google */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useGoogleMap } from '@react-google-maps/api';
-import { haversine } from '@/lib/serviceCategories';
-import { getServiceMarkerUrl, getClusterMarkerUrl } from '@/lib/serviceMarkers';
+import { haversine, getServiceCategory } from '@/lib/serviceCategories';
+import CustomMapMarker from './CustomMapMarker';
 
 const SERVICE_ZOOM_THRESHOLD = 13;
 const SERVICE_DISTANCE_KM = 10;
@@ -24,15 +24,15 @@ function clusterServices(services, zoom) {
 }
 
 /**
- * ServiceMarkers — renders service pins as native google.maps.Marker instances with
- * per-category custom image icons (matching the NativeEventMarkers approach), so
- * services share the same custom-marker styling as events. Zoom-gated to >= 13 and
- * distance-filtered to the rider; co-located services collapse into a count cluster.
+ * ServiceMarkers — renders service pins as HTML overlays using the same
+ * `.motogo-event-pin__body` teardrop style as event markers. When a service
+ * has an uploaded logo_url, the logo image is clipped into the pin body;
+ * otherwise the category emoji is used as a fallback. Keeps the existing
+ * zoom threshold (>=13) and 10km proximity filtering for services.
  */
 export default function ServiceMarkers({ services, userPos, onMarkerClick }) {
   const map = useGoogleMap();
-  const [zoom, setZoom] = useState(map?.getZoom() || 13);
-  const markersRef = useRef(new Map());
+  const [zoom, setZoom] = useState(map?.getZoom() || SERVICE_ZOOM_THRESHOLD);
   const cbRef = useRef(onMarkerClick);
   cbRef.current = onMarkerClick;
 
@@ -44,47 +44,78 @@ export default function ServiceMarkers({ services, userPos, onMarkerClick }) {
     return () => google.maps.event.removeListener(id);
   }, [map]);
 
-  useEffect(() => {
-    if (!map || !window.google) return;
-    const g = window.google;
-    const markers = markersRef.current;
-    markers.forEach((m) => m.setMap(null));
-    markers.clear();
-
-    if (zoom < SERVICE_ZOOM_THRESHOLD) return;
-
+  const items = useMemo(() => {
+    if (zoom < SERVICE_ZOOM_THRESHOLD) return [];
     const filtered = userPos
-      ? services.filter((s) => haversine(userPos[0], userPos[1], s.lat, s.lng) <= SERVICE_DISTANCE_KM)
-      : services;
+      ? services.filter((s) =>
+          s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng) &&
+          haversine(userPos[0], userPos[1], s.lat, s.lng) <= SERVICE_DISTANCE_KM)
+      : services.filter((s) => s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng));
+    return clusterServices(filtered, zoom);
+  }, [services, userPos, zoom]);
 
-    clusterServices(filtered, zoom).forEach((item) => {
-      if (item.type === 'single') {
-        const s = item.service;
-        if (s.lat == null || s.lng == null || isNaN(s.lat) || isNaN(s.lng)) return;
-        const icon = {
-          url: getServiceMarkerUrl(s.category),
-          scaledSize: new g.maps.Size(44, 44),
-          anchor: new g.maps.Point(22, 22),
-        };
-        const m = new g.maps.Marker({ position: new g.maps.LatLng(s.lat, s.lng), map, icon, zIndex: 400 });
-        m.addListener('click', () => cbRef.current?.(s));
-        markers.set(`svc-${s.id}`, m);
-      } else {
-        const icon = {
-          url: getClusterMarkerUrl(item.count),
-          scaledSize: new g.maps.Size(44, 44),
-          anchor: new g.maps.Point(22, 22),
-        };
-        const m = new g.maps.Marker({ position: new g.maps.LatLng(item.lat, item.lng), map, icon, zIndex: 400 });
-        markers.set(`svc-cluster-${item.lat}-${item.lng}`, m);
-      }
-    });
-  }, [map, services, userPos, zoom]);
-
-  useEffect(() => () => {
-    markersRef.current.forEach((m) => m.setMap(null));
-    markersRef.current.clear();
-  }, []);
-
-  return null;
+  return (
+    <>
+      {items.map((item) => {
+        if (item.type === 'single') {
+          const s = item.service;
+          const cat = getServiceCategory(s.category);
+          return (
+            <CustomMapMarker
+              key={`svc-${s.id}`}
+              position={[s.lat, s.lng]}
+              zIndex={400}
+              onClick={() => cbRef.current?.(s)}
+            >
+              <div className="motogo-event-pin">
+                <div className="motogo-event-pin__body" style={{ overflow: 'hidden' }}>
+                  {s.logo_url ? (
+                    <img
+                      src={s.logo_url}
+                      alt=""
+                      style={{
+                        transform: 'rotate(45deg)',
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
+                  ) : (
+                    <span style={{ transform: 'rotate(45deg)' }}>{cat.emoji}</span>
+                  )}
+                </div>
+              </div>
+            </CustomMapMarker>
+          );
+        }
+        return (
+          <CustomMapMarker
+            key={`svc-cluster-${item.lat}-${item.lng}`}
+            position={[item.lat, item.lng]}
+            zIndex={400}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: '#FF6F00',
+                border: '3px solid #fff',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontWeight: 'bold',
+                fontSize: 16,
+              }}
+            >
+              {item.count}
+            </div>
+          </CustomMapMarker>
+        );
+      })}
+    </>
+  );
 }
