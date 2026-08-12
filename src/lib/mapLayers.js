@@ -88,6 +88,7 @@ export function getLayerStyles(layer) {
 export function getMapOptions(layer) {
   const config = MAP_LAYERS.find((l) => l.key === layer) || MAP_LAYERS[0];
   return {
+    mapId: 'motogo_main_map',
     mapTypeId: config.mapTypeId,
     styles: getLayerStyles(layer),
     zoomControl: false,

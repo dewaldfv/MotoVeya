@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const API_KEY = 'AIzaSyBAjSPAjCOCRj1LWq4BQ5iZLykHk6H5rPI';
-const LIBRARIES = ['geometry'];
+const LIBRARIES = ['geometry', 'marker'];
 
 let loadPromise = null;
 
