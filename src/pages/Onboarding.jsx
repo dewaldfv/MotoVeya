@@ -16,7 +16,7 @@ const STEP_KEY = 'motogo_onboarding_step';
 const EMPTY_FORM = {
   nickname: '', motorcycle_club: '', bio: '', medical_notes: '',
   make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '',
-  emergency_contact_name: '', emergency_contact_phone: '', emergency_contact_relationship: '',
+  emergency_contact_name: '', emergency_contact_phone: '', emergency_contact_email: '', emergency_contact_relationship: '',
   interests: [],
   subscription: 'free',
 };
@@ -47,6 +47,7 @@ export default function Onboarding() {
           medical_notes: me.medical_notes || f.medical_notes,
           emergency_contact_name: me.emergency_contact_name || f.emergency_contact_name,
           emergency_contact_phone: me.emergency_contact_phone || f.emergency_contact_phone,
+          emergency_contact_email: me.emergency_contact_email || f.emergency_contact_email,
           emergency_contact_relationship: me.emergency_contact_relationship || f.emergency_contact_relationship,
           interests: me.interests?.length ? me.interests : f.interests,
           subscription: me.subscription_tier === 'premium' ? 'premium' : f.subscription,
@@ -86,6 +87,7 @@ export default function Onboarding() {
       await base44.auth.updateMe({
         emergency_contact_name: form.emergency_contact_name,
         emergency_contact_phone: form.emergency_contact_phone,
+        emergency_contact_email: form.emergency_contact_email,
         emergency_contact_relationship: form.emergency_contact_relationship,
         medical_notes: form.medical_notes,
       });

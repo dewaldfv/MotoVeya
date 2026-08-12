@@ -119,6 +119,7 @@ export function EmergencyStep({ form, set, onNext, saving }) {
       <div className="space-y-3">
         <div><Label>Contact Name *</Label><Input value={form.emergency_contact_name} onChange={(e) => set('emergency_contact_name', e.target.value)} placeholder="Jane Doe" className="min-h-[48px]" /></div>
         <div><Label>Phone Number *</Label><Input type="tel" value={form.emergency_contact_phone} onChange={(e) => set('emergency_contact_phone', e.target.value)} placeholder="+27 82 123 4567" className="min-h-[48px]" /></div>
+        <div><Label>Email (for crash alerts)</Label><Input type="email" value={form.emergency_contact_email} onChange={(e) => set('emergency_contact_email', e.target.value)} placeholder="jane@example.com" className="min-h-[48px]" /></div>
         <div>
           <Label>Relationship</Label>
           <select value={form.emergency_contact_relationship} onChange={(e) => set('emergency_contact_relationship', e.target.value)} className="flex min-h-[48px] w-full rounded-md border border-input bg-transparent px-3 text-base">
