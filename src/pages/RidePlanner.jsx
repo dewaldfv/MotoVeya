@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, Loader2, Calendar, CloudSun } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, Navigation, Loader2, Calendar, CloudSun } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import WeatherCard from '@/components/ride-planner/WeatherCard';
 import RangeWarning from '@/components/ride-planner/RangeWarning';
 import StopSuggestions from '@/components/ride-planner/StopSuggestions';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
+import { savePendingNavigation } from '@/lib/rideCache';
 import { getRouteWeather } from '@/lib/weather';
 import { toast } from 'sonner';
 
@@ -229,6 +230,38 @@ export default function RidePlanner() {
     } catch (e) { toast.error('Could not load route'); }
   };
 
+  const handleShare = async () => {
+    if (!title.trim()) { toast.error('Give your route a title'); return; }
+    if (waypoints.length < 2) { toast.error('Add at least two waypoints'); return; }
+    try {
+      let id = currentPlanId;
+      if (!id) {
+        const plan = await saveMutation.mutateAsync(buildPayload());
+        id = plan.id;
+        setCurrentPlanId(id);
+        lastSavedSnapshot.current = planSnapshot;
+        setAutoSaveStatus('saved');
+        queryClient.invalidateQueries({ queryKey: ['ride-plans'] });
+      }
+      setSharePlan({ id, title: title.trim() });
+      setShareOpen(true);
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not share route');
+    }
+  };
+
+  const handleStartRide = () => {
+    if (waypoints.length < 2) { toast.error('Add at least two waypoints first'); return; }
+    const dest = waypoints[waypoints.length - 1];
+    const start = waypoints[0];
+    savePendingNavigation({
+      dest: { name: dest.name, lat: dest.lat, lng: dest.lng },
+      start: { lat: start.lat, lng: start.lng },
+    });
+    navigate('/');
+  };
+
   const shareLink = sharePlan ? `${window.location.origin}/ride-planner?load=${sharePlan.id}` : '';
 
   return (
@@ -302,13 +335,32 @@ export default function RidePlanner() {
         )}
 
         <Button
-          onClick={handleSave}
-          disabled={saveMutation.isPending}
+          onClick={handleStartRide}
+          disabled={waypoints.length < 2}
           className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl text-base font-bold"
         >
-          {saveMutation.isPending ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
-          Save Plan
+          <Navigation size={20} /> Start Ride
         </Button>
+
+        <div className="flex gap-3">
+          <Button
+            onClick={handleShare}
+            variant="outline"
+            disabled={saveMutation.isPending || !title.trim() || waypoints.length < 2}
+            className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold"
+          >
+            <Share2 size={20} /> Share
+          </Button>
+          <Button
+            onClick={handleSave}
+            variant="outline"
+            disabled={saveMutation.isPending || !title.trim() || waypoints.length < 2}
+            className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold"
+          >
+            {saveMutation.isPending ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+            Save
+          </Button>
+        </div>
       </div>
 
       <ShareCodeSheet
