@@ -9,11 +9,11 @@ const FAQS = [
     questions: [
       {
         q: 'How do I start navigation to a destination?',
-        a: 'Open the Rides tab, search for a destination or pick a saved place, then tap "Go". MotoGo launches turn-by-turn navigation on the Home map with your route highlighted.',
+        a: 'Open the Rides tab, search for a destination or pick a saved place, then tap "Go". MotoVeya launches turn-by-turn navigation on the Home map with your route highlighted.',
       },
       {
         q: 'Can I import a destination from a Google Maps link?',
-        a: 'Yes. In the Rides tab, tap "Import from Google Maps" and paste a shared Google Maps URL. MotoGo resolves the coordinates and place name automatically.',
+        a: 'Yes. In the Rides tab, tap "Import from Google Maps" and paste a shared Google Maps URL. MotoVeya resolves the coordinates and place name automatically.',
       },
       {
         q: 'Why does the map rotate while I ride?',
@@ -21,7 +21,7 @@ const FAQS = [
       },
       {
         q: 'Does navigation work offline?',
-        a: 'MotoGo requires an internet connection to load map tiles and calculate routes. Cached areas may still display, but turn-by-turn guidance needs connectivity.',
+        a: 'MotoVeya requires an internet connection to load map tiles and calculate routes. Cached areas may still display, but turn-by-turn guidance needs connectivity.',
       },
     ],
   },
@@ -31,7 +31,7 @@ const FAQS = [
     questions: [
       {
         q: 'How does crash detection work?',
-        a: 'MotoGo uses your phone\'s motion sensors to detect sudden impact and deceleration. When a crash is detected, a 30-second countdown starts. If you do not cancel it, your emergency contacts are notified with your live location.',
+        a: 'MotoVeya uses your phone\'s motion sensors to detect sudden impact and deceleration. When a crash is detected, a 30-second countdown starts. If you do not cancel it, your emergency contacts are notified with your live location.',
       },
       {
         q: 'How do I add an emergency contact?',
@@ -83,7 +83,7 @@ const FAQS = [
       },
       {
         q: 'Can I restore a previous purchase?',
-        a: 'Yes. On the Go Premium screen, tap "Restore Purchases" and MotoGo will re-activate any valid subscription linked to your account.',
+        a: 'Yes. On the Go Premium screen, tap "Restore Purchases" and MotoVeya will re-activate any valid subscription linked to your account.',
       },
     ],
   },
@@ -101,7 +101,7 @@ const FAQS = [
       },
       {
         q: 'How do I add a friend?',
-        a: 'Open the Community tab, share your MotoGo code, or scan a friend\'s QR code. Once they accept your request, you can see each other on the map (subject to privacy settings).',
+        a: 'Open the Community tab, share your MotoVeya code, or scan a friend\'s QR code. Once they accept your request, you can see each other on the map (subject to privacy settings).',
       },
     ],
   },
@@ -134,7 +134,7 @@ export default function SupportCenter() {
           <HelpCircle size={28} className="shrink-0 text-primary" />
           <div>
             <h2 className="text-base font-bold">How can we help?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Search frequently asked questions about MotoGo features, navigation, and subscriptions.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Search frequently asked questions about MotoVeya features, navigation, and subscriptions.</p>
           </div>
         </div>
 

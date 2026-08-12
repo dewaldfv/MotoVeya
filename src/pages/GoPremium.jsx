@@ -151,7 +151,7 @@ export default function GoPremium() {
           <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
             <Crown size={32} fill="white" />
           </div>
-          <h2 className="text-2xl font-black">MotoGo Premium</h2>
+          <h2 className="text-2xl font-black">MotoVeya Premium</h2>
           <p className="mt-1 text-sm text-white/80">Unlock the full riding experience</p>
           <div className="mt-4 flex items-center justify-center gap-1">
             <span className="text-4xl font-black">R{price.toFixed(2)}</span>

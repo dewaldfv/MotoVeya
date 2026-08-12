@@ -191,7 +191,7 @@ export default function Community() {
     }
     if (scanMode === 'group' && t) return await joinGroupByCode(t);
     if (scanMode === 'friend' && t) return await addFriendByCode(t);
-    toast.error('Not a MotoGo QR code');
+    toast.error('Not a MotoVeya QR code');
     return false;
   };
 
@@ -321,7 +321,7 @@ export default function Community() {
               <div className="flex gap-2">
                 <Button className="min-h-[48px] flex-1" onClick={() => setAddFriendOpen(true)}><UserPlus size={18} className="mr-2" /> Add</Button>
                 <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => { setScannerMode('friend'); setScannerOpen(true); }}><QrIcon size={18} className="mr-2" /> Scan</Button>
-                <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setShare({ title: 'My MotoGo Code', code: user.id, qrData: `motogo://friend?code=${user.id}`, description: 'Share to add as friend' })}><Share2 size={18} className="mr-2" /> My Code</Button>
+                <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setShare({ title: 'My MotoVeya Code', code: user.id, qrData: `motogo://friend?code=${user.id}`, description: 'Share to add as friend' })}><Share2 size={18} className="mr-2" /> My Code</Button>
               </div>
             )}
             {isPremium && <FriendsDashboard user={user} friends={friends} />}
@@ -369,8 +369,8 @@ export default function Community() {
             <DialogHeader><DialogTitle>Add Friend</DialogTitle></DialogHeader>
             <div className="space-y-2">
               <Label>Rider Code</Label>
-              <Input value={friendCode} onChange={(e) => setFriendCode(e.target.value)} placeholder="Enter rider's MotoGo code" />
-              <p className="text-xs text-muted-foreground">Ask your friend for their MotoGo code from their Profile page.</p>
+              <Input value={friendCode} onChange={(e) => setFriendCode(e.target.value)} placeholder="Enter rider's MotoVeya code" />
+              <p className="text-xs text-muted-foreground">Ask your friend for their MotoVeya code from their Profile page.</p>
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setAddFriendOpen(false)}>Cancel</Button>

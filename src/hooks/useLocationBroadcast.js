@@ -70,7 +70,7 @@ export function useLocationBroadcast() {
       notifiedRef.current = true;
       try {
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('MotoGo location sharing active', {
+          new Notification('MotoVeya location sharing active', {
             body: 'Your live location is being shared with friends.',
           });
         }

@@ -71,7 +71,7 @@ export function buildIcs(events) {
   const header = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//MotoGo//Events//EN',
+    'PRODID:-//MotoVeya//Events//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
   ].join('\r\n');

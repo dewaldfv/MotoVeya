@@ -20,7 +20,7 @@ export default function Contact() {
     }
     setSending(true);
     try {
-      const mailto = `mailto:hello@motogo.app?subject=${encodeURIComponent('MotoGo Contact from ' + form.name)}&body=${encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`)}`;
+      const mailto = `mailto:hello@motogo.app?subject=${encodeURIComponent('MotoVeya Contact from ' + form.name)}&body=${encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`)}`;
       window.location.href = mailto;
       toast.success('Opening your email app…');
     } catch (err) {
@@ -72,7 +72,7 @@ export default function Contact() {
         </form>
 
         <div className="rounded-3xl bg-card p-6 space-y-3 border border-border">
-          <h2 className="font-bold">Follow MotoGo</h2>
+          <h2 className="font-bold">Follow MotoVeya</h2>
           <div className="flex gap-3">
             <a href="https://instagram.com/motogo" target="_blank" rel="noopener noreferrer" className="flex h-12 w-12 items-center justify-center rounded-full bg-muted hover:bg-primary/10 transition-colors" aria-label="Instagram">
               <Instagram size={22} className="text-primary" />

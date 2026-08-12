@@ -53,7 +53,7 @@ export default function EmergencyOverlay({
             </span>
             {voiceSupported && (
               <span className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80">
-                <Mic size={12} /> {voiceListening ? 'Listening…' : '"MotoGo, I\'m OK"'}
+                <Mic size={12} /> {voiceListening ? 'Listening…' : '"MotoVeya, I\'m OK"'}
               </span>
             )}
             <span className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80">

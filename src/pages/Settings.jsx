@@ -196,7 +196,7 @@ export default function Settings() {
           <Row icon={FileText} label="App Version" value={APP_VERSION} last />
         </Section>
 
-        <p className="mt-2 px-1 text-center text-xs text-muted-foreground">MotoGo 🇿🇦 — Made in South Africa</p>
+        <p className="mt-2 px-1 text-center text-xs text-muted-foreground">MotoVeya 🇿🇦 — Made in South Africa</p>
       </div>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -204,7 +204,7 @@ export default function Settings() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Account?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete your MotoGo account. This action cannot be undone. Your ride history, bikes, and profile data will be lost.
+              This will permanently delete your MotoVeya account. This action cannot be undone. Your ride history, bikes, and profile data will be lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -221,7 +221,7 @@ export default function Settings() {
           <AlertDialogHeader>
             <AlertDialogTitle>Background Location Required</AlertDialogTitle>
             <AlertDialogDescription>
-              MotoGo needs background location access to provide:
+              MotoVeya needs background location access to provide:
               <br />• Turn-by-turn navigation while your screen is off
               <br />• Crash detection while the phone is in your pocket
               <br />• Emergency alerts with your exact location

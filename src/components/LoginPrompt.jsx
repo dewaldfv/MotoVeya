@@ -10,7 +10,7 @@ export default function LoginPrompt({ message = 'Please log in to access this fe
       </div>
       <p className="max-w-xs text-lg text-muted-foreground">{message}</p>
       <Button size="lg" className="min-h-[56px] px-8 text-base" onClick={() => base44.auth.redirectToLogin()}>
-        Log In to MotoGo
+        Log In to MotoVeya
       </Button>
     </div>
   );

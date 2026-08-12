@@ -1,8 +1,8 @@
-// MotoGo service worker — receives Web Push events and shows a device
+// MotoVeya service worker — receives Web Push events and shows a device
 // notification when a new group or private message arrives, even when the
 // app is closed. Clicking the notification focuses/opens the app and
 // jumps to the relevant conversation.
-const APP_NAME = 'MotoGo';
+const APP_NAME = 'MotoVeya';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

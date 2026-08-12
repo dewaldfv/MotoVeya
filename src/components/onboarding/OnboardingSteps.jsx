@@ -40,7 +40,7 @@ export function WelcomeStep({ onNext }) {
   ];
   return (
     <div>
-      <StepHeader icon={Sparkles} title="Welcome to MotoGo" subtitle="Your bike. Anytime. Anywhere." />
+      <StepHeader icon={Sparkles} title="Welcome to MotoVeya" subtitle="Your bike. Anytime. Anywhere." />
       <div className="space-y-3">
         {features.map((f) => <FeatureRow key={f.title} {...f} />)}
       </div>

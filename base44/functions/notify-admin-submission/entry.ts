@@ -51,7 +51,7 @@ export default async function(req) {
     await base44.asServiceRole.integrations.Core.SendEmail({
       to: ADMIN_EMAIL,
       subject,
-      body: `A new ${entityName.toLowerCase()} has been submitted and is pending review.\n\n${summary}\n\nReview it in the MotoGo Admin dashboard.`
+      body: `A new ${entityName.toLowerCase()} has been submitted and is pending review.\n\n${summary}\n\nReview it in the MotoVeya Admin dashboard.`
     });
 
     return Response.json({ ok: true });

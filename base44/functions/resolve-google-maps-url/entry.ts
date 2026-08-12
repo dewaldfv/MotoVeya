@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
       /^(maps\.app\.goo\.gl|goo\.gl)$/i.test(parsedInput.hostname);
     if (isShortLink) {
       try {
-        const res = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 MotoGo-App' } });
+        const res = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 MotoVeya-App' } });
         finalUrl = res.url || url;
         resolvedShortLink = true;
 
@@ -131,7 +131,7 @@ function extractPlaceName(url) {
 async function reverseGeocode(lat, lng) {
   const res = await fetch(
     `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=18&addressdetails=1`,
-    { headers: { 'User-Agent': 'MotoGo-App/1.0' } }
+    { headers: { 'User-Agent': 'MotoVeya-App/1.0' } }
   );
   if (!res.ok) return null;
   const data = await res.json();

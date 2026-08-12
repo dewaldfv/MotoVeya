@@ -4,26 +4,26 @@ import { ChevronLeft } from 'lucide-react';
 const DOCS = {
   eula: {
     title: 'End User License Agreement',
-    body: `MotoGo End User License Agreement
+    body: `MotoVeya End User License Agreement
 Last updated: July 2026
 
 1. License Grant
-MotoGo grants you a personal, non-exclusive, non-transferable license to use the application for your personal motorcycling and navigation purposes, subject to these terms.
+MotoVeya grants you a personal, non-exclusive, non-transferable license to use the application for your personal motorcycling and navigation purposes, subject to these terms.
 
 2. Acceptable Use
-You agree to use MotoGo lawfully and safely. Do not interact with the app in a way that distracts you from operating your motorcycle safely. Always obey local traffic laws. The app is a supplementary tool and does not replace your judgment, proper riding gear, or adherence to road regulations.
+You agree to use MotoVeya lawfully and safely. Do not interact with the app in a way that distracts you from operating your motorcycle safely. Always obey local traffic laws. The app is a supplementary tool and does not replace your judgment, proper riding gear, or adherence to road regulations.
 
 3. Safety Disclaimer
-Safety features including crash detection, distress alerts, and emergency notifications are supplementary aids. They rely on device sensors, GPS, and network connectivity, all of which may fail or be unavailable. MotoGo does not guarantee that alerts will be sent or received in an emergency. Always carry appropriate safety equipment and know your local emergency numbers.
+Safety features including crash detection, distress alerts, and emergency notifications are supplementary aids. They rely on device sensors, GPS, and network connectivity, all of which may fail or be unavailable. MotoVeya does not guarantee that alerts will be sent or received in an emergency. Always carry appropriate safety equipment and know your local emergency numbers.
 
 4. Intellectual Property
-All content, branding, and software within MotoGo are owned by MotoGo or its licensors. You may not copy, modify, or redistribute the app without permission.
+All content, branding, and software within MotoVeya are owned by MotoVeya or its licensors. You may not copy, modify, or redistribute the app without permission.
 
 5. Termination
-You may stop using MotoGo at any time. We may suspend or terminate access if you breach these terms.
+You may stop using MotoVeya at any time. We may suspend or terminate access if you breach these terms.
 
 6. Limitation of Liability
-MotoGo is provided "as is" without warranties of any kind. To the fullest extent permitted by law, MotoGo shall not be liable for any damages arising from your use of the app, including but not limited to accidents, injuries, or data loss.
+MotoVeya is provided "as is" without warranties of any kind. To the fullest extent permitted by law, MotoVeya shall not be liable for any damages arising from your use of the app, including but not limited to accidents, injuries, or data loss.
 
 7. Changes
 We may update this agreement from time to time. Continued use after changes constitutes acceptance.
@@ -33,7 +33,7 @@ This agreement is governed by the laws of the Republic of South Africa.`,
   },
   privacy: {
     title: 'Privacy Policy',
-    body: `MotoGo Privacy Policy
+    body: `MotoVeya Privacy Policy
 Last updated: July 2026
 
 1. Information We Collect
@@ -54,7 +54,7 @@ Last updated: July 2026
 Real-time location is only shared with others when you actively join a group or enable location sharing. You can stop sharing at any time by leaving the group or ending the ride.
 
 4. Data Storage and Security
-Your data is stored securely on our servers. We use industry-standard measures to protect it. Payment details are handled entirely by Stripe and are never stored by MotoGo.
+Your data is stored securely on our servers. We use industry-standard measures to protect it. Payment details are handled entirely by Stripe and are never stored by MotoVeya.
 
 5. Data Sharing
 We do not sell your personal data. We share data only with service providers necessary to operate the app (such as Stripe and mapping providers), and where required by law.
@@ -63,18 +63,18 @@ We do not sell your personal data. We share data only with service providers nec
 You can view and update your profile information at any time. You can delete your account and associated data from Settings > Account > Delete Account. This action is permanent and cannot be undone.
 
 7. Children
-MotoGo is not intended for users under 18.
+MotoVeya is not intended for users under 18.
 
 8. Contact
-For privacy questions, contact MotoGo support.`,
+For privacy questions, contact MotoVeya support.`,
   },
   terms: {
     title: 'Terms & Conditions',
-    body: `MotoGo Terms & Conditions
+    body: `MotoVeya Terms & Conditions
 Last updated: July 2026
 
 1. Acceptance
-By creating an account or using MotoGo, you agree to these Terms & Conditions and our Privacy Policy and End User License Agreement.
+By creating an account or using MotoVeya, you agree to these Terms & Conditions and our Privacy Policy and End User License Agreement.
 
 2. Eligibility
 You must be at least 18 years old and hold a valid motorcycle license where required by law to use riding-related features.
@@ -83,16 +83,16 @@ You must be at least 18 years old and hold a valid motorcycle license where requ
 You are responsible for maintaining the security of your account and for all activity under your account. Provide accurate information during registration.
 
 4. Subscriptions
-MotoGo offers a Premium subscription (monthly and annual). Subscriptions are billed via Stripe and auto-renew until cancelled. You can cancel anytime; cancellation stops future renewals but does not refund the current period. Prices are displayed in South African Rand.
+MotoVeya offers a Premium subscription (monthly and annual). Subscriptions are billed via Stripe and auto-renew until cancelled. You can cancel anytime; cancellation stops future renewals but does not refund the current period. Prices are displayed in South African Rand.
 
 5. User Content
-You are responsible for any content you submit, such as event submissions. You grant MotoGo a license to display such content within the app. You must not submit content that is unlawful, offensive, or infringes others' rights.
+You are responsible for any content you submit, such as event submissions. You grant MotoVeya a license to display such content within the app. You must not submit content that is unlawful, offensive, or infringes others' rights.
 
 6. Prohibited Conduct
 You agree not to misuse the app, including attempting to disrupt the service, reverse engineer it, or use it for unlawful purposes.
 
 7. Third-Party Services
-MotoGo integrates mapping, routing, and payment services from third parties. Their terms and availability are outside our control.
+MotoVeya integrates mapping, routing, and payment services from third parties. Their terms and availability are outside our control.
 
 8. Disclaimers
 The app is provided "as is" and "as available." We do not guarantee uninterrupted or error-free operation.

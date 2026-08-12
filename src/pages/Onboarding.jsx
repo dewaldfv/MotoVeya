@@ -142,7 +142,7 @@ export default function Onboarding() {
       localStorage.removeItem(STEP_KEY);
       // Refresh the cached auth user so the route guard sees onboarding_completed=true
       await checkUserAuth();
-      toast.success('Welcome to MotoGo!');
+      toast.success('Welcome to MotoVeya!');
       localStorage.setItem('motogo_show_tutorial', 'true');
       localStorage.removeItem('motogo_tutorial_done');
       navigate('/');

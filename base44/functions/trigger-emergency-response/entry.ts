@@ -55,8 +55,8 @@ Deno.serve(async (req) => {
       try {
         await base44.integrations.Core.SendEmail({
           to: contactEmail,
-          subject: `EMERGENCY (${severity.toUpperCase()}): MotoGo Crash Alert — ${riderName}`,
-          body: `EMERGENCY ALERT — MotoGo Rider in Distress
+          subject: `EMERGENCY (${severity.toUpperCase()}): MotoVeya Crash Alert — ${riderName}`,
+          body: `EMERGENCY ALERT — MotoVeya Rider in Distress
 
 Rider: ${riderName}
 Severity: ${severity.toUpperCase()}
@@ -72,11 +72,11 @@ Battery level: ${batteryLevel != null ? batteryLevel + '%' : 'Unknown'}
 
 Crash indicators: ${indicators ? JSON.stringify(indicators) : 'Manual trigger'}
 
-MotoGo has detected a potential motorcycle crash. The rider's live GPS location is being transmitted and updated continuously.
+MotoVeya has detected a potential motorcycle crash. The rider's live GPS location is being transmitted and updated continuously.
 
 Please attempt to contact the rider immediately. If you cannot reach them, contact emergency services (112 in South Africa) and provide the location coordinates above.
 
-This is an automated emergency alert from MotoGo.`,
+This is an automated emergency alert from MotoVeya.`,
         });
         contactNotified = true;
       } catch (e) { console.error('Failed to send emergency email:', e); }

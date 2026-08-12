@@ -346,7 +346,7 @@ export default function Profile() {
 
           <MenuCard
             icon={Info}
-            title="About MotoGo"
+            title="About MotoVeya"
             subtitle="What we do and who we are"
             delay={0.75}
             onClick={() => navigate('/about')} />
@@ -354,7 +354,7 @@ export default function Profile() {
           <MenuCard
             icon={MessageCircle}
             title="Contact Us"
-            subtitle="Get in touch with the MotoGo team"
+            subtitle="Get in touch with the MotoVeya team"
             delay={0.74}
             onClick={() => navigate('/contact')} />
           
@@ -419,7 +419,7 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
-      <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} title="My MotoGo Code" code={user.id} qrData={`motogo://friend?code=${user.id}`} description="Share to add as friend" />
+      <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} title="My MotoVeya Code" code={user.id} qrData={`motogo://friend?code=${user.id}`} description="Share to add as friend" />
     </div>);
 
 }

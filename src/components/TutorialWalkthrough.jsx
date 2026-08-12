@@ -38,7 +38,7 @@ const STEPS = [
     icon: Shield,
     color: 'text-primary',
     title: 'Stay safe out there',
-    body: 'MotoGo detects crashes and sends a distress alert to your emergency contact and nearby riders. Set up your emergency details any time in Profile.',
+    body: 'MotoVeya detects crashes and sends a distress alert to your emergency contact and nearby riders. Set up your emergency details any time in Profile.',
   },
 ];
 

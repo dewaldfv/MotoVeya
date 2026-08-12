@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       const timer = setTimeout(() => ctrl.abort(), 9000);
       fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'MotoGo-App/1.0' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'MotoVeya-App/1.0' },
         body: 'data=' + encodeURIComponent(query),
         signal: ctrl.signal,
       }).then((r) => {

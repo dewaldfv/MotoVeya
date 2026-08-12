@@ -11,7 +11,7 @@ export default function CalendarExportButton({ event, events, label = 'Add to Ca
       return;
     }
     try {
-      const name = list.length === 1 ? `motogo-${list[0].id}` : 'motogo-events';
+      const name = list.length === 1 ? `motoveya-${list[0].id}` : 'motoveya-events';
       downloadIcs(list, name);
       toast.success(list.length === 1 ? 'Event added to your calendar' : `${list.length} events exported to your calendar`);
     } catch (e) {

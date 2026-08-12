@@ -303,7 +303,7 @@ Deno.serve(async (req) => {
       const isApproved = status === 'approved';
       const title = isApproved ? 'Event Approved 🎉' : 'Event Rejected';
       const notifBody = isApproved
-        ? `Your event "${ev.title}" has been approved and is now live on MotoGo.`
+        ? `Your event "${ev.title}" has been approved and is now live on MotoVeya.`
         : `Your event "${ev.title}" was denied${reason ? `. Reason: ${reason}` : '.'}`;
 
       await svc.entities.Notification.create({
@@ -330,7 +330,7 @@ Deno.serve(async (req) => {
           await base44.integrations.Core.SendEmail({
             to: org.email,
             subject: title,
-            body: `${notifBody}\n\nView it in MotoGo under the Events tab.\n\n— The MotoGo Team`,
+            body: `${notifBody}\n\nView it in MotoVeya under the Events tab.\n\n— The MotoVeya Team`,
           });
         }
       } catch (e) { console.error('event email', e.message); }
@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
       const isApproved = status === 'approved';
       const title = isApproved ? 'Service Approved 🎉' : 'Service Rejected';
       const notifBody = isApproved
-        ? `Your service "${serviceRec.name}" has been approved and is now listed on MotoGo.`
+        ? `Your service "${serviceRec.name}" has been approved and is now listed on MotoVeya.`
         : `Your service "${serviceRec.name}" was denied${reason ? `. Reason: ${reason}` : '.'}`;
 
       await svc.entities.Notification.create({
@@ -376,7 +376,7 @@ Deno.serve(async (req) => {
           await base44.integrations.Core.SendEmail({
             to: sub.email,
             subject: title,
-            body: `${notifBody}\n\nView it in MotoGo under Community → Services.\n\n— The MotoGo Team`,
+            body: `${notifBody}\n\nView it in MotoVeya under Community → Services.\n\n— The MotoVeya Team`,
           });
         }
       } catch (e) { console.error('service email', e.message); }

@@ -351,7 +351,7 @@ export default function RidePlanner() {
         title="Share Route"
         code={shareLink || ''}
         qrData={shareLink || ''}
-        description="Send this link to friends so they can load the route in MotoGo"
+        description="Send this link to friends so they can load the route in MotoVeya"
       />
     </div>
   );

@@ -40,7 +40,7 @@ export function useEmergencyCancellation({ enabled, onCancel }) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [enabled, triggerCancel]);
 
-  // Voice command: "MotoGo, I'm OK"
+  // Voice command: "MotoVeya, I'm OK"
   useEffect(() => {
     if (!enabled) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -70,8 +70,8 @@ export function useEmergencyCancellation({ enabled, onCancel }) {
     recognition.onresult = (event) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript.toLowerCase();
-        const hasMotoGo = transcript.includes('motogo') || transcript.includes('moto go');
-        if (hasMotoGo && transcript.includes('ok')) {
+        const hasMotoVeya = transcript.includes('motoveya') || transcript.includes('moto veya');
+        if (hasMotoVeya && transcript.includes('ok')) {
           triggerCancel('voice');
           return;
         }
@@ -107,9 +107,9 @@ export function useEmergencyCancellation({ enabled, onCancel }) {
     if (typeof MediaMetadata !== 'undefined') {
       try {
         navigator.mediaSession.metadata = new MediaMetadata({
-          title: 'MotoGo Emergency',
+          title: 'MotoVeya Emergency',
           artist: 'Crash Detection Active',
-          album: 'MotoGo',
+          album: 'MotoVeya',
         });
       } catch (e) {}
     }

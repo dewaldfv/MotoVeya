@@ -1,4 +1,4 @@
-// Achievement catalog + progress evaluation for MotoGo rider profiles.
+// Achievement catalog + progress evaluation for MotoVeya rider profiles.
 // 100 achievements across riding, distance, speed, endurance, fuel, garage,
 // planning, social, group rides, safety, time-of-day and consistency.
 
@@ -88,12 +88,12 @@ export const ACHIEVEMENT_CATALOG = [
   { id: 'cartographer', emoji: '🌐', name: 'Cartographer', description: 'Save 100 routes', metric: 'ridePlans', threshold: 100 },
 
   // === Friends (6) ===
-  { id: 'first_friend', emoji: '🤝', name: 'First Friend', description: 'Add your first MotoGo friend', metric: 'friends', threshold: 1 },
+  { id: 'first_friend', emoji: '🤝', name: 'First Friend', description: 'Add your first MotoVeya friend', metric: 'friends', threshold: 1 },
   { id: 'friendly_rider', emoji: '😊', name: 'Friendly Rider', description: 'Add 10 friends', metric: 'friends', threshold: 10 },
   { id: 'social_butterfly', emoji: '🦋', name: 'Social Butterfly', description: 'Add 25 friends', metric: 'friends', threshold: 25 },
   { id: 'friendship_circle', emoji: '🔄', name: 'Friendship Circle', description: 'Add 50 friends', metric: 'friends', threshold: 50 },
   { id: 'network_builder', emoji: '📡', name: 'Network Builder', description: 'Add 100 friends', metric: 'friends', threshold: 100 },
-  { id: 'motogo_celebrity', emoji: '🌟', name: 'MotoGo Celebrity', description: 'Add 250 friends', metric: 'friends', threshold: 250 },
+  { id: 'motogo_celebrity', emoji: '🌟', name: 'MotoVeya Celebrity', description: 'Add 250 friends', metric: 'friends', threshold: 250 },
 
   // === Groups (5) ===
   { id: 'group_member', emoji: '👥', name: 'Group Member', description: 'Join a riding group', metric: 'groups', threshold: 1 },
