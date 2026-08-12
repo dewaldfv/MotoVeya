@@ -5,9 +5,10 @@ import { useGoogleMap } from '@react-google-maps/api';
 
 /**
  * Renders arbitrary HTML content at a geographic position on a GoogleMap.
- * Uses the modern AdvancedMarkerElement API, which is synced to the map's
- * vector canvas rendering loop. This eliminates the panning jitter/flicker
- * that the legacy OverlayView (floatPane) approach exhibited.
+ * Uses the legacy OverlayView (floatPane) API so the map can be a raster map
+ * (no mapId), which is required for the `styles` option to apply our dark
+ * theme. Native markers (LiveMarkers, NativeEventMarkers) already use
+ * google.maps.Marker and are unaffected.
  * @param {number[]|{lat:number,lng:number}} position - [lat, lng] or {lat, lng}
  * @param {React.ReactNode} children - marker visual content
  * @param {function} onClick - click handler
@@ -15,54 +16,74 @@ import { useGoogleMap } from '@react-google-maps/api';
  */
 export default function CustomMapMarker({ position, children, onClick, zIndex = 0, anchor = 'center' }) {
   const map = useGoogleMap();
-  const markerRef = useRef(null);
+  const overlayRef = useRef(null);
   const containerRef = useRef(null);
   const contentRef = useRef(null);
+  const posRef = useRef(null);
 
-  // Build the DOM container once. We render React children into it via a
-  // stable wrapper div so the AdvancedMarkerElement content is directly
-  // managed by the map's renderer.
+  // Build the DOM container once.
   if (!containerRef.current && typeof document !== 'undefined') {
     const div = document.createElement('div');
+    div.style.position = 'absolute';
     div.style.cursor = onClick ? 'pointer' : 'default';
-    div.style.transform = anchor === 'bottom' ? 'translateY(-50%)' : 'none';
     containerRef.current = div;
   }
 
   useEffect(() => {
-    if (!map || !window.google?.maps?.marker?.AdvancedMarkerElement || !containerRef.current) return;
+    if (!map || !window.google?.maps?.OverlayView || !containerRef.current) return;
 
     const lat = Array.isArray(position) ? position[0] : position?.lat;
     const lng = Array.isArray(position) ? position[1] : position?.lng;
     if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return;
+    posRef.current = { lat, lng };
 
-    const latLng = { lat, lng };
+    class HTMLOverlay extends google.maps.OverlayView {
+      constructor() {
+        super();
+        this._el = containerRef.current;
+      }
+      onAdd() {
+        const pane = this.getPanes().floatPane;
+        pane.appendChild(this._el);
+      }
+      onRemove() {
+        if (this._el.parentNode) this._el.parentNode.removeChild(this._el);
+      }
+      draw() {
+        if (!posRef.current) return;
+        const proj = this.getProjection();
+        const point = proj.fromLatLngToDivPixel(new google.maps.LatLng(posRef.current.lat, posRef.current.lng));
+        if (!point) return;
+        const el = this._el;
+        el.style.zIndex = String(zIndex);
+        if (anchor === 'bottom') {
+          el.style.transform = `translate(${point.x}px, ${point.y}px) translate(-50%, -100%)`;
+        } else {
+          el.style.transform = `translate(${point.x}px, ${point.y}px) translate(-50%, -50%)`;
+        }
+      }
+    }
 
-    if (!markerRef.current) {
-      markerRef.current = new google.maps.marker.AdvancedMarkerElement({
-        map,
-        position: latLng,
-        content: containerRef.current,
-        zIndex,
-      });
+    if (!overlayRef.current) {
+      overlayRef.current = new HTMLOverlay();
+      overlayRef.current.setMap(map);
       if (onClick) {
-        google.maps.event.addListener(markerRef.current, 'click', () => onClick());
+        containerRef.current.addEventListener('click', onClick);
       }
     } else {
-      markerRef.current.position = latLng;
-      markerRef.current.zIndex = zIndex;
+      // Trigger redraw with new position.
+      overlayRef.current.draw();
     }
 
     return () => {
-      if (markerRef.current) {
-        google.maps.event.clearInstanceListeners(markerRef.current);
-        markerRef.current.map = null;
-        markerRef.current = null;
+      if (overlayRef.current) {
+        overlayRef.current.setMap(null);
+        overlayRef.current = null;
       }
     };
-  }, [map, position, zIndex]);
+  }, [map, position, zIndex, anchor]);
 
-  // Keep click handler fresh without recreating the marker.
+  // Keep click handler fresh.
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.style.cursor = onClick ? 'pointer' : 'default';
@@ -70,7 +91,6 @@ export default function CustomMapMarker({ position, children, onClick, zIndex = 
   }, [onClick]);
 
   // Render children into the container using a detached React root.
-  // The root is created once and reused; we only re-render when content changes.
   useEffect(() => {
     if (!containerRef.current) return;
     if (!contentRef.current) {
@@ -78,7 +98,6 @@ export default function CustomMapMarker({ position, children, onClick, zIndex = 
     }
     contentRef.current.render(
       <div
-        onClick={onClick}
         style={{
           cursor: onClick ? 'pointer' : 'default',
           display: 'flex',

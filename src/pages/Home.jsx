@@ -45,7 +45,7 @@ export default function Home() {
   const [selectedService, setSelectedService] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('motogo_show_tutorial') === 'true' && localStorage.getItem('motogo_tutorial_done') !== 'true');
-  const [layer, setLayer] = useMapLayer();
+  const [layer, setLayer, rawLayer] = useMapLayer();
   const { overlays, toggle: toggleOverlay } = useMapOverlays();
   const [headingUp, setHeadingUp] = useState(true);
   const [notifyFriends, setNotifyFriends] = useState(true);
@@ -422,7 +422,7 @@ export default function Home() {
         onSelect={handleSelectCategory} />
       
 
-      <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={layer} onSelect={setLayer} overlays={overlays} onToggleOverlay={toggleOverlay} />
+      <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={rawLayer} onSelect={setLayer} overlays={overlays} onToggleOverlay={toggleOverlay} />
 
       <BottomSheet open={!!selected} onClose={() => setSelected(null)} title={selected?.name || selected?.title}>
         {selected &&
