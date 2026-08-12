@@ -1,7 +1,7 @@
-import { Phone, Navigation, Star, MapPin, Heart } from 'lucide-react';
+import { Phone, Navigation, Star, MapPin, Heart, Route } from 'lucide-react';
 import { getServiceCategory, formatDistance, haversine, isOpenNow } from '@/lib/serviceCategories';
 
-export default function ServiceListingCard({ service, userPos, isFavorite, onFavorite, onSelect, onNavigate }) {
+export default function ServiceListingCard({ service, userPos, isFavorite, onFavorite, onSelect, onDirections, onNavigate }) {
   const cat = getServiceCategory(service.category);
   const distance = userPos ? haversine(userPos[0], userPos[1], service.lat, service.lng) : null;
   const open = isOpenNow(service);
@@ -45,11 +45,15 @@ export default function ServiceListingCard({ service, userPos, isFavorite, onFav
             className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-secondary py-2 text-sm font-semibold">
             <Phone size={14} /> Call
           </button>
-        )}
-        <button onClick={(e) => { e.stopPropagation(); onNavigate(service); }}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-sm font-semibold text-primary-foreground">
-          <Navigation size={14} /> Navigate
-        </button>
+          )}
+          <button onClick={(e) => { e.stopPropagation(); onDirections(service); }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-secondary py-2 text-sm font-semibold">
+            <Route size={14} /> Directions
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onNavigate(service); }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-sm font-semibold text-primary-foreground">
+            <Navigation size={14} /> Navigate
+          </button>
       </div>
     </div>
   );

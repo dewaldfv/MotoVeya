@@ -160,7 +160,12 @@ export default function Home() {
     const pending = getPendingNavigation();
     if (pending?.dest) {
       clearPendingNavigation();
-      session.navigateTo(pending.dest, pending.start ? [pending.start.lat, pending.start.lng] : undefined);
+      const start = pending.start ? [pending.start.lat, pending.start.lng] : undefined;
+      if (pending.autoStart) {
+        session.navigateTo(pending.dest, start);
+      } else {
+        session.handleDestination(pending.dest);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

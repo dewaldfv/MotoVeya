@@ -1,10 +1,10 @@
-import { Phone, Navigation, Star, MapPin, Globe, Clock, BadgeCheck, Crown, Heart, Tag } from 'lucide-react';
+import { Phone, Navigation, Star, MapPin, Globe, Clock, BadgeCheck, Crown, Heart, Tag, Route } from 'lucide-react';
 import BottomSheet from '@/components/BottomSheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getServiceCategory, formatDistance, haversine, isOpenNow } from '@/lib/serviceCategories';
 
-export default function ServiceDetailSheet({ service, userPos, isFavorite, onFavorite, onNavigate, onClose }) {
+export default function ServiceDetailSheet({ service, userPos, isFavorite, onFavorite, onDirections, onNavigate, onClose }) {
   if (!service) return null;
   const cat = getServiceCategory(service.category);
   const distance = userPos ? haversine(userPos[0], userPos[1], service.lat, service.lng) : null;
@@ -66,20 +66,27 @@ export default function ServiceDetailSheet({ service, userPos, isFavorite, onFav
           </div>
         )}
 
-        <div className="flex gap-2 pt-2">
-          {service.phone && (
-            <Button size="lg" variant="secondary" className="min-h-[56px] flex-1" onClick={() => window.open(`tel:${service.phone}`)}>
-              <Phone size={18} className="mr-2" /> Call
+        <div className="space-y-2 pt-2">
+          <div className="flex gap-2">
+            {service.phone && (
+              <Button size="lg" variant="secondary" className="min-h-[56px] flex-1" onClick={() => window.open(`tel:${service.phone}`)}>
+                <Phone size={18} className="mr-2" /> Call
+              </Button>
+            )}
+            {onFavorite && (
+              <Button size="lg" variant="outline" className="min-h-[56px] px-4" onClick={() => onFavorite(service)}>
+                <Heart size={18} className={isFavorite ? 'fill-primary text-primary' : ''} />
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button size="lg" variant="secondary" className="min-h-[56px] flex-1" onClick={() => onDirections(service)}>
+              <Route size={18} className="mr-2" /> Directions
             </Button>
-          )}
-          <Button size="lg" className="min-h-[56px] flex-1" onClick={() => onNavigate(service)}>
-            <Navigation size={18} className="mr-2" /> Navigate
-          </Button>
-          {onFavorite && (
-            <Button size="lg" variant="outline" className="min-h-[56px] px-4" onClick={() => onFavorite(service)}>
-              <Heart size={18} className={isFavorite ? 'fill-primary text-primary' : ''} />
+            <Button size="lg" className="min-h-[56px] flex-1" onClick={() => onNavigate(service)}>
+              <Navigation size={18} className="mr-2" /> Navigate
             </Button>
-          )}
+          </div>
         </div>
       </div>
     </BottomSheet>

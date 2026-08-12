@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, SlidersHorizontal, ChevronLeft, X, Loader2, Wrench } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { savePendingNavigation } from '@/lib/rideCache';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import ServiceCategoryGrid from './ServiceCategoryGrid';
@@ -86,9 +87,16 @@ export default function ServicesTab({ user }) {
     } catch (e) { console.error(e); toast.error('Could not update favorites'); }
   };
 
+  const handleDirections = (service) => {
+    setSelectedService(null);
+    savePendingNavigation({ dest: { lat: service.lat, lng: service.lng, name: service.name } });
+    navigate('/');
+  };
+
   const handleNavigate = (service) => {
     setSelectedService(null);
-    navigate('/ride/active', { state: { destination: { lat: service.lat, lng: service.lng, name: service.name } } });
+    savePendingNavigation({ dest: { lat: service.lat, lng: service.lng, name: service.name }, autoStart: true });
+    navigate('/');
   };
 
   const handleSelect = (service) => {
@@ -147,14 +155,14 @@ export default function ServicesTab({ user }) {
                   {filteredServices.map((service) => (
                     <ServiceListingCard key={service.id} service={service} userPos={userPos}
                       isFavorite={favoriteIds.has(service.id)} onFavorite={handleFavorite}
-                      onSelect={handleSelect} onNavigate={handleNavigate} />
+                      onSelect={handleSelect} onDirections={handleDirections} onNavigate={handleNavigate} />
                   ))}
                 </div>
               </>}
 
       <ServiceDetailSheet service={selectedService} userPos={userPos}
         isFavorite={selectedService ? favoriteIds.has(selectedService.id) : false}
-        onFavorite={handleFavorite} onNavigate={handleNavigate} onClose={() => setSelectedService(null)} />
+        onFavorite={handleFavorite} onDirections={handleDirections} onNavigate={handleNavigate} onClose={() => setSelectedService(null)} />
 
       <ServiceFilters open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} />
 
