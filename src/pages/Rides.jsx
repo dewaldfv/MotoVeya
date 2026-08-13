@@ -132,19 +132,19 @@ export default function Rides() {
           </div>
           <ChevronRight className="text-muted-foreground" size={20} />
         </button>
-        <button
-          onClick={() => navigate('/service-history')}
-          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform hidden">
-          
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
-            <Wrench size={24} className="text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-base font-bold text-foreground">Service History</p>
-            <p className="text-xs text-muted-foreground">Log maintenance and workshop visits</p>
-          </div>
-          <ChevronRight className="text-muted-foreground" size={20} />
-        </button>
+        
+
+
+
+
+
+
+
+
+
+
+
+        
         <NavigationBanner />
         <RideHistoryBanner stats={stats} lastRideDate={lastRideDate} />
         <RideSummaryCard
