@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CloudSun, ChevronRight, Route, Gauge } from 'lucide-react';
+import { CloudSun, ChevronRight, Route, Gauge, Fuel } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import NavigationBanner from '@/components/rides/NavigationBanner';
 import RideHistoryBanner from '@/components/rides/RideHistoryBanner';
@@ -56,7 +56,15 @@ export default function Rides() {
     rides.forEach((r) => { if (r.ride_date) { const d = DAYS[new Date(r.ride_date).getDay()]; dayCounts[d] = (dayCounts[d] || 0) + 1; } });
     const favDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
 
-    return { totalRides, totalKm, totalMinutes, totalFuel, avgSpeed, monthDistance, avgRideLength, fuelEconomy, rideTime, favDay };
+    const profile = fuelProfiles[0];
+    const primaryBike = bikes.find((b) => b.is_primary) || bikes[0];
+    let litresRemaining = null;
+    if (profile?.estimated_range_km && profile?.adaptive_l_per_100km) {
+      litresRemaining = Math.max(0, Math.round((profile.estimated_range_km * profile.adaptive_l_per_100km / 100) * 10) / 10);
+    } else if (primaryBike?.tank_capacity_l) {
+      litresRemaining = Math.round(primaryBike.tank_capacity_l * 10) / 10;
+    }
+    return { totalRides, totalKm, totalMinutes, totalFuel, avgSpeed, monthDistance, avgRideLength, fuelEconomy, rideTime, favDay, litresRemaining };
   }, [rides, bikes, fuelProfiles]);
 
   const lastRide = rides[0];
@@ -91,6 +99,23 @@ export default function Rides() {
           <div className="flex-1">
             <p className="text-base font-bold text-foreground">Saved Routes</p>
             <p className="text-xs text-muted-foreground">Load, share, or delete your planned routes</p>
+          </div>
+          <ChevronRight className="text-muted-foreground" size={20} />
+        </button>
+        <button
+          onClick={() => navigate('/fuel-tracker')}
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+            <Fuel size={24} className="text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-base font-bold text-foreground">Fuel Tracker</p>
+            <p className="text-xs text-muted-foreground">Adaptive consumption and refill history</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-bold text-primary">{stats.litresRemaining != null ? `${stats.litresRemaining} L` : '—'}</p>
+            <p className="text-[10px] text-muted-foreground">remaining</p>
           </div>
           <ChevronRight className="text-muted-foreground" size={20} />
         </button>

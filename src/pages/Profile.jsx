@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle, LifeBuoy, HelpCircle, Wrench, Store } from 'lucide-react';
+import { Bike as BikeIcon, Trophy, Shield, Crown, SlidersHorizontal, Info, MessageCircle, LifeBuoy, HelpCircle, Wrench, Store } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,8 +23,6 @@ const coerceBike = (form) => ({
   tank_capacity_l: Number(form.tank_capacity_l) || undefined,
   fuel_consumption_l_per_100km: Number(form.fuel_consumption_l_per_100km) || undefined
 });
-
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function computeAchievements(rideCount, totalDistance, maxSpeed) {
   const badges = [];
@@ -79,24 +77,6 @@ export default function Profile() {
     enabled: !!user?.id
   });
 
-  const { data: friends = [] } = useQuery({
-    queryKey: ['profile-friends', user?.id],
-    queryFn: () => base44.entities.Friend.filter({ status: 'accepted' }, '-created_date', 100),
-    enabled: !!user?.id
-  });
-
-  const { data: pending = [] } = useQuery({
-    queryKey: ['profile-pending', user?.id],
-    queryFn: () => base44.entities.Friend.filter({ recipient_id: user.id, status: 'pending' }, '-created_date', 20),
-    enabled: !!user?.id
-  });
-
-  const { data: memberships = [] } = useQuery({
-    queryKey: ['profile-memberships', user?.id],
-    queryFn: () => base44.entities.GroupMember.filter({ user_id: user.id, status: 'active' }, '-created_date', 50),
-    enabled: !!user?.id
-  });
-
   const saveBikeMutation = useMutation({
     mutationFn: ({ editing, form }) => {
       const data = coerceBike(form);
@@ -117,22 +97,15 @@ export default function Profile() {
     const maxSpeed = Math.max(0, ...rides.map((r) => r.max_speed_kmh || 0));
     const badges = computeAchievements(totalRides, totalDistance, maxSpeed);
 
-    const sorted = [...rides].sort((a, b) => new Date(b.ride_date) - new Date(a.ride_date));
-    const lastRide = sorted[0];
-    const longestRide = [...rides].sort((a, b) => (b.distance_km || 0) - (a.distance_km || 0))[0];
-
     const primaryBike = bikes.find((b) => b.is_primary) || bikes[0];
     const serviceInterval = 5000;
     const nextService = primaryBike ? Math.max(0, serviceInterval - totalDistance % serviceInterval) : null;
 
     return {
       totalRides, totalDistance, fuelUsed, achievementCount: badges.length, newestBadge: badges[badges.length - 1],
-      lastRide: lastRide?.title || '—', longestRide: longestRide ? `${longestRide.title} (${Math.round(longestRide.distance_km)}km)` : '—',
-      primaryBike, nextService,
-      friendsOnline: friends.filter((f) => f.location_shared).length,
-      groupCount: memberships.length, pendingCount: pending.length
+      primaryBike, nextService
     };
-  }, [user, rides, refills, bikes, friends, pending, memberships]);
+  }, [user, rides, refills, bikes]);
 
   const isPremium = user?.subscription_tier === 'premium';
 
@@ -228,17 +201,6 @@ export default function Profile() {
         }
 
         <div className="space-y-2.5">
-          <MenuCard icon={Fuel} title="Fuel Tracker" subtitle="Adaptive fuel consumption and refill history" delay={0.35} onClick={() => navigate('/fuel-tracker')} />
-
-          <MenuCard
-            icon={Route}
-            title="Ride History"
-            subtitle="View every ride you've completed"
-            details={`Last: ${stats.lastRide} · Longest: ${stats.longestRide}`}
-            delay={0.45}
-            onClick={() => navigate('/rides')} />
-          
-
           <MenuCard
             icon={Trophy}
             title="Achievements"
@@ -246,15 +208,6 @@ export default function Profile() {
             details={stats.newestBadge || 'No badges yet — start riding!'}
             delay={0.5}
             onClick={() => navigate('/achievements')} />
-          
-
-          <MenuCard
-            icon={Users}
-            title="Friends & Community"
-            subtitle="Manage friends, groups and voice channels"
-            details={`${stats.friendsOnline} online · ${stats.groupCount} groups · ${stats.pendingCount} pending`}
-            delay={0.55}
-            onClick={() => navigate('/community')} />
           
 
           <MenuCard
