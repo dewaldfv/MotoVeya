@@ -47,7 +47,7 @@ export default function Contact() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Email us anytime</p>
-              <a href="mailto:hello@motogo.app" className="font-bold text-primary">hello@motogo.app</a>
+              <a href="mailto:hello@motogo.app" className="font-bold text-primary">Dewald.MotoVe</a>
             </div>
           </div>
         </div>
@@ -83,6 +83,6 @@ export default function Contact() {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
