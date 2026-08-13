@@ -137,7 +137,7 @@
   top: 50% !important;
   right: auto !important;
   bottom: auto !important;
-  transform: translate(-50%, -50%) perspective(1200px) rotateX(45deg) rotate(var(--nav-rot, 0deg));
+  transform: translate(-50%, calc(-50% + 16vh)) perspective(1200px) rotateX(45deg) rotate(var(--nav-rot, 0deg));
   transform-origin: center center;
   transition: transform 0.4s ease-out;
 }
@@ -148,7 +148,7 @@
   left: 50% !important;
   top: 50% !important;
   position: absolute !important;
-  transform: translate(-50%, -50%) perspective(1200px) rotateX(45deg) rotate(var(--nav-rot, 0deg));
+  transform: translate(-50%, calc(-50% + 16vh)) perspective(1200px) rotateX(45deg) rotate(var(--nav-rot, 0deg));
   transform-origin: center center;
   transition: transform 0.4s ease-out;
 }

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Pencil, Trash2, Bike as BikeIcon, Camera, Loader2, Star, Fuel } from 'lucide-react';
+import { ChevronLeft, Plus, Pencil, Trash2, Bike as BikeIcon, Camera, Loader2, Star, Fuel, Info } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
+import BikeDetailSheet from '@/components/garage/BikeDetailSheet';
 import { toast } from 'sonner';
 
 const EMPTY = { make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '', color: '', nickname: '', is_primary: false, photo_url: '' };
@@ -24,6 +25,7 @@ export default function BikeGarage() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [uploading, setUploading] = useState(false);
+  const [detailBike, setDetailBike] = useState(null);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -164,6 +166,7 @@ export default function BikeGarage() {
                       <p className="text-sm text-muted-foreground">{bike.year || '—'} · {bike.engine_size_cc || '?'}cc</p>
                     </div>
                     <div className="flex shrink-0 gap-1">
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setDetailBike(bike)}><Info size={16} /></Button>
                       <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEdit(bike)}><Pencil size={16} /></Button>
                       <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => handleDelete(bike)}><Trash2 size={16} /></Button>
                     </div>
@@ -220,6 +223,8 @@ export default function BikeGarage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BikeDetailSheet bike={detailBike} open={!!detailBike} onClose={() => setDetailBike(null)} />
     </div>
   );
 }

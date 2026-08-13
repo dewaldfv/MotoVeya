@@ -1,5 +1,5 @@
 /* global google */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeInOutQuad = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
@@ -7,50 +7,69 @@ const easeInOutQuad = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) 
 /**
  * useMapCamera — smoothly drives the Google Map camera during active navigation.
  *
- * Instead of hard-snapping map.setCenter() to each raw GPS fix (which produces
- * jittery "jump" pans), this hook interpolates the camera center + zoom from
- * their current values toward the new target over a short easing window using
- * requestAnimationFrame. When headingUp is enabled, the target center is offset
- * ahead of the rider so the rider sits in the lower third of the viewport and
- * the direction of travel faces up.
+ * The map stays pannable so the rider can look around; while they pan, auto-
+ * centering pauses. After 5 seconds of inactivity the camera snaps back to the
+ * rider. The bottom-third placement of the rider is handled by a CSS transform
+ * on the rotating container (see .nav-map-heading-up in index.css), so here the
+ * map center simply tracks the rider's raw GPS position.
  */
 export function useMapCamera({ map, userPos, heading, headingUp, speed, nextManeuverDistance, recenterToken }) {
   const animRef = useRef(null);
   const currentCenterRef = useRef(null);
   const currentZoomRef = useRef(null);
+  const userPannedRef = useRef(false);
+  const recenterTimerRef = useRef(null);
+  const [recenterTick, setRecenterTick] = useState(0);
 
-  // Lock map gestures during navigation; restore on cleanup.
+  // Keep the map pannable during navigation; zoom stays controlled.
   useEffect(() => {
     if (!map) return;
-    map.setOptions({ draggable: false, scrollwheel: false, disableDoubleClickZoom: true, gestureHandling: 'none' });
+    map.setOptions({ draggable: true, scrollwheel: false, disableDoubleClickZoom: true, gestureHandling: 'greedy' });
     return () => {
       map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'auto' });
     };
   }, [map]);
 
-  // Recenter token — cancel any in-flight easing and snap to the rider.
+  // Pause auto-center while the rider pans; recenter after 5s of inactivity.
   useEffect(() => {
-    if (!map || !recenterToken || !currentCenterRef.current) return;
-    if (animRef.current) cancelAnimationFrame(animRef.current);
-    const zoom = resolveTargetZoom(speed, nextManeuverDistance);
-    currentZoomRef.current = zoom;
-    map.setZoom(zoom);
-    // Re-project the offset so the snap still respects heading-up.
-    const center = computeTargetCenter(map, userPos, heading, headingUp);
-    if (center) {
-      currentCenterRef.current = center;
-      map.setCenter(center);
-    }
-  }, [recenterToken]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!map) return;
+    const onDragStart = () => {
+      userPannedRef.current = true;
+      if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
+    };
+    const onDragEnd = () => {
+      if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+      recenterTimerRef.current = setTimeout(() => {
+        userPannedRef.current = false;
+        currentCenterRef.current = null; // snap (not ease) on recenter
+        setRecenterTick((t) => t + 1);
+      }, 5000);
+    };
+    map.addListener('dragstart', onDragStart);
+    map.addListener('dragend', onDragEnd);
+    return () => {
+      google.maps.event.clearListeners(map, 'dragstart');
+      google.maps.event.clearListeners(map, 'dragend');
+      if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+    };
+  }, [map]);
+
+  // Manual recenter token (e.g. the "My Location" button) — snap back immediately.
+  useEffect(() => {
+    if (!map || !recenterToken) return;
+    userPannedRef.current = false;
+    currentCenterRef.current = null;
+    if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
+  }, [recenterToken, map]);
 
   // Drive the camera on every position / heading / speed update.
   useEffect(() => {
     if (!map || !userPos) return;
-    const targetCenter = computeTargetCenter(map, userPos, heading, headingUp);
+    if (userPannedRef.current) return; // rider is panning — don't fight them
+    const targetCenter = new google.maps.LatLng(userPos[0], userPos[1]);
     const targetZoom = resolveTargetZoom(speed, nextManeuverDistance);
-    if (!targetCenter) return;
 
-    // First frame — initialize without animation.
+    // First frame (or after a recenter snap) — initialize without animation.
     if (!currentCenterRef.current) {
       currentCenterRef.current = targetCenter;
       currentZoomRef.current = targetZoom;
@@ -59,7 +78,6 @@ export function useMapCamera({ map, userPos, heading, headingUp, speed, nextMane
       return;
     }
 
-    // Cancel any running easing and start a fresh interpolation.
     if (animRef.current) cancelAnimationFrame(animRef.current);
     const start = performance.now();
     const duration = 700;
@@ -83,7 +101,7 @@ export function useMapCamera({ map, userPos, heading, headingUp, speed, nextMane
       }
     };
     animRef.current = requestAnimationFrame(animate);
-  }, [userPos?.[0], userPos?.[1], heading, headingUp, speed, nextManeuverDistance, map]);
+  }, [userPos?.[0], userPos?.[1], heading, headingUp, speed, nextManeuverDistance, map, recenterToken, recenterTick]);
 
   useEffect(() => () => {
     if (animRef.current) cancelAnimationFrame(animRef.current);
@@ -95,28 +113,4 @@ function resolveTargetZoom(speed, nextManeuverDistance) {
   if (speed > 80) return 14;
   if (speed > 40) return 16;
   return 16;
-}
-
-// Compute the map center that places the rider in the lower third when
-// heading-up is active, otherwise returns the raw rider position.
-function computeTargetCenter(map, userPos, heading, headingUp) {
-  if (!userPos) return null;
-  if (!headingUp || heading == null || isNaN(heading)) {
-    return new google.maps.LatLng(userPos[0], userPos[1]);
-  }
-  try {
-    const projection = map.getProjection();
-    if (!projection) return new google.maps.LatLng(userPos[0], userPos[1]);
-    const headingRad = (heading * Math.PI) / 180;
-    const containerEl = map.getDiv();
-    const offsetPx = (containerEl.offsetHeight || 600) * 0.30;
-    const scale = Math.pow(2, map.getZoom());
-    const riderPoint = projection.fromLatLngToPoint(new google.maps.LatLng(userPos[0], userPos[1]));
-    const offsetX = (offsetPx * Math.sin(headingRad)) / scale;
-    const offsetY = (-offsetPx * Math.cos(headingRad)) / scale;
-    const centerPoint = new google.maps.Point(riderPoint.x + offsetX, riderPoint.y + offsetY);
-    return projection.fromPointToLatLng(centerPoint);
-  } catch (e) {
-    return new google.maps.LatLng(userPos[0], userPos[1]);
-  }
 }

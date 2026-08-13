@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Users } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Users } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
 import GroupRideCard from './GroupRideCard';
-import CreateRideDialog from './CreateRideDialog';
-import { toast } from 'sonner';
 
 export default function GroupRidesList({ user, groups = [], memberships = [] }) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [createOpen, setCreateOpen] = useState(false);
   const [userPos, setUserPos] = useState(null);
 
   const memberGroupIds = new Set(memberships.map((m) => m.group_id));
@@ -45,17 +40,9 @@ export default function GroupRidesList({ user, groups = [], memberships = [] }) 
   const active = rides.filter((r) => ['planning', 'waiting', 'riding', 'paused'].includes(r.status));
   const finished = rides.filter((r) => r.status === 'finished');
 
-  const handleCreated = (id) => {
-    queryClient.invalidateQueries({ queryKey: ['group-rides'] });
-    if (id) navigate(`/ride/group/${id}`);
-  };
-
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-muted-foreground">Group Rides</h2>
-        <Button size="sm" className="min-h-[40px]" disabled={myGroups.length === 0} onClick={() => setCreateOpen(true)}><Plus size={16} className="mr-1" /> Plan Ride</Button>
-      </div>
+      <h2 className="text-sm font-bold text-muted-foreground">Group Rides</h2>
 
       {myGroups.length === 0 && (
         <div className="rounded-2xl bg-card p-4 text-center text-sm text-muted-foreground">Join or create a group first, then plan a ride.</div>
@@ -85,7 +72,6 @@ export default function GroupRidesList({ user, groups = [], memberships = [] }) 
         </div>
       )}
 
-      <CreateRideDialog open={createOpen} onClose={() => setCreateOpen(false)} user={user} groups={myGroups} memberships={memberships} onCreated={handleCreated} />
     </div>
   );
 }

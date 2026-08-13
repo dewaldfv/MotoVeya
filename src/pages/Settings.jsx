@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, User, KeyRound, LogOut, Trash2, Shield, Eye, FileText, ScrollText, Check, Bike, MapPin, Mic } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, KeyRound, LogOut, Trash2, Shield, Eye, FileText, ScrollText, Check, Bike, MapPin, Mic } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useTheme } from '@/hooks/useTheme';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -175,7 +175,6 @@ export default function Settings() {
         </Section>
 
         <Section title="👤 Account">
-          <Row icon={User} label="Edit Profile" onClick={() => navigate('/onboarding')} />
           <Row icon={KeyRound} label="Change Password" onClick={() => navigate('/forgot-password')} />
           <Row icon={LogOut} label="Log Out" onClick={handleLogout} danger />
           <Row icon={Trash2} label="Delete Account" onClick={() => setDeleteOpen(true)} danger last />

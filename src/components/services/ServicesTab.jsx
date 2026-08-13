@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, SlidersHorizontal, ChevronLeft, X, Loader2, Wrench } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronLeft, X, Loader2, Wrench, List } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { savePendingNavigation } from '@/lib/rideCache';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ export default function ServicesTab({ user }) {
   const [submitOpen, setSubmitOpen] = useState(false);
   const [filters, setFilters] = useState({ distance: null, rating: null, openNow: false, verified: false, premiumPartner: false });
   const [userPos, setUserPos] = useState(null);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -50,7 +51,7 @@ export default function ServicesTab({ user }) {
 
   const filteredServices = useMemo(() => {
     let result = services;
-    if (selectedCategory) result = result.filter((s) => s.category === selectedCategory);
+    if (selectedCategory && !showAll) result = result.filter((s) => s.category === selectedCategory);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter((s) =>
@@ -106,8 +107,8 @@ export default function ServicesTab({ user }) {
     }
   };
 
-  const handleBack = () => { setSelectedCategory(null); setSearchQuery(''); };
-  const hasSearchOrCategory = !!selectedCategory || !!searchQuery.trim();
+  const handleBack = () => { setSelectedCategory(null); setSearchQuery(''); setShowAll(false); };
+  const hasSearchOrCategory = !!selectedCategory || !!searchQuery.trim() || showAll;
   const activeCategory = selectedCategory ? getServiceCategory(selectedCategory) : null;
 
   return (
@@ -136,14 +137,19 @@ export default function ServicesTab({ user }) {
         <Plus size={18} /> Submit a Service
       </Button>
 
-      {activeCategory && !searchQuery && (
+      {activeCategory && !searchQuery && !showAll && (
         <p className="text-sm font-semibold text-muted-foreground">{activeCategory.emoji} {activeCategory.label}</p>
       )}
 
       {isLoading
         ? <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-primary" /></div>
         : !hasSearchOrCategory
-          ? <ServiceCategoryGrid onSelect={setSelectedCategory} />
+          ? <>
+              <Button variant="secondary" onClick={() => setShowAll(true)} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl">
+                <List size={18} /> Show All Services
+              </Button>
+              <ServiceCategoryGrid onSelect={setSelectedCategory} />
+            </>
           : filteredServices.length === 0
             ? <div className="flex flex-col items-center gap-3 py-16 text-center">
                 <Wrench size={48} className="text-muted-foreground" />

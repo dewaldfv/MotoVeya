@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Phone, Mail, Globe, MapPin, Clock, FileText, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Phone, Mail, Globe, MapPin, Clock, FileText, Loader2, Camera, X, Image as ImageIcon } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 export default function ProviderEditDialog({ service, onClose, onSaved }) {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     if (!service) { setForm(null); return; }
@@ -24,12 +26,30 @@ export default function ProviderEditDialog({ service, onClose, onSaved }) {
       opening_hours: service.opening_hours || '',
       is_open_24h: service.is_open_24h || false,
       description: service.description || '',
+      photo_urls: service.photo_urls || [],
     });
   }, [service]);
 
   if (!service || !form) return null;
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm((f) => ({ ...f, photo_urls: [...(f.photo_urls || []), file_url] }));
+      toast.success('Photo added');
+    } catch (err) { console.error(err); toast.error('Upload failed'); }
+    finally { setUploading(false); }
+  };
+
+  const removePhoto = (index) => {
+    setForm((f) => ({ ...f, photo_urls: (f.photo_urls || []).filter((_, i) => i !== index) }));
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -91,6 +111,25 @@ export default function ProviderEditDialog({ service, onClose, onSaved }) {
           <div>
             <Label className="flex items-center gap-1"><FileText size={12} /> Description</Label>
             <Textarea value={form.description} onChange={(e) => set('description', e.target.value)} rows={3} placeholder="What services do you offer?" />
+          </div>
+          <div>
+            <Label className="flex items-center gap-1"><ImageIcon size={12} /> Store Photos</Label>
+            <p className="mb-2 text-xs text-muted-foreground">These appear on your listing when riders view it in the Services tab.</p>
+            <div className="flex flex-wrap gap-2">
+              {(form.photo_urls || []).map((url, i) => (
+                <div key={i} className="relative h-20 w-20 overflow-hidden rounded-xl">
+                  <img src={url} alt={`photo ${i + 1}`} className="h-full w-full object-cover" />
+                  <button type="button" onClick={() => removePhoto(i)} className="absolute right-0.5 top-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white">
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={() => fileRef.current?.click()} className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border bg-muted text-muted-foreground">
+                {uploading ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
+                <span className="text-[10px]">{uploading ? 'Uploading' : 'Add'}</span>
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            </div>
           </div>
         </div>
         <DialogFooter>

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Bike as BikeIcon, Trophy, Shield, Crown, SlidersHorizontal, Info, MessageCircle, LifeBuoy, HelpCircle, Wrench, Store } from 'lucide-react';
+import { Bike as BikeIcon, Trophy, Shield, Crown, SlidersHorizontal, Info, MessageCircle, LifeBuoy, HelpCircle, Wrench, Store, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import StatGrid from '@/components/profile/StatGrid';
 import MenuCard from '@/components/profile/MenuCard';
 import BikeCard from '@/components/profile/BikeCard';
+import EditProfileDialog from '@/components/profile/EditProfileDialog';
+import EmergencySafetySheet from '@/components/profile/EmergencySafetySheet';
 import { toast } from 'sonner';
 
 const coerceBike = (form) => ({
@@ -45,6 +47,8 @@ export default function Profile() {
   const [editingBike, setEditingBike] = useState(null);
   const [copied, setCopied] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
   const [bikeForm, setBikeForm] = useState({ make: '', model: '', year: '', engine_size_cc: '', tank_capacity_l: '', fuel_consumption_l_per_100km: '', color: '', nickname: '', is_primary: false });
 
   useEffect(() => {
@@ -174,7 +178,10 @@ export default function Profile() {
           onSettings={() => navigate('/settings')}
           onAvatarUpload={handleAvatarUpload}
           onCoverUpload={handleCoverUpload} />
-        
+
+        <Button variant="secondary" className="min-h-[48px] w-full gap-2" onClick={() => setEditOpen(true)}>
+          <Pencil size={16} /> Edit Profile
+        </Button>
 
         <StatGrid
           totalRides={stats.totalRides}
@@ -216,7 +223,7 @@ export default function Profile() {
             subtitle="Crash Detection, SOS and Emergency Contacts"
             details={`Crash Detection ${crashDetectionOn ? 'ON' : 'OFF'} · ${emergencyContacts} Emergency Contact${emergencyContacts === 1 ? '' : 's'}`}
             delay={0.6}
-            onClick={() => navigate('/settings')} />
+            onClick={() => setEmergencyOpen(true)} />
           
 
           <MenuCard
@@ -333,6 +340,8 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
+      <EditProfileDialog user={user} open={editOpen} onClose={() => setEditOpen(false)} onSaved={(data) => setUser((u) => ({ ...u, ...data }))} />
+      <EmergencySafetySheet user={user} open={emergencyOpen} onClose={() => setEmergencyOpen(false)} onSaved={(data) => setUser((u) => ({ ...u, ...data }))} />
       <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} title="My MotoVeya Code" code={user.id} qrData={`motogo://friend?code=${user.id}`} description="Share to add as friend" />
     </div>);
 

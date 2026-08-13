@@ -45,6 +45,9 @@
     "medical_notes": {
       "type": "string"
     },
+    "medical_aid": {
+      "type": "string"
+    },
     "interests": {
       "type": "array",
       "items": {

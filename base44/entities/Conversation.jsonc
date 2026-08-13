@@ -35,6 +35,10 @@
     },
     "group_name": {
       "type": "string"
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

@@ -1,5 +1,5 @@
 /* global google */
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { GoogleMap, Polyline, useGoogleMap } from '@react-google-maps/api';
 import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
 import { MAP_LAYERS, getLayerStyles, getLayerBackground, getMapOptions } from '@/lib/mapLayers';
@@ -42,6 +42,9 @@ function MapResizer() {
 function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, route, recenterToken }) {
   const map = useGoogleMap();
   const failCountRef = useRef(0);
+  const userPannedRef = useRef(false);
+  const recenterTimerRef = useRef(null);
+  const [recenterTick, setRecenterTick] = useState(0);
   const targetZoom = useMemo(() => {
     if (!active) return 13;
     if (nextManeuverDistance != null && nextManeuverDistance < 200) return 17;
@@ -53,14 +56,46 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
   useEffect(() => {
     if (!map) return;
     if (active) {
-      map.setOptions({ draggable: false, scrollwheel: false, disableDoubleClickZoom: true, gestureHandling: 'none' });
+      // Allow panning during navigation; zoom stays controlled.
+      map.setOptions({ draggable: true, scrollwheel: false, disableDoubleClickZoom: true, gestureHandling: 'greedy' });
     } else {
       map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'auto' });
     }
   }, [active, map]);
 
+  // Pause auto-center while the rider pans the map; recenter after 5s of inactivity.
+  useEffect(() => {
+    if (!map || !active) return;
+    const onDragStart = () => {
+      userPannedRef.current = true;
+      if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
+    };
+    const onDragEnd = () => {
+      if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+      recenterTimerRef.current = setTimeout(() => {
+        userPannedRef.current = false;
+        setRecenterTick((t) => t + 1);
+      }, 5000);
+    };
+    map.addListener('dragstart', onDragStart);
+    map.addListener('dragend', onDragEnd);
+    return () => {
+      google.maps.event.clearListeners(map, 'dragstart');
+      google.maps.event.clearListeners(map, 'dragend');
+      if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+    };
+  }, [map, active]);
+
+  // Manual recenter token — snap back immediately.
+  useEffect(() => {
+    if (!map || !recenterToken) return;
+    userPannedRef.current = false;
+    if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
+  }, [recenterToken, map]);
+
   useEffect(() => {
     if (!map || !userPos) return;
+    if (userPannedRef.current) return; // rider is panning — don't fight them
     try {
       if (!active && route && route.length > 1) {
         const bounds = new google.maps.LatLngBounds();
@@ -79,7 +114,7 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
         failCountRef.current = 0;
       }
     }
-  }, [userPos?.[0], userPos?.[1], active, targetZoom, route, map, recenterToken]);
+  }, [userPos?.[0], userPos?.[1], active, targetZoom, route, map, recenterToken, recenterTick]);
 
   return null;
 }
@@ -116,7 +151,7 @@ export default function NavMapView({
     return <div className="absolute inset-0 z-0" style={{ background: bgColor }} />;
   }
 
-  const options = { ...getMapOptions(layer), gestureHandling: active ? 'none' : 'auto', draggable: !active, scrollwheel: !active };
+  const options = { ...getMapOptions(layer), gestureHandling: active ? 'greedy' : 'auto', draggable: true, scrollwheel: !active };
 
   return (
     <div
