@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CloudSun, ChevronRight, Route, Gauge, Fuel } from 'lucide-react';
+import { CloudSun, ChevronRight, Route, Gauge, Fuel, Bike as BikeIcon } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import NavigationBanner from '@/components/rides/NavigationBanner';
 import RideHistoryBanner from '@/components/rides/RideHistoryBanner';
@@ -116,6 +116,19 @@ export default function Rides() {
           <div className="text-right">
             <p className="text-sm font-bold text-primary">{stats.litresRemaining != null ? `${stats.litresRemaining} L` : '—'}</p>
             <p className="text-[10px] text-muted-foreground">remaining</p>
+          </div>
+          <ChevronRight className="text-muted-foreground" size={20} />
+        </button>
+        <button
+          onClick={() => navigate('/bike-garage')}
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+            <BikeIcon size={24} className="text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-base font-bold text-foreground">Bike Garage</p>
+            <p className="text-xs text-muted-foreground">Manage your motorcycles, fuel data and photos</p>
           </div>
           <ChevronRight className="text-muted-foreground" size={20} />
         </button>
