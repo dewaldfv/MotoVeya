@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CloudSun, ChevronRight, Route } from 'lucide-react';
+import { CloudSun, ChevronRight, Route, Gauge } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import NavigationBanner from '@/components/rides/NavigationBanner';
 import RideHistoryBanner from '@/components/rides/RideHistoryBanner';
@@ -106,6 +106,19 @@ export default function Rides() {
             weatherPref: 'Clear skies'
           }}
           delay={0.2} />
+        <button
+          onClick={() => navigate('/safety-dashboard')}
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+            <Gauge size={24} className="text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-base font-bold text-foreground">Safety Dashboard</p>
+            <p className="text-xs text-muted-foreground">Your riding safety stats and alert history</p>
+          </div>
+          <ChevronRight className="text-muted-foreground" size={20} />
+        </button>
       </div>
     </div>
   );

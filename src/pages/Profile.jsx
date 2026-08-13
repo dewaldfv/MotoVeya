@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle, LifeBuoy, HelpCircle, Wrench, Gauge, Store } from 'lucide-react';
+import { Fuel, Bike as BikeIcon, Route, Trophy, Users, Shield, Crown, SlidersHorizontal, Plus, Play, Info, MessageCircle, LifeBuoy, HelpCircle, Wrench, Store } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -302,13 +302,6 @@ export default function Profile() {
             subtitle="Manage your shop listings, contact info and views"
             delay={0.726}
             onClick={() => navigate('/provider-dashboard')} />
-
-          <MenuCard
-            icon={Gauge}
-            title="Safety Dashboard"
-            subtitle="Your riding safety stats and alert history"
-            delay={0.73}
-            onClick={() => navigate('/safety-dashboard')} />
 
           <MenuCard
             icon={LifeBuoy}
