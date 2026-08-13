@@ -17,7 +17,7 @@ export default function Rides() {
       const authed = await base44.auth.isAuthenticated();
       if (!authed) return [];
       return (await base44.entities.Ride.filter({ status: 'completed' }, '-ride_date', 100)) || [];
-    },
+    }
   });
 
   const { data: bikes = [] } = useQuery({
@@ -26,7 +26,7 @@ export default function Rides() {
       const authed = await base44.auth.isAuthenticated();
       if (!authed) return [];
       return (await base44.entities.Bike.filter({}, '-created_date', 20)) || [];
-    },
+    }
   });
 
   const { data: fuelProfiles = [] } = useQuery({
@@ -35,7 +35,7 @@ export default function Rides() {
       const authed = await base44.auth.isAuthenticated();
       if (!authed) return [];
       return (await base44.entities.FuelProfile.filter({}, '-last_calculated', 10)) || [];
-    },
+    }
   });
 
   const stats = useMemo(() => {
@@ -53,14 +53,14 @@ export default function Rides() {
     const rideTime = totalMinutes >= 60 ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` : `${totalMinutes}m`;
 
     const dayCounts = {};
-    rides.forEach((r) => { if (r.ride_date) { const d = DAYS[new Date(r.ride_date).getDay()]; dayCounts[d] = (dayCounts[d] || 0) + 1; } });
+    rides.forEach((r) => {if (r.ride_date) {const d = DAYS[new Date(r.ride_date).getDay()];dayCounts[d] = (dayCounts[d] || 0) + 1;}});
     const favDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
 
     const profile = fuelProfiles[0];
     const primaryBike = bikes.find((b) => b.is_primary) || bikes[0];
     let litresRemaining = null;
     if (profile?.estimated_range_km && profile?.adaptive_l_per_100km) {
-      litresRemaining = Math.max(0, Math.round((profile.estimated_range_km * profile.adaptive_l_per_100km / 100) * 10) / 10);
+      litresRemaining = Math.max(0, Math.round(profile.estimated_range_km * profile.adaptive_l_per_100km / 100 * 10) / 10);
     } else if (primaryBike?.tank_capacity_l) {
       litresRemaining = Math.round(primaryBike.tank_capacity_l * 10) / 10;
     }
@@ -68,9 +68,9 @@ export default function Rides() {
   }, [rides, bikes, fuelProfiles]);
 
   const lastRide = rides[0];
-  const lastRideDate = lastRide
-    ? new Date(lastRide.ride_date || lastRide.created_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })
-    : null;
+  const lastRideDate = lastRide ?
+  new Date(lastRide.ride_date || lastRide.created_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) :
+  null;
 
   return (
     <div className="min-h-screen bg-[#121212] pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
@@ -78,8 +78,8 @@ export default function Rides() {
       <div className="space-y-4 px-4">
         <button
           onClick={() => navigate('/ride-planner')}
-          className="flex w-full items-center gap-3 rounded-3xl bg-gradient-to-r from-primary to-orange-600 p-4 text-left shadow-lg active:scale-[0.99] transition-transform"
-        >
+          className="flex w-full items-center gap-3 rounded-3xl bg-gradient-to-r from-primary to-orange-600 p-4 text-left shadow-lg active:scale-[0.99] transition-transform">
+          
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20">
             <CloudSun size={26} className="text-white" />
           </div>
@@ -91,8 +91,8 @@ export default function Rides() {
         </button>
         <button
           onClick={() => navigate('/rides/saved')}
-          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
-        >
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform">
+          
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
             <Route size={24} className="text-primary" />
           </div>
@@ -104,8 +104,8 @@ export default function Rides() {
         </button>
         <button
           onClick={() => navigate('/fuel-tracker')}
-          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
-        >
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform">
+          
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
             <Fuel size={24} className="text-primary" />
           </div>
@@ -121,8 +121,8 @@ export default function Rides() {
         </button>
         <button
           onClick={() => navigate('/bike-garage')}
-          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
-        >
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform">
+          
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
             <BikeIcon size={24} className="text-primary" />
           </div>
@@ -134,8 +134,8 @@ export default function Rides() {
         </button>
         <button
           onClick={() => navigate('/service-history')}
-          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
-        >
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform hidden">
+          
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
             <Wrench size={24} className="text-primary" />
           </div>
@@ -159,8 +159,8 @@ export default function Rides() {
           delay={0.2} />
         <button
           onClick={() => navigate('/safety-dashboard')}
-          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
-        >
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform">
+          
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
             <Gauge size={24} className="text-primary" />
           </div>
@@ -171,6 +171,6 @@ export default function Rides() {
           <ChevronRight className="text-muted-foreground" size={20} />
         </button>
       </div>
-    </div>
-  );
+    </div>);
+
 }
