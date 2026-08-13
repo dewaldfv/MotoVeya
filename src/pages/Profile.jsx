@@ -13,7 +13,6 @@ import ShareCodeSheet from '@/components/ShareCodeSheet';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import StatGrid from '@/components/profile/StatGrid';
 import MenuCard from '@/components/profile/MenuCard';
-import RideSummaryCard from '@/components/profile/RideSummaryCard';
 import BikeCard from '@/components/profile/BikeCard';
 import { toast } from 'sonner';
 
@@ -80,12 +79,6 @@ export default function Profile() {
     enabled: !!user?.id
   });
 
-  const { data: fuelProfiles = [] } = useQuery({
-    queryKey: ['profile-fuel-profiles', user?.id],
-    queryFn: () => base44.entities.FuelProfile.filter({}, '-last_calculated', 10),
-    enabled: !!user?.id
-  });
-
   const { data: friends = [] } = useQuery({
     queryKey: ['profile-friends', user?.id],
     queryFn: () => base44.entities.Friend.filter({ status: 'accepted' }, '-created_date', 100),
@@ -124,18 +117,6 @@ export default function Profile() {
     const maxSpeed = Math.max(0, ...rides.map((r) => r.max_speed_kmh || 0));
     const badges = computeAchievements(totalRides, totalDistance, maxSpeed);
 
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthDistance = Math.round(rides.filter((r) => new Date(r.ride_date) >= monthStart).reduce((s, r) => s + (r.distance_km || 0), 0));
-    const avgRideLength = totalRides > 0 ? Math.round(totalDistance / totalRides) : 0;
-    const fuelEconomy = fuelProfiles[0]?.adaptive_l_per_100km || fuelProfiles[0]?.baseline_l_per_100km || bikes[0]?.fuel_consumption_l_per_100km || '—';
-    const rideTimeMin = rides.reduce((s, r) => s + (r.duration_minutes || 0), 0);
-    const rideTime = rideTimeMin >= 60 ? `${Math.floor(rideTimeMin / 60)}h ${rideTimeMin % 60}m` : `${rideTimeMin}m`;
-
-    const dayCounts = {};
-    rides.forEach((r) => {if (r.ride_date) {const d = DAYS[new Date(r.ride_date).getDay()];dayCounts[d] = (dayCounts[d] || 0) + 1;}});
-    const favDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
-
     const sorted = [...rides].sort((a, b) => new Date(b.ride_date) - new Date(a.ride_date));
     const lastRide = sorted[0];
     const longestRide = [...rides].sort((a, b) => (b.distance_km || 0) - (a.distance_km || 0))[0];
@@ -146,13 +127,12 @@ export default function Profile() {
 
     return {
       totalRides, totalDistance, fuelUsed, achievementCount: badges.length, newestBadge: badges[badges.length - 1],
-      monthDistance, avgRideLength, fuelEconomy, rideTime, favDay,
       lastRide: lastRide?.title || '—', longestRide: longestRide ? `${longestRide.title} (${Math.round(longestRide.distance_km)}km)` : '—',
       primaryBike, nextService,
       friendsOnline: friends.filter((f) => f.location_shared).length,
       groupCount: memberships.length, pendingCount: pending.length
     };
-  }, [user, rides, refills, fuelProfiles, bikes, friends, pending, memberships]);
+  }, [user, rides, refills, bikes, friends, pending, memberships]);
 
   const isPremium = user?.subscription_tier === 'premium';
 
@@ -367,18 +347,6 @@ export default function Profile() {
           )}
           </div>
         }
-
-        <RideSummaryCard
-          data={{
-            monthDistance: stats.monthDistance,
-            avgRideLength: stats.avgRideLength,
-            fuelEconomy: stats.fuelEconomy,
-            rideTime: stats.rideTime,
-            favDay: stats.favDay,
-            weatherPref: 'Clear skies'
-          }}
-          delay={0.75} />
-        
 
         <div className="flex gap-3 pt-2">
           
