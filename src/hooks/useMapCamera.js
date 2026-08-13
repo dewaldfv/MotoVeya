@@ -70,10 +70,14 @@ export function useMapCamera({ map, userPos, heading, headingUp, speed, nextMane
     const targetZoom = resolveTargetZoom(speed, nextManeuverDistance);
 
     // First frame (or after a recenter snap) — initialize without animation.
+    // Store a plain {lat, lng} (not a google.maps.LatLng) so the spread below
+    // on subsequent updates keeps real numeric values — LatLng exposes coords
+    // via lat()/lng() methods, not own properties, so spreading it yields {} and
+    // the interpolation would produce NaN, freezing the camera on the start point.
     if (!currentCenterRef.current) {
-      currentCenterRef.current = targetCenter;
+      currentCenterRef.current = { lat: userPos[0], lng: userPos[1] };
       currentZoomRef.current = targetZoom;
-      map.setCenter(targetCenter);
+      map.setCenter(currentCenterRef.current);
       map.setZoom(targetZoom);
       return;
     }
