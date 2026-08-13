@@ -47,7 +47,7 @@ export default function Contact() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Email us anytime</p>
-              <a href="mailto:hello@motogo.app" className="font-bold text-primary">Dewald.MotoVeya@</a>
+              <a href="mailto:hello@motogo.app" className="font-bold text-primary">Dewald.MotoVeya@gmail.com</a>
             </div>
           </div>
         </div>
