@@ -1,11 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { Gauge, Fuel, Wrench, History } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Gauge, Fuel, Wrench, History, Plus, ListChecks } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import BottomSheet from '@/components/BottomSheet';
+import { Button } from '@/components/ui/button';
 
 const SERVICE_INTERVAL = 5000;
 
 export default function BikeDetailSheet({ bike, open, onClose }) {
+  const navigate = useNavigate();
   const { data: refills = [] } = useQuery({
     queryKey: ['bike-refills', bike?.id],
     queryFn: () => base44.entities.FuelRefill.filter({ bike_id: bike.id }, '-refill_date', 200),
@@ -66,6 +69,15 @@ export default function BikeDetailSheet({ bike, open, onClose }) {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <Button variant="secondary" className="min-h-[48px] gap-2" onClick={() => navigate(`/service-history?bike=${bike.id}`)}>
+            <ListChecks size={16} /> View Full History
+          </Button>
+          <Button className="min-h-[48px] gap-2" onClick={() => navigate(`/service-history?bike=${bike.id}&record=1`)}>
+            <Plus size={16} /> Record Service
+          </Button>
         </div>
       </div>
     </BottomSheet>

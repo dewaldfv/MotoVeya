@@ -37,6 +37,15 @@ export default function ServiceHistory() {
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const [bikeFilter, setBikeFilter] = useState('');
+  const [autoRecord, setAutoRecord] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const bikeId = params.get('bike');
+    if (bikeId) setBikeFilter(bikeId);
+    if (params.get('record') === '1') setAutoRecord(true);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -51,6 +60,15 @@ export default function ServiceHistory() {
     queryFn: () => base44.entities.Bike.filter({}, '-created_date', 50),
     enabled: !!user?.id,
   });
+
+  // Auto-open the Record Service dialog when arriving via a "record" deep link.
+  useEffect(() => {
+    if (!autoRecord || bikes.length === 0) return;
+    const preselect = bikeFilter || bikes.find((b) => b.is_primary)?.id || bikes[0]?.id || '';
+    setForm({ ...EMPTY, bike_id: preselect });
+    setDialog(true);
+    setAutoRecord(false);
+  }, [autoRecord, bikes, bikeFilter]);
 
   const { data: records = [] } = useQuery({
     queryKey: ['service-records', user?.id],
@@ -68,7 +86,7 @@ export default function ServiceHistory() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['service-records'] }),
   });
 
-  const openAdd = () => { setForm({ ...EMPTY, bike_id: bikes.find((b) => b.is_primary)?.id || bikes[0]?.id || '' }); setDialog(true); };
+  const openAdd = () => { setForm({ ...EMPTY, bike_id: bikeFilter || bikes.find((b) => b.is_primary)?.id || bikes[0]?.id || '' }); setDialog(true); };
 
   const handleSave = async () => {
     if (!form.bike_id) { toast.error('Select a motorcycle'); return; }
@@ -97,9 +115,11 @@ export default function ServiceHistory() {
     catch (e) { toast.error('Could not delete'); }
   };
 
-  const totalCost = records.reduce((s, r) => s + (r.cost_zar || 0), 0);
-  const lastService = records[0];
-  const nextService = [...records].filter((r) => r.next_service_km).sort((a, b) => (b.odometer_km || 0) + (b.next_service_km || 0) - ((a.odometer_km || 0) + (a.next_service_km || 0)))[0];
+  const filteredRecords = bikeFilter ? records.filter((r) => r.bike_id === bikeFilter) : records;
+  const totalCost = filteredRecords.reduce((s, r) => s + (r.cost_zar || 0), 0);
+  const lastService = filteredRecords[0];
+  const nextService = [...filteredRecords].filter((r) => r.next_service_km).sort((a, b) => (b.odometer_km || 0) + (b.next_service_km || 0) - ((a.odometer_km || 0) + (a.next_service_km || 0)))[0];
+  const filteredBike = bikeFilter ? bikes.find((b) => b.id === bikeFilter) : null;
 
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!user) return <LoginPrompt />;
@@ -114,8 +134,14 @@ export default function ServiceHistory() {
       </div>
 
       <div className="mx-auto max-w-2xl space-y-4 p-4">
+        {filteredBike && (
+          <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-3">
+            <p className="text-sm text-muted-foreground">Showing <span className="font-semibold text-foreground">{filteredBike.make} {filteredBike.model}</span></p>
+            <button onClick={() => setBikeFilter('')} className="text-xs font-semibold text-primary">Show all</button>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-2">
-          <Stat label="Services" value={records.length} />
+          <Stat label="Services" value={filteredRecords.length} />
           <Stat label="Total Spent" value={`R${Math.round(totalCost)}`} />
           <Stat label="Last Service" value={lastService ? new Date(lastService.service_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) : '—'} />
         </div>
@@ -130,14 +156,14 @@ export default function ServiceHistory() {
             <p className="mt-3 text-sm text-muted-foreground">Add a motorcycle in the Bike Garage before recording services.</p>
             <Button variant="secondary" className="mt-3" onClick={() => navigate('/bike-garage')}>Open Bike Garage</Button>
           </div>
-        ) : records.length === 0 ? (
+        ) : filteredRecords.length === 0 ? (
           <div className="rounded-3xl border border-border bg-card p-8 text-center">
             <Wrench size={40} className="mx-auto text-muted-foreground" />
             <p className="mt-3 text-sm text-muted-foreground">No service records yet. Log your first workshop visit to keep your bike running sweet.</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {records.map((r) => (
+            {filteredRecords.map((r) => (
               <div key={r.id} className="rounded-3xl border border-border bg-card p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex min-w-0 items-start gap-3">
