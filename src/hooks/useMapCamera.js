@@ -21,10 +21,11 @@ export function useMapCamera({ map, userPos, heading, headingUp, speed, nextMane
   const recenterTimerRef = useRef(null);
   const [recenterTick, setRecenterTick] = useState(0);
 
-  // Keep the map pannable during navigation; zoom stays controlled.
+  // During ride mode the camera stays locked on the rider — no manual panning,
+  // zoom stays controlled. Heading rotation is handled by the container CSS.
   useEffect(() => {
     if (!map) return;
-    map.setOptions({ draggable: true, scrollwheel: false, disableDoubleClickZoom: true, gestureHandling: 'greedy' });
+    map.setOptions({ draggable: false, scrollwheel: false, disableDoubleClickZoom: true, gestureHandling: 'none' });
     return () => {
       map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'auto' });
     };
