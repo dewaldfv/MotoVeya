@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
       const fLat = profile?.last_lat;
       const fLng = profile?.last_lng;
       const fUpdated = profile?.last_location_updated;
-      const locFresh = fUpdated && (Date.now() - new Date(fUpdated).getTime() < 15 * 1000);
+      const locFresh = fUpdated && (Date.now() - new Date(fUpdated).getTime() < 10 * 60 * 1000);
       const audience = privacy.location_audience
         || (privacy.location_group_rides_only ? 'group_rides' : (privacy.share_live_location ? 'friends' : 'nobody'));
       let lat = null;
