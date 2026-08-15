@@ -26,17 +26,20 @@ export async function notifyFriendsOfRide(user, destination) {
     lng: destination.lng,
     name: destination.name,
   });
-  const notifications = friendIds.map((recipient_id) => ({
-    type: 'ride_invite',
-    title,
-    body,
-    recipient_id,
-    data,
-    action_url: '/community',
-    is_read: false,
-  }));
-  await base44.entities.Notification.bulkCreate(notifications);
-  return friendIds.length;
+  try {
+    const res = await base44.functions.invoke('messaging-secure', {
+      action: 'notify_ride_invite',
+      recipient_ids: friendIds,
+      title,
+      body,
+      data,
+      action_url: '/community',
+    });
+    return res?.data?.sent ?? friendIds.length;
+  } catch (e) {
+    console.error('notify_ride_invite', e);
+    return 0;
+  }
 }
 
 // Notifies all accepted friends when a new group ride is created, including the
@@ -58,17 +61,20 @@ export async function notifyFriendsOfGroupRide(user, ride) {
     lng: ride.destination_lng ?? null,
   });
   const joinUrl = `/ride/group/${ride.id}`;
-  const notifications = friendIds.map((recipient_id) => ({
-    type: 'ride_invite',
-    title,
-    body,
-    recipient_id,
-    data,
-    action_url: joinUrl,
-    is_read: false,
-  }));
-  await base44.entities.Notification.bulkCreate(notifications);
-  return friendIds.length;
+  try {
+    const res = await base44.functions.invoke('messaging-secure', {
+      action: 'notify_ride_invite',
+      recipient_ids: friendIds,
+      title,
+      body,
+      data,
+      action_url: joinUrl,
+    });
+    return res?.data?.sent ?? friendIds.length;
+  } catch (e) {
+    console.error('notify_ride_invite', e);
+    return 0;
+  }
 }
 
 // Sends a single ride_invite to one friend with an optional meet-up destination.
@@ -84,14 +90,17 @@ export async function inviteFriendToRide(user, friendUserId, destination) {
     lng: destination?.lng ?? null,
     name: destination?.name || null,
   });
-  await base44.entities.Notification.create({
-    type: 'ride_invite',
-    title,
-    body,
-    recipient_id: friendUserId,
-    data,
-    action_url: '/community',
-    is_read: false,
-  });
+  try {
+    await base44.functions.invoke('messaging-secure', {
+      action: 'notify_ride_invite',
+      recipient_ids: [friendUserId],
+      title,
+      body,
+      data,
+      action_url: '/community',
+    });
+  } catch (e) {
+    console.error('inviteFriendToRide', e);
+  }
   return true;
 }

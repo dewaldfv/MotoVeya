@@ -408,6 +408,88 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // Send a ride invite (push + in-app notification) to accepted friends.
+    if (action === 'notify_ride_invite') {
+      const { recipient_ids, title, body: inviteBody, data, action_url } = body || {};
+      const ids = Array.isArray(recipient_ids) ? recipient_ids.filter(Boolean) : [];
+      if (ids.length === 0) return Response.json({ error: 'No recipients' }, { status: 400 });
+
+      // Only notify accepted friends of the caller.
+      const [asReq, asRec] = await Promise.all([
+        svc.entities.Friend.filter({ requester_id: user.id, status: 'accepted' }, '-created_date', 200),
+        svc.entities.Friend.filter({ recipient_id: user.id, status: 'accepted' }, '-created_date', 200),
+      ]);
+      const accepted = new Set([
+        ...(asReq || []).map((f) => f.recipient_id),
+        ...(asRec || []).map((f) => f.requester_id),
+      ]);
+      const allowed = ids.filter((id) => accepted.has(id));
+      if (allowed.length === 0) return Response.json({ sent: 0 });
+
+      const notifTitle = title || 'Ride invite';
+      const notifBody = inviteBody || '';
+      const dataStr = JSON.stringify(data || {});
+      const url = action_url || '/community';
+      await svc.entities.Notification.bulkCreate(
+        allowed.map((recipient_id) => ({
+          type: 'ride_invite',
+          title: notifTitle,
+          body: notifBody,
+          recipient_id,
+          data: dataStr,
+          action_url: url,
+          is_read: false,
+        }))
+      ).catch(() => {});
+
+      try {
+        await sendPushToUsers(svc, allowed, {
+          title: notifTitle,
+          body: notifBody,
+          type: 'ride_invite',
+          action_url: url,
+          ...(data || {}),
+        });
+      } catch (e) { console.error('ride invite push', e.message); }
+
+      return Response.json({ sent: allowed.length });
+    }
+
+    // Notify a rider of a new friend request (push + in-app notification).
+    if (action === 'notify_friend_request') {
+      const { recipient_id } = body || {};
+      if (!recipient_id) return Response.json({ error: 'Missing recipient_id' }, { status: 400 });
+      if (recipient_id === user.id) return Response.json({ error: 'Cannot friend yourself' }, { status: 400 });
+
+      // Confirm a pending friend request from the caller exists.
+      const fr = await svc.entities.Friend.filter({ requester_id: user.id, recipient_id, status: 'pending' });
+      if (!fr || fr.length === 0) return Response.json({ error: 'No pending request' }, { status: 400 });
+
+      const requesterName = user.full_name || 'A rider';
+      const notifTitle = 'Friend Request';
+      const notifBody = `${requesterName} wants to connect with you on MotoVeya.`;
+      await svc.entities.Notification.create({
+        type: 'friend_request',
+        title: notifTitle,
+        body: notifBody,
+        recipient_id,
+        is_read: false,
+        data: JSON.stringify({ requester_id: user.id, requester_name: requesterName }),
+        action_url: '/community',
+      }).catch(() => {});
+
+      try {
+        await sendPushToUsers(svc, [recipient_id], {
+          title: notifTitle,
+          body: notifBody,
+          type: 'friend_request',
+          action_url: '/community',
+        });
+      } catch (e) { console.error('friend request push', e.message); }
+
+      return Response.json({ success: true });
+    }
+
     return Response.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
     console.error('messaging-secure error', error);

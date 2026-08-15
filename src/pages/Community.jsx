@@ -171,6 +171,9 @@ export default function Community() {
     if (code === user.id) { toast.error("You can't add yourself"); return false; }
     try {
       await base44.entities.Friend.create({ requester_id: user.id, requester_name: user.nickname || user.full_name, recipient_id: code, recipient_name: 'Pending', status: 'pending' });
+      try {
+        await base44.functions.invoke('messaging-secure', { action: 'notify_friend_request', recipient_id: code });
+      } catch (e) { console.error('friend request push', e); }
       toast.success('Friend request sent');
       return true;
     } catch (e) { console.error(e); toast.error('Could not send request'); return false; }
