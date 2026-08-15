@@ -84,20 +84,11 @@ Deno.serve(async (req) => {
       let lat = null;
       let lng = null;
       let location_shared = false;
-      if (audience !== 'nobody' && fLat != null && fLng != null && locFresh) {
+      if (audience !== 'nobody' && fLat != null && fLng != null) {
         let reveal = false;
-        if (audience === 'friends') {
+        if (audience === 'friends' || audience === 'group_rides') {
+          // Friends can see each other permanently — no group-ride requirement.
           reveal = true;
-        } else if (audience === 'group_rides') {
-          // Only reveal if both riders are in an active group ride together.
-          if (activeRideIds.length > 0) {
-            for (const rid of activeRideIds) {
-              try {
-                const fp = await svc.entities.RideParticipant.filter({ group_ride_id: rid, user_id: friendUid });
-                if (fp && fp.length > 0) { reveal = true; break; }
-              } catch (e) {}
-            }
-          }
         } else if (audience === 'favorite_friends') {
           reveal = !!f.is_favorite;
         } else if (audience === 'emergency_contacts') {
