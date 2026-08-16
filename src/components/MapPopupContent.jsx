@@ -1,19 +1,13 @@
 import { Navigation, Bookmark, Info } from 'lucide-react';
 import { formatEventDateRange } from '@/lib/eventDate';
-import { getEventMarkerUrl, EVENT_CATEGORIES } from '@/lib/eventMarkers';
 
 export default function MapPopupContent({ item, onMoreInfo, onSave, onNavigate }) {
   const title = item.name || item.title || item.rider_name || 'Location';
   const isDistress = item.category === 'distress' || !!item.rider_name;
-  const isEvent = !isDistress && (!!item.event_date || (item.category && EVENT_CATEGORIES.some((c) => c.value === item.category)));
-  const markerUrl = isEvent ? (item.markerIcon || getEventMarkerUrl(item.category)) : null;
 
   return (
     <div className="min-w-[200px] space-y-2 p-1">
       <div>
-        {markerUrl && (
-          <img src={markerUrl} alt="" className="mb-2 h-11 w-11 rounded-full border border-border object-cover" />
-        )}
         <h3 className="text-sm font-bold leading-tight">{title}</h3>
         {item.category && !isDistress && (
           <span className="text-xs capitalize text-muted-foreground">{item.category.replace('_', ' ')}</span>
