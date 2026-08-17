@@ -6,6 +6,7 @@ import { base44 } from '@/api/base44Client';
 import NavigationBanner from '@/components/rides/NavigationBanner';
 import RideHistoryBanner from '@/components/rides/RideHistoryBanner';
 import RideSummaryCard from '@/components/profile/RideSummaryCard';
+import RidesEventsCard from '@/components/rides/RidesEventsCard';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -131,12 +132,9 @@ export default function Rides() {
             <p className="text-xs text-muted-foreground">Manage your motorcycles, fuel data and photos</p>
           </div>
           <ChevronRight className="text-muted-foreground" size={20} />
-        </button>
-        
+          </button>
 
-
-
-
+          <RidesEventsCard />
 
 
 
