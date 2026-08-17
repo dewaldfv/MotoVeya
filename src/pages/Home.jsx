@@ -96,10 +96,9 @@ export default function Home() {
   const { data: eventData = null } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
-      const events = await base44.entities.Event.filter({ status: 'approved' }, 'event_date', 50);
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      return (events || []).filter((e) => new Date(e.event_date) >= startOfToday);
+      // Render ALL events on the map regardless of approval status, sorted by date.
+      const events = await base44.entities.Event.list('event_date', 100);
+      return events || [];
     }
   });
 
