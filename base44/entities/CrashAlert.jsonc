@@ -92,10 +92,10 @@
     "create": {
       "$or": [
         {
-          "data.rider_id": "{{user.id}}"
+          "created_by_id": "{{user.id}}"
         },
         {
-          "created_by_id": "{{user.id}}"
+          "data.rider_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -104,14 +104,16 @@
         }
       ]
     },
-    "read": null,
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
     "update": {
       "$or": [
         {
-          "data.rider_id": "{{user.id}}"
+          "created_by_id": "{{user.id}}"
         },
         {
-          "created_by_id": "{{user.id}}"
+          "data.rider_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -123,10 +125,10 @@
     "delete": {
       "$or": [
         {
-          "data.rider_id": "{{user.id}}"
+          "created_by_id": "{{user.id}}"
         },
         {
-          "created_by_id": "{{user.id}}"
+          "data.rider_id": "{{user.id}}"
         },
         {
           "user_condition": {
