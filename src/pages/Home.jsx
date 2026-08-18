@@ -193,28 +193,8 @@ export default function Home() {
     return () => {unsubUser();};
   }, [me?.id, queryClient]);
 
-  // Real-time group participant marker updates
-  useEffect(() => {
-    if (!activeGroupRide?.active) return;
-    const rideId = activeGroupRide.ride.id;
-    const unsub = base44.entities.RideParticipant.subscribe((event) => {
-      const p = event.data;
-      if (!p || p.group_ride_id !== rideId) return;
-      queryClient.setQueryData(['active-group-ride'], (old) => {
-        if (!old?.active) return old;
-        const parts = old.participants || [];
-        if (event.type === 'delete') {
-          return { ...old, participants: parts.filter((x) => x.user_id !== p.user_id) };
-        }
-        const idx = parts.findIndex((x) => x.user_id === p.user_id);
-        let newParts;
-        if (idx === -1) newParts = [...parts, p];else
-        {newParts = [...parts];newParts[idx] = { ...newParts[idx], ...p };}
-        return { ...old, participants: newParts };
-      });
-    });
-    return unsub;
-  }, [activeGroupRide?.active, activeGroupRide?.ride?.id, queryClient]);
+  // Live group state is refreshed by the authorization-checked active-ride query.
+  // Do not subscribe directly to private RideParticipant records.
 
   useEffect(() => {
     (async () => {
