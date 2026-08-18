@@ -88,9 +88,8 @@ export default function Community() {
   const rideInvites = data?.invites ?? [];
 
   const joinGroupMutation = useMutation({
-    mutationFn: ({ group, user }) => base44.entities.GroupMember.create({
-      group_id: group.id, user_id: user.id, user_name: user.full_name,
-      user_nickname: user.nickname, role: 'member', status: 'active',
+    mutationFn: ({ group }) => base44.functions.invoke('group-membership-secure', {
+      action: 'join', group_id: group.id,
     }),
     onMutate: async ({ group, user }) => {
       await queryClient.cancelQueries({ queryKey: ['community'] });
@@ -126,9 +125,11 @@ export default function Community() {
     if (!newGroupName.trim()) return;
     try {
       const code = generateCode();
-      const maxM = isPremium ? 32 : 2;
-      const grp = await base44.entities.Group.create({ name: newGroupName, invite_code: code, max_members: maxM, created_by_name: user.nickname || user.full_name, is_active: true });
-      await base44.entities.GroupMember.create({ group_id: grp.id, user_id: user.id, user_name: user.full_name, user_nickname: user.nickname, role: 'leader', status: 'active' });
+      const result = await base44.functions.invoke('group-membership-secure', {
+        action: 'create', name: newGroupName, invite_code: code,
+      });
+      const grp = result.data?.group;
+      if (!grp) throw new Error('Group creation failed');
       setCreateOpen(false); setNewGroupName('');
       await queryClient.invalidateQueries({ queryKey: ['community'] });
     } catch (e) { console.error(e); }
@@ -145,7 +146,7 @@ export default function Community() {
       if (existing) { toast.info('Already a member'); return true; }
       const members = await base44.entities.GroupMember.filter({ group_id: grp.id, status: 'active' });
       if (members.length >= grp.max_members) { toast.error('Group is full'); return false; }
-      await joinGroupMutation.mutateAsync({ group: grp, user });
+      await joinGroupMutation.mutateAsync({ group: grp });
       toast.success(`Joined ${grp.name}`);
       return true;
     } catch (e) { console.error(e); toast.error('Could not join group'); return false; }
@@ -160,7 +161,7 @@ export default function Community() {
   const handleLeaveGroup = async (groupId) => {
     try {
       const myMembership = memberships.find((m) => m.group_id === groupId);
-      if (myMembership) await base44.entities.GroupMember.update(myMembership.id, { status: 'left' });
+      if (myMembership) await base44.functions.invoke('group-membership-secure', { action: 'leave', group_id: groupId });
       await queryClient.invalidateQueries({ queryKey: ['community'] });
     } catch (e) { console.error(e); }
   };
