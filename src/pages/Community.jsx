@@ -71,7 +71,15 @@ export default function Community() {
       let groupMembers = [];
       if (groupIds.length > 0) {
         const results = await Promise.all(
-          groupIds.map((id) => base44.entities.GroupMember.filter({ group_id: id, status: 'active' }, '-created_date', 50))
+          groupIds.map(async (id) => {
+            try {
+              const response = await base44.functions.invoke('get-group-members-secure', { group_id: id });
+              return (response.data?.members || []).map((m) => ({ group_id: id, id: m.id }));
+            } catch (e) {
+              console.error('secure group member lookup', e);
+              return [];
+            }
+          })
         );
         groupMembers = results.flat();
       }
