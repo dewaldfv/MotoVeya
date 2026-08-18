@@ -36,21 +36,8 @@ export default function ChatThread({ user, conversation, onBack }) {
     }
   }, [convId, queryClient]);
 
-  useEffect(() => {
-    if (!convId) return;
-    const unsub = base44.entities.Message.subscribe((event) => {
-      const m = event.data;
-      if (!m || m.conversation_id !== convId) return;
-      queryClient.setQueryData(['messages', convId], (old = []) => {
-        if (old.some((x) => x.id === m.id)) return old;
-        return [...old, m];
-      });
-      if (m.sender_id !== user.id) {
-        base44.functions.invoke('messaging-secure', { action: 'mark_read', conversation_id: convId }).catch(() => {});
-      }
-    });
-    return unsub;
-  }, [convId, user.id, queryClient]);
+  // Messages are read through the authorization-checked backend function.
+  // Do not subscribe directly to the Message entity: its records are private.
 
   useEffect(() => {
     setActiveConversation(convId);
