@@ -176,11 +176,8 @@ export default function ActiveGroupRide() {
   useEffect(() => {
     (async () => {
       try {
-        const [crashes, distress] = await Promise.all([
-          base44.entities.CrashAlert.filter({ status: 'active' }, '-created_date', 20),
-          base44.entities.DistressAlert.filter({ status: 'active' }, '-created_date', 20),
-        ]);
-        setHazards([...(crashes || []), ...(distress || [])].filter((h) => h.lat != null));
+        const response = await base44.functions.invoke('get-group-safety-alerts', { group_ride_id: id });
+        setHazards((response.data?.alerts || []).filter((h) => h.lat != null));
       } catch (e) { console.error(e); }
     })();
   }, []);
