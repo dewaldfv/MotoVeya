@@ -67,8 +67,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const all = await svc.entities.RideParticipant.filter({ group_ride_id }, '-last_updated', 100);
-    return Response.json({ participant, participants: all || [] });
+    // Do not return other riders' private telemetry from the write endpoint.
+    // Clients must use the membership-checked read endpoint for group state.
+    return Response.json({ participant });
   } catch (error) {
     console.error('update-rider-location error', error);
     return Response.json({ error: error.message }, { status: 500 });
