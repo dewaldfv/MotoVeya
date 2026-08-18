@@ -66,20 +66,19 @@ export default function ActiveGroupRide() {
     })();
   }, [id]);
 
-  // Real-time subscription to participant updates
+  // Participant locations are private. Refresh through the membership-checked backend endpoint
+  // instead of subscribing directly to the RideParticipant entity.
   useEffect(() => {
-    const unsub = base44.entities.RideParticipant.subscribe((event) => {
-      const p = event.data;
-      if (!p || p.group_ride_id !== id) return;
-      setParticipants((prev) => {
-        if (event.type === 'delete') return prev.filter((x) => x.user_id !== p.user_id);
-        const idx = prev.findIndex((x) => x.user_id === p.user_id);
-        if (idx === -1) return [...prev, p];
-        const copy = [...prev]; copy[idx] = { ...copy[idx], ...p }; return copy;
-      });
-    });
-    return unsub;
-  }, [id]);
+    if (!id || accessDenied) return;
+    const refresh = async () => {
+      try {
+        const res = await base44.functions.invoke('get-group-ride-secure', { id });
+        if (!res.data?.access_denied) setParticipants(res.data?.participants || []);
+      } catch (e) { /* keep last known state */ }
+    };
+    const timer = setInterval(refresh, 8000);
+    return () => clearInterval(timer);
+  }, [id, accessDenied]);
 
   const isLeader = ride?.leader_id === user?.id;
   const rideStatus = RIDE_STATUS[ride?.status] || RIDE_STATUS.planning;
@@ -248,13 +247,13 @@ export default function ActiveGroupRide() {
         await base44.entities.GroupRide.update(id, { sweep_id: p.user_id, sweep_name: p.user_name });
         setRide({ ...ride, sweep_id: p.user_id, sweep_name: p.user_name });
       }
-      await base44.entities.RideParticipant.update(p.id, { role });
+      await base44.functions.invoke('manage-group-ride-participant', { action: 'assign_role', participant_id: p.id, group_ride_id: id, role });
       setParticipants((prev) => prev.map((x) => x.id === p.id ? { ...x, role } : x));
       toast.success(`${p.user_name} is now ${role}`);
     } catch (e) { toast.error('Could not assign role'); }
   };
   const handleRemove = async (p) => {
-    try { await base44.entities.RideParticipant.delete(p.id); setParticipants((prev) => prev.filter((x) => x.user_id !== p.user_id)); toast.success(`${p.user_name} removed`); } catch (e) { toast.error('Could not remove rider'); }
+    try { await base44.functions.invoke('manage-group-ride-participant', { action: 'remove', participant_id: p.id, group_ride_id: id }); setParticipants((prev) => prev.filter((x) => x.user_id !== p.user_id)); toast.success(`${p.user_name} removed`); } catch (e) { toast.error('Could not remove rider'); }
   };
   const handleBroadcast = () => {
     const msg = window.prompt('Broadcast message to all riders:');
