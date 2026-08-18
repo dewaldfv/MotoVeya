@@ -122,21 +122,12 @@ export default function Onboarding() {
   const finish = async () => {
     setSaving(true);
     try {
+      // Subscription entitlements are controlled by verified billing/trial backend flows.
+      // Onboarding must never grant Premium by writing subscription fields directly.
       await base44.auth.updateMe({
-        subscription_tier: form.subscription,
-        subscription_status: form.subscription === 'premium' ? 'active' : 'none',
         onboarding_completed: true,
         profile_completed: true,
       });
-      const me = await base44.auth.me();
-      const existing = await base44.entities.Subscription.filter({ user_id: me.id }, '-created_date', 5);
-      if (existing.length === 0) {
-        await base44.entities.Subscription.create({
-          plan: form.subscription, status: 'active',
-          amount_zar: form.subscription === 'premium' ? 89.99 : 0,
-          start_date: new Date().toISOString(), auto_renew: true,
-        });
-      }
       localStorage.removeItem(STEP_KEY);
       // Refresh the cached auth user so the route guard sees onboarding_completed=true
       await checkUserAuth();
