@@ -292,7 +292,11 @@ Deno.serve(async (req) => {
     }
 
     // Notify the organizer who submitted an event that it was approved or rejected.
+    // Only admins/moderators may issue official approval/rejection notices.
     if (action === 'notify_event') {
+      if (user.role !== 'admin' && user.role !== 'moderator') {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
       const { event_id, status, reason } = body;
       if (!event_id || !status) return Response.json({ error: 'Missing event_id or status' }, { status: 400 });
       const ev = await svc.entities.Event.get(event_id).catch(() => null);
@@ -339,7 +343,11 @@ Deno.serve(async (req) => {
     }
 
     // Notify the user who submitted a service that it was approved or rejected.
+    // Only admins/moderators may issue official approval/rejection notices.
     if (action === 'notify_service') {
+      if (user.role !== 'admin' && user.role !== 'moderator') {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
       const { service_id, status, reason } = body;
       if (!service_id || !status) return Response.json({ error: 'Missing service_id or status' }, { status: 400 });
       const serviceRec = await svc.entities.Service.get(service_id).catch(() => null);

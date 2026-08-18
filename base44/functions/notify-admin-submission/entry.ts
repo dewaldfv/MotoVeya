@@ -5,6 +5,9 @@ const ADMIN_EMAIL = "Dewald.motoveya@gmail.com";
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
     const body = await req.json().catch(() => ({}));
     const entityName = body.entity_name;
     const entityId = body.entity_id;
@@ -13,9 +16,20 @@ export default async function(req) {
       return Response.json({ error: "entity_name and entity_id required" }, { status: 400 });
     }
 
+    // Only user-submissible entities are allowed; arbitrary entity reads are blocked.
+    const ALLOWED = ["Event", "Service"];
+    if (!ALLOWED.includes(entityName)) {
+      return Response.json({ error: "Unsupported entity" }, { status: 400 });
+    }
+
     const record = await base44.asServiceRole.entities[entityName].get(entityId);
     if (!record) {
       return Response.json({ error: "Record not found" }, { status: 404 });
+    }
+
+    // Only the submitter (author) or an admin may trigger the admin notification.
+    if (record.created_by_id !== user.id && user.role !== "admin" && user.role !== "moderator") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
     let subject, summary;

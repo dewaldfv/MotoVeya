@@ -3,6 +3,7 @@ import BottomSheet from '@/components/BottomSheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getServiceCategory, formatDistance, haversine, isOpenNow } from '@/lib/serviceCategories';
+import { safeHttpUrl } from '@/lib/safeUrl';
 
 export default function ServiceDetailSheet({ service, userPos, isFavorite, onFavorite, onDirections, onNavigate, onClose }) {
   if (!service) return null;
@@ -54,7 +55,7 @@ export default function ServiceDetailSheet({ service, userPos, isFavorite, onFav
           {service.address && <div className="flex items-start gap-2 text-muted-foreground"><MapPin size={16} className="mt-0.5 shrink-0" /> {service.address}</div>}
           {service.town && <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {service.town}{service.province ? `, ${service.province}` : ''}</div>}
           {service.phone && <a href={`tel:${service.phone}`} className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {service.phone}</a>}
-          {service.website && <a href={service.website} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-primary"><Globe size={16} /> Visit website</a>}
+          {safeHttpUrl(service.website) && <a href={safeHttpUrl(service.website)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-primary"><Globe size={16} /> Visit website</a>}
           {service.opening_hours && <div className="flex items-center gap-2 text-muted-foreground"><Clock size={16} /> {service.opening_hours}</div>}
         </div>
 

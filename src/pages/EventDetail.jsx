@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import CalendarExportButton from '@/components/CalendarExportButton';
 import { formatEventDateRange } from '@/lib/eventDate';
+import { safeHttpUrl } from '@/lib/safeUrl';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -109,8 +110,8 @@ export default function EventDetail() {
           <Button size="lg" className="min-h-[56px] flex-1 text-base" onClick={() => navigate('/ride/active', { state: { destination: { lat: event.lat, lng: event.lng, name: event.venue_name } } })}>
             <Navigation size={18} className="mr-2" /> Navigate
           </Button>
-          {event.booking_link && (
-            <Button size="lg" variant="secondary" className="min-h-[56px] px-5" onClick={() => window.open(event.booking_link, '_blank')}>
+          {safeHttpUrl(event.booking_link) && (
+            <Button size="lg" variant="secondary" className="min-h-[56px] px-5" onClick={() => window.open(safeHttpUrl(event.booking_link), '_blank')}>
               <ExternalLink size={18} />
             </Button>
           )}
