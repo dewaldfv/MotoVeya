@@ -10,7 +10,14 @@ Deno.serve(async (req) => {
     const lat = body.lat;
     const lng = body.lng;
     const riderName = body.rider_name || user.full_name || 'Rider';
-    const isPremium = body.is_premium || user.subscription_tier === 'premium';
+    // Premium is determined server-side from the Subscription entity. Never trust client-supplied entitlement flags.
+    const subscriptions = await base44.asServiceRole.entities.Subscription.filter({ user_id: user.id }, '-created_date', 50);
+    const now = new Date();
+    const activePremium = (subscriptions || []).find((sub) => {
+      if (sub.plan !== 'premium' || !['active', 'trialing'].includes(sub.status)) return false;
+      return !sub.expiry_date || new Date(sub.expiry_date) > now;
+    });
+    const isPremium = !!activePremium;
     const indicators = body.indicators;
     const severity = body.severity || 'low';
     const speedAtImpact = body.speed_at_impact;
