@@ -25,8 +25,12 @@ export default function GroupRidesList({ user, groups = [], memberships = [] }) 
     queryKey: ['ride-counts', rides.map((r) => r.id).join(',')],
     queryFn: async () => {
       const entries = await Promise.all(rides.map(async (r) => {
-        const parts = await base44.entities.RideParticipant.filter({ group_ride_id: r.id }, '-last_updated', 100);
-        return [r.id, parts.length];
+        try {
+          const res = await base44.functions.invoke('get-group-ride-secure', { id: r.id });
+          return [r.id, (res.data?.participants || []).length];
+        } catch (e) {
+          return [r.id, 0];
+        }
       }));
       return Object.fromEntries(entries);
     },
