@@ -50,21 +50,8 @@ export function useMessageNotifications() {
         await refresh();
         interval = setInterval(refresh, 20000);
 
-        unsub = base44.entities.Message.subscribe((event) => {
-          if (event.type !== 'create' && event.type !== 'update') return;
-          const m = event.data;
-          if (!m || !m.conversation_id || !m.sender_id) return;
-          if (m.sender_id === me.id) return;
-          if (!convSetRef.current.has(m.conversation_id)) return;
-          if (getActiveConversationId() === m.conversation_id) return;
-
-          const meta = convMetaRef.current[m.conversation_id] || {};
-          const title = meta.is_group ? meta.name || 'Group chat' : m.sender_name || 'New message';
-          const body = (meta.is_group && m.sender_name ? `${m.sender_name}: ` : '') + (m.content || '');
-          showMessageNotification({ title, body, conversationId: m.conversation_id });
-
-          refresh();
-        });
+        // Message records are private. Poll the authorization-checked conversation endpoint
+        // rather than subscribing directly to the Message entity.
       } catch (e) {
         /* ignore */
       }
