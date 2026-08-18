@@ -190,10 +190,7 @@ export default function Home() {
         };
       }));
     });
-    const invalidateFriends = () => queryClient.invalidateQueries({ queryKey: ['map-friends'] });
-    const unsubDistress = base44.entities.DistressAlert.subscribe(invalidateFriends);
-    const unsubCrash = base44.entities.CrashAlert.subscribe(invalidateFriends);
-    return () => {unsubUser();unsubDistress();unsubCrash();};
+    return () => {unsubUser();};
   }, [me?.id, queryClient]);
 
   // Real-time group participant marker updates
