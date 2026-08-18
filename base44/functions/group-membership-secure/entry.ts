@@ -16,8 +16,11 @@ export default async function(req) {
     const body = await req.json().catch(() => ({}));
     const action = body.action;
     const groupId = body.group_id;
-    if (!groupId || !['create', 'join', 'leave'].includes(action)) {
-      return Response.json({ error: 'action and group_id required' }, { status: 400 });
+    if (!['create', 'join', 'leave'].includes(action)) {
+      return Response.json({ error: 'valid action required' }, { status: 400 });
+    }
+    if (action !== 'create' && !groupId) {
+      return Response.json({ error: 'group_id required' }, { status: 400 });
     }
 
     const svc = base44.asServiceRole;
