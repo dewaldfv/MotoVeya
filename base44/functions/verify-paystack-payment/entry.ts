@@ -37,8 +37,8 @@ export default async function(req) {
 
     // The payment reference must belong to the authenticated caller.
     const metadata = tx.metadata || {};
-    if (metadata.user_id && metadata.user_id !== me.id) {
-      return Response.json({ error: 'Payment reference belongs to a different user' }, { status: 403 });
+    if (!metadata.user_id || metadata.user_id !== me.id) {
+      return Response.json({ error: 'Payment reference is not bound to this user' }, { status: 403 });
     }
 
     // Idempotently activate the subscription if the webhook hasn't already recorded it
