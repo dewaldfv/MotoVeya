@@ -61,7 +61,14 @@
         "free",
         "premium"
       ],
-      "default": "free"
+      "default": "free",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "subscription_status": {
       "type": "string",
@@ -70,7 +77,14 @@
         "cancelled",
         "none"
       ],
-      "default": "none"
+      "default": "none",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "total_distance_km": {
       "type": "number",
