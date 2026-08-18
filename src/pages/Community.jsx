@@ -91,14 +91,15 @@ export default function Community() {
     mutationFn: ({ group }) => base44.functions.invoke('group-membership-secure', {
       action: 'join', group_id: group.id,
     }),
-    onMutate: async ({ group, user }) => {
+    onMutate: async ({ group }) => {
+      const optimisticUser = data?.user;
       await queryClient.cancelQueries({ queryKey: ['community'] });
       const prev = queryClient.getQueryData(['community']);
       queryClient.setQueryData(['community'], (old) => {
         if (!old) return old;
         const tempMembership = {
-          id: 'temp-' + Date.now(), group_id: group.id, user_id: user.id,
-          user_name: user.full_name, user_nickname: user.nickname,
+          id: 'temp-' + Date.now(), group_id: group.id, user_id: optimisticUser?.id,
+          user_name: optimisticUser?.full_name, user_nickname: optimisticUser?.nickname,
           role: 'member', status: 'active',
         };
         return { ...old, memberships: [...old.memberships, tempMembership] };
