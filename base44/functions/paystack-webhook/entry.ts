@@ -40,6 +40,10 @@ export default async function(req) {
       const data = event.data;
       const metadata = data.metadata || {};
       const userId = metadata.user_id;
+      if (!userId) {
+        console.error('Paystack charge.success missing metadata.user_id');
+        return Response.json({ error: 'Missing payment user binding' }, { status: 400 });
+      }
       const cycle = metadata.billing_cycle === 'annual' ? 'annual' : 'monthly';
       const reference = data.reference;
       const amount = data.amount / 100; // cents to ZAR
