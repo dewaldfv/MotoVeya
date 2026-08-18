@@ -45,7 +45,6 @@ export default async function(req) {
     const svc = base44.asServiceRole;
     const existing = await svc.entities.Subscription.filter({ purchase_token: reference });
     if (existing.length === 0) {
-      const metadata = tx.metadata || {};
       const cycle = metadata.billing_cycle === 'annual' ? 'annual' : 'monthly';
       const amount = tx.amount / 100; // cents to ZAR
       const paidAt = new Date(tx.paid_at || Date.now());
