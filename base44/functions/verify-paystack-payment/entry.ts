@@ -35,6 +35,12 @@ export default async function(req) {
       return Response.json({ status: tx.status, active: false });
     }
 
+    // The payment reference must belong to the authenticated caller.
+    const metadata = tx.metadata || {};
+    if (metadata.user_id && metadata.user_id !== me.id) {
+      return Response.json({ error: 'Payment reference belongs to a different user' }, { status: 403 });
+    }
+
     // Idempotently activate the subscription if the webhook hasn't already recorded it
     const svc = base44.asServiceRole;
     const existing = await svc.entities.Subscription.filter({ purchase_token: reference });
