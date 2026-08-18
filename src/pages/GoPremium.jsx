@@ -52,30 +52,12 @@ export default function GoPremium() {
   const handleStartTrial = async () => {
     setProcessing(true);
     try {
-      const now = new Date();
-      const expiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      await base44.entities.Subscription.create({
-        user_id: user?.id,
-        plan: 'premium',
-        status: 'trialing',
-        billing_cycle: 'monthly',
-        amount_zar: 0,
-        purchase_date: now.toISOString(),
-        renewal_date: expiry.toISOString(),
-        expiry_date: expiry.toISOString(),
-        payment_provider: 'trial',
-        auto_renew: false,
-      });
-      await base44.auth.updateMe({
-        subscription_tier: 'premium',
-        subscription_status: 'trialing',
-        subscription_expiry: expiry.toISOString(),
-      });
+      await base44.functions.invoke('start-premium-trial', {});
       await refresh();
       toast.success('7-day Premium trial activated!');
     } catch (e) {
       console.error(e);
-      toast.error('Could not start trial');
+      toast.error(e?.response?.data?.error || 'Could not start trial');
     } finally {
       setProcessing(false);
     }
@@ -110,21 +92,9 @@ export default function GoPremium() {
   const handleRestore = async () => {
     setProcessing(true);
     try {
-      const subs = await base44.entities.Subscription.filter({ user_id: user?.id }, '-created_date', 1);
-      if (subs.length > 0) {
-        const sub = subs[0];
-        const expiry = sub.expiry_date ? new Date(sub.expiry_date) : null;
-        const valid = sub.status === 'active' && expiry && expiry > new Date();
-        await base44.auth.updateMe({
-          subscription_tier: valid ? 'premium' : 'free',
-          subscription_status: sub.status,
-          subscription_expiry: sub.expiry_date,
-        });
-        await refresh();
-        toast.success(valid ? 'Premium subscription restored' : 'No active subscription found');
-      } else {
-        toast.error('No purchases found');
-      }
+      const result = await base44.functions.invoke('get-current-entitlement', {});
+      await refresh();
+      toast.success(result.data?.is_premium ? 'Premium subscription restored' : 'No active subscription found');
     } catch (e) {
       console.error(e);
       toast.error('Could not restore purchases');
