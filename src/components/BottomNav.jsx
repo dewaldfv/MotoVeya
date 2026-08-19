@@ -1,4 +1,4 @@
-import { Map, Route, Calendar, Users, User } from 'lucide-react';
+import { Map, Route, Calendar, Users, User, Clapperboard } from 'lucide-react';
 import { useTabHistory } from '@/lib/TabHistoryContext';
 import useKeyboardVisible from '@/hooks/useKeyboardVisible';
 
@@ -7,6 +7,7 @@ const navItems = [
 { key: 'rides', icon: Route, label: 'Rides' },
 { key: 'events', icon: Calendar, label: 'Events' },
 { key: 'community', icon: Users, label: 'Community' },
+{ key: 'crowd-clips', icon: Clapperboard, label: 'Crowd Clips' },
 { key: 'profile', icon: User, label: 'Profile' }];
 
 
