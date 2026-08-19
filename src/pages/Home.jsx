@@ -414,7 +414,7 @@ export default function Home() {
               {selected.is_open_24h && <Badge className="bg-green-600">24h</Badge>}
               {selected.rating && <Badge variant="outline">⭐ {selected.rating}</Badge>}
             </div>
-            {selected.description && <p className="text-sm leading-6 text-white/85">{selected.description}</p>
+            {selected.description && <p className="text-sm leading-6 text-white/85">{selected.description}</p>}
             <div className="space-y-2 text-sm">
               {selected.address &&
             <div className="flex items-center gap-2 text-white/75"><MapPin size={16} /> {selected.address}</div>
