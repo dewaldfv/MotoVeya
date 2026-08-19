@@ -49,11 +49,10 @@ export default function ServiceMarkers({ services, userPos, onMarkerClick }) {
 
   const items = useMemo(() => {
     if (zoom < SERVICE_ZOOM_THRESHOLD) return [];
-    const filtered = userPos
-      ? services.filter((s) =>
-          s.lat != null && s.lng != null && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng)) &&
-          haversine(Number(userPos[0]), Number(userPos[1]), Number(s.lat), Number(s.lng)) <= SERVICE_DISTANCE_KM)
-      : services.filter((s) => s.lat != null && s.lng != null && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng)));
+    const filtered = services
+      .filter((s) => s.lat != null && s.lng != null && Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng)))
+      .map((s) => ({ ...s, lat: Number(s.lat), lng: Number(s.lng) }))
+      .filter((s) => !userPos || haversine(Number(userPos[0]), Number(userPos[1]), s.lat, s.lng) <= SERVICE_DISTANCE_KM);
     return clusterServices(filtered, zoom);
   }, [services, userPos, zoom]);
 
