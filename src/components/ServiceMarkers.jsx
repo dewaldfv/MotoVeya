@@ -14,14 +14,17 @@ function clusterServices(services, zoom) {
   const precision = zoom >= 15 ? 5 : zoom >= 14 ? 4 : 3;
   const groups = {};
   services.forEach((s) => {
-    const key = `${s.lat.toFixed(precision)},${s.lng.toFixed(precision)}`;
+    const lat = Number(s.lat);
+    const lng = Number(s.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const key = `${lat.toFixed(precision)},${lng.toFixed(precision)}`;
     if (!groups[key]) groups[key] = [];
     groups[key].push(s);
   });
   return Object.values(groups).map((items) => {
     if (items.length === 1) return { type: 'single', service: items[0] };
-    const avgLat = items.reduce((sum, s) => sum + s.lat, 0) / items.length;
-    const avgLng = items.reduce((sum, s) => sum + s.lng, 0) / items.length;
+    const avgLat = items.reduce((sum, s) => sum + Number(s.lat), 0) / items.length;
+    const avgLng = items.reduce((sum, s) => sum + Number(s.lng), 0) / items.length;
     return { type: 'cluster', count: items.length, lat: avgLat, lng: avgLng };
   });
 }
