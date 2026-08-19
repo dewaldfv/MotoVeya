@@ -8,6 +8,7 @@ const TAB_ROOTS = {
   rides: '/rides',
   events: '/events',
   community: '/community',
+  'crowd-clips': '/crowd-clips',
   profile: '/profile',
 };
 
@@ -15,6 +16,7 @@ export function getTabFromPath(pathname) {
   if (pathname.startsWith('/rides')) return 'rides';
   if (pathname.startsWith('/events')) return 'events';
   if (pathname.startsWith('/community')) return 'community';
+  if (pathname.startsWith('/crowd-clips')) return 'crowd-clips';
   if (pathname.startsWith('/profile') || pathname.startsWith('/admin')) return 'profile';
   return 'map';
 }
