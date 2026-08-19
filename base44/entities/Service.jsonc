@@ -25,7 +25,14 @@
         "transport",
         "roadside_assist",
         "training_schools",
-        "photography"
+        "photography",
+        "food_restaurant",
+        "food_pub_bar",
+        "food_cafe",
+        "food_fast_food",
+        "food_breakfast",
+        "food_bakery",
+        "food_market"
       ],
       "default": "maintenance_repair"
     },
