@@ -1,0 +1,42 @@
+{
+  "name": "GroupRideQueryCache",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "group_id": {
+      "type": "string"
+    },
+    "ride_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "group_id",
+    "ride_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
