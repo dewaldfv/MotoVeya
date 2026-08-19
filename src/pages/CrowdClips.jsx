@@ -35,6 +35,10 @@ export default function CrowdClips() {
   const [commentClip, setCommentClip] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [following, setFollowing] = useState(new Set());
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoTrimStart, setVideoTrimStart] = useState(0);
+  const [videoTrimEnd, setVideoTrimEnd] = useState(30);
+  const [videoNeedsTrim, setVideoNeedsTrim] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['crowd-clips'],
@@ -140,6 +144,10 @@ export default function CrowdClips() {
     setCaption('');
     setLocationName('');
     setLocationCoords(null);
+    setVideoDuration(0);
+    setVideoTrimStart(0);
+    setVideoTrimEnd(30);
+    setVideoNeedsTrim(false);
   };
 
   const selectMedia = (file, type) => {
@@ -151,6 +159,12 @@ export default function CrowdClips() {
     setMediaFile(file);
     setMediaType(type);
     setMediaPreview(URL.createObjectURL(file));
+    if (type === 'video') {
+      setVideoDuration(0);
+      setVideoTrimStart(0);
+      setVideoTrimEnd(30);
+      setVideoNeedsTrim(false);
+    }
   };
 
   const selectGalleryMedia = (files) => {
@@ -162,6 +176,12 @@ export default function CrowdClips() {
     setMediaFile(file);
     setMediaType(type);
     setMediaPreview(URL.createObjectURL(file));
+    if (type === 'video') {
+      setVideoDuration(0);
+      setVideoTrimStart(0);
+      setVideoTrimEnd(30);
+      setVideoNeedsTrim(false);
+    }
     if ((files?.length || 0) > 1) toast.info('Crowd Clips currently posts one item at a time. The first selected item was loaded.');
   };
 
