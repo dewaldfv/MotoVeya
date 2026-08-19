@@ -17,6 +17,13 @@ export const SERVICE_CATEGORIES = [
   { key: 'roadside_assist', label: 'Roadside Assistance', short: 'Roadside', emoji: '🚨', color: '#dc2626' },
   { key: 'training_schools', label: 'Training Schools', short: 'Training', emoji: '🏍', color: '#059669' },
   { key: 'photography', label: 'Photography & Media', short: 'Media', emoji: '📷', color: '#a855f7' },
+  { key: 'food_restaurant', label: 'Restaurants', short: 'Restaurants', emoji: '🍽️', color: '#ef4444' },
+  { key: 'food_pub_bar', label: 'Pubs & Bars', short: 'Pubs & Bars', emoji: '🍺', color: '#f59e0b' },
+  { key: 'food_cafe', label: 'Cafés', short: 'Cafés', emoji: '☕', color: '#92400e' },
+  { key: 'food_fast_food', label: 'Fast Food', short: 'Fast Food', emoji: '🍔', color: '#f97316' },
+  { key: 'food_breakfast', label: 'Breakfast Spots', short: 'Breakfast', emoji: '🥓', color: '#eab308' },
+  { key: 'food_bakery', label: 'Bakeries', short: 'Bakeries', emoji: '🥐', color: '#d97706' },
+  { key: 'food_market', label: 'Food Markets', short: 'Food Markets', emoji: '🌮', color: '#16a34a' },
 ];
 
 export function getServiceCategory(key) {
