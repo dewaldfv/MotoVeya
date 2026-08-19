@@ -28,7 +28,6 @@ export default function NativeEventMarkers({ events = [], favoriteEventIds = [],
     const validEvents = events.filter((ev) =>
       ev.lat != null && ev.lng != null && !isNaN(ev.lat) && !isNaN(ev.lng)
     );
-    const groups = [];
     const GROUP_RADIUS_METERS = 60;
     const metersBetween = (a, b) => {
       const lat1 = Number(a.lat) * Math.PI / 180;
