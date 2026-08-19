@@ -376,6 +376,7 @@ export default function CrowdClips() {
             <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => selectGalleryMedia(e.target.files)} />
 
             {mediaPreview ? (
+              <>
               <div className="relative overflow-hidden rounded-2xl bg-black">
                 {mediaType === 'video' ? <video src={mediaPreview} controls onLoadedMetadata={(e) => { const duration = e.currentTarget.duration || 0; setVideoDuration(duration); setVideoNeedsTrim(duration > 30); setVideoTrimStart(0); setVideoTrimEnd(Math.min(30, duration)); }} className="max-h-72 w-full object-contain" /> : <img src={mediaPreview} alt="Selected clip" className="max-h-72 w-full object-contain" />}
                 <button type="button" onClick={() => { setMediaFile(null); setMediaPreview(''); setVideoNeedsTrim(false); }} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white"><X size={17} /></button>
@@ -391,6 +392,7 @@ export default function CrowdClips() {
                   ) : <p className="text-xs text-muted-foreground">This video is within the 30-second limit.</p>}
                 </div>
               )}
+              </>
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => photoInputRef.current?.click()}><Camera size={24} /> Take Photo</Button>
