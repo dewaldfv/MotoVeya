@@ -125,7 +125,7 @@ export default function FoodDrinkTab({ user }) {
 
       <ServiceDetailSheet service={selectedPlace} userPos={userPos} isFavorite={selectedPlace ? favoriteIds.has(selectedPlace.id) : false} onFavorite={handleFavorite} onDirections={handleDirections} onNavigate={handleNavigate} onClose={() => setSelectedPlace(null)} />
       <ServiceFilters open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} />
-      <ServiceSubmitDialog open={submitOpen} onOpenChange={setSubmitOpen} onSubmitted={() => queryClient.invalidateQueries({ queryKey: ['food-drink'] })} />
+      <ServiceSubmitDialog foodOnly open={submitOpen} onOpenChange={setSubmitOpen} onSubmitted={() => queryClient.invalidateQueries({ queryKey: ['food-drink'] })} />
     </div>
   );
 }
