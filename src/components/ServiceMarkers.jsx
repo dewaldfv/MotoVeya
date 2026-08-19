@@ -4,8 +4,11 @@ import { useGoogleMap } from '@react-google-maps/api';
 import { haversine, getServiceCategory } from '@/lib/serviceCategories';
 import CustomMapMarker from './CustomMapMarker';
 
-const SERVICE_ZOOM_THRESHOLD = 13;
-const SERVICE_DISTANCE_KM = 10;
+// Keep service and Food & Drink markers visible at normal city-level zoom.
+// A wider radius also prevents markers from disappearing while the user's GPS
+// position is still settling or when venues are just outside the immediate area.
+const SERVICE_ZOOM_THRESHOLD = 11;
+const SERVICE_DISTANCE_KM = 30;
 
 function clusterServices(services, zoom) {
   const precision = zoom >= 15 ? 5 : zoom >= 14 ? 4 : 3;
@@ -48,9 +51,9 @@ export default function ServiceMarkers({ services, userPos, onMarkerClick }) {
     if (zoom < SERVICE_ZOOM_THRESHOLD) return [];
     const filtered = userPos
       ? services.filter((s) =>
-          s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng) &&
-          haversine(userPos[0], userPos[1], s.lat, s.lng) <= SERVICE_DISTANCE_KM)
-      : services.filter((s) => s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng));
+          s.lat != null && s.lng != null && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng)) &&
+          haversine(Number(userPos[0]), Number(userPos[1]), Number(s.lat), Number(s.lng)) <= SERVICE_DISTANCE_KM)
+      : services.filter((s) => s.lat != null && s.lng != null && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng)));
     return clusterServices(filtered, zoom);
   }, [services, userPos, zoom]);
 
