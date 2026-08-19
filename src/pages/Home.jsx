@@ -400,7 +400,13 @@ export default function Home() {
 
       <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={rawLayer} onSelect={setLayer} overlays={overlays} onToggleOverlay={toggleOverlay} />
 
-      <BottomSheet open={!!selected} onClose={() => setSelected(null)} title={selected?.name || selected?.title}>
+      <BottomSheet
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        title={selected?.name || selected?.title}
+        backgroundImage={selected?.photo_urls?.[0] || selected?.photo_url}
+        immersive={!!(selected?.photo_urls?.[0] || selected?.photo_url)}
+      >
         {selected &&
         <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -408,25 +414,19 @@ export default function Home() {
               {selected.is_open_24h && <Badge className="bg-green-600">24h</Badge>}
               {selected.rating && <Badge variant="outline">⭐ {selected.rating}</Badge>}
             </div>
-            {selected.photo_urls?.[0] &&
-          <img src={selected.photo_urls[0]} alt={selected.title} className="h-40 w-full rounded-2xl object-cover" />
-          }
-            {selected.photo_url &&
-          <img src={selected.photo_url} alt={selected.name} className="h-40 w-full rounded-2xl object-cover" />
-          }
-            {selected.description && <p className="text-sm text-muted-foreground">{selected.description}</p>}
+            {selected.description && <p className="text-sm leading-6 text-white/85">{selected.description}</p>
             <div className="space-y-2 text-sm">
               {selected.address &&
-            <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {selected.address}</div>
+            <div className="flex items-center gap-2 text-white/75"><MapPin size={16} /> {selected.address}</div>
             }
               {selected.venue_name &&
-            <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {selected.venue_name}</div>
+            <div className="flex items-center gap-2 text-white/75"><MapPin size={16} /> {selected.venue_name}</div>
             }
               {selected.phone &&
-            <div className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {selected.phone}</div>
+            <div className="flex items-center gap-2 text-white/75"><Phone size={16} /> {selected.phone}</div>
             }
               {selected.contact_phone &&
-            <div className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {selected.contact_phone}</div>
+            <div className="flex items-center gap-2 text-white/75"><Phone size={16} /> {selected.contact_phone}</div>
             }
             </div>
             <div className="flex gap-2 pt-2">
