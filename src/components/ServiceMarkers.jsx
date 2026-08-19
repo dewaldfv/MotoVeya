@@ -1,5 +1,5 @@
 /* global google */
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { useGoogleMap } from '@react-google-maps/api';
 import { getServiceCategory } from '@/lib/serviceCategories';
 
@@ -58,6 +58,7 @@ export default function ServiceMarkers({ services = [], userPos, onMarkerClick }
   const map = useGoogleMap();
   const markersRef = useRef(new Map());
   const callbackRef = useRef(onMarkerClick);
+  const [zoom, setZoom] = useState(() => map?.getZoom() || 0);
   callbackRef.current = onMarkerClick;
 
   const validServices = useMemo(() => services
@@ -72,7 +73,6 @@ export default function ServiceMarkers({ services = [], userPos, onMarkerClick }
 
     const g = window.google;
     const markers = markersRef.current;
-    const zoom = map.getZoom() || 0;
     const shouldShow = zoom >= SERVICE_MIN_ZOOM;
     const visible = shouldShow ? spiderfy(validServices) : [];
     const seen = new Set();
@@ -114,28 +114,14 @@ export default function ServiceMarkers({ services = [], userPos, onMarkerClick }
         markers.delete(id);
       }
     }
-  }, [map, validServices, userPos]);
+  }, [map, validServices, userPos, zoom]);
 
+  // Keep the marker layer synchronized with the map zoom.
   useEffect(() => {
     if (!map) return;
-    const refresh = () => {
-      const event = new Event('service-marker-refresh');
-      window.dispatchEvent(event);
-    };
-    const listener = map.addListener('zoom_changed', refresh);
-    return () => gmapsRemove(listener);
-  }, [map]);
-
-  // Re-run marker visibility whenever the map zoom changes.
-  useEffect(() => {
-    if (!map) return;
-    const markers = markersRef.current;
-    const updateVisibility = () => {
-      const visible = (map.getZoom() || 0) >= SERVICE_MIN_ZOOM;
-      markers.forEach((marker) => marker.setMap(visible ? map : null));
-    };
-    const listener = map.addListener('zoom_changed', updateVisibility);
-    updateVisibility();
+    const updateZoom = () => setZoom(map.getZoom() || 0);
+    updateZoom();
+    const listener = map.addListener('zoom_changed', updateZoom);
     return () => {
       if (window.google?.maps?.event) window.google.maps.event.removeListener(listener);
     };
