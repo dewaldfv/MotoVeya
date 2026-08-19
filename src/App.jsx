@@ -19,6 +19,7 @@ import RideDetail from '@/pages/RideDetail';
 import Events from '@/pages/Events';
 import EventDetail from '@/pages/EventDetail';
 import Community from '@/pages/Community';
+import CrowdClips from '@/pages/CrowdClips';
 import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
 import GoPremium from '@/pages/GoPremium';
@@ -108,6 +109,7 @@ const AuthenticatedApp = () => {
         <Route path="/events" element={<Events />} />
         <Route path="/events/:id" element={<EventDetail />} />
         <Route path="/community" element={<Community />} />
+        <Route path="/crowd-clips" element={<CrowdClips />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/premium" element={<GoPremium />} />
