@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,11 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
   const [form, setForm] = useState(EMPTY);
   const categoryOptions = foodOnly ? FOOD_CATEGORIES : SERVICE_CATEGORIES;
 
+  useEffect(() => {
+    if (open && foodOnly && !form.category.startsWith('food_')) {
+      setForm((f) => ({ ...f, category: FOOD_CATEGORIES[0].key }));
+    }
+  }, [open, foodOnly, form.category]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
