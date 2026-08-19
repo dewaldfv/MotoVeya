@@ -29,12 +29,24 @@ const EMPTY = {
   logo_url: '', photo_urls: []
 };
 
-export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted }) {
+const FOOD_CATEGORIES = [
+  { key: 'food_restaurant', label: 'Restaurants', emoji: '🍽️' },
+  { key: 'food_pub_bar', label: 'Pubs & Bars', emoji: '🍺' },
+  { key: 'food_cafe', label: 'Cafés', emoji: '☕' },
+  { key: 'food_fast_food', label: 'Fast Food', emoji: '🍔' },
+  { key: 'food_breakfast', label: 'Breakfast Spots', emoji: '🥓' },
+  { key: 'food_bakery', label: 'Bakeries', emoji: '🥐' },
+  { key: 'food_market', label: 'Food Markets', emoji: '🌮' },
+];
+
+export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, foodOnly = false }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const categoryOptions = foodOnly ? FOOD_CATEGORIES : SERVICE_CATEGORIES;
+
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -101,7 +113,7 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
         photo_urls: form.photo_urls || [],
         status: 'pending'
       });
-      toast.success('Service submitted! Awaiting admin approval.');
+      toast.success(`${foodOnly ? 'Food & Drink venue' : 'Service'} submitted! Awaiting admin approval.`);
       onOpenChange(false);
       onSubmitted?.();
       setForm(EMPTY);
@@ -118,7 +130,7 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Submit a Service</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{foodOnly ? 'Submit a Food & Drink Venue' : 'Submit a Service'}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div><Label>Business Name *</Label><Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Joe's Bike Workshop" className="min-h-[48px]" /></div>
 
@@ -134,7 +146,7 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
               <DrawerContent>
                 <DrawerHeader><DrawerTitle>Select Category</DrawerTitle></DrawerHeader>
                 <div className="p-4 pb-8">
-                  {SERVICE_CATEGORIES.map((cat) =>
+                  {categoryOptions.map((cat) =>
                   <button
                     key={cat.key}
                     onClick={() => {set('category', cat.key);setCategoryDrawerOpen(false);}}
@@ -237,11 +249,11 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted })
 
           <div><Label>Notes for Admin (optional)</Label><Textarea value={form.submitter_notes} onChange={(e) => set('submitter_notes', e.target.value)} placeholder="Anything the admin should know" rows={2} /></div>
 
-          <p className="text-xs text-muted-foreground">Your listing will be reviewed by an admin before appearing in Services.</p>
+          <p className="text-xs text-muted-foreground">Your listing will be reviewed by an admin before appearing in {foodOnly ? 'Food & Drink' : 'Services'}.</p>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button disabled={saving} onClick={handleSubmit}>{saving ? 'Submitting...' : 'Submit Service'}</Button>
+          <Button disabled={saving} onClick={handleSubmit}>{saving ? 'Submitting...' : foodOnly ? 'Submit Venue' : 'Submit Service'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>);
