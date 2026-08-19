@@ -24,6 +24,7 @@ export default function CrowdClips() {
   const queryClient = useQueryClient();
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaPreview, setMediaPreview] = useState('');
@@ -131,6 +132,18 @@ export default function CrowdClips() {
     setMediaFile(file);
     setMediaType(type);
     setMediaPreview(URL.createObjectURL(file));
+  };
+
+  const selectGalleryMedia = (files) => {
+    const file = Array.from(files || []).find((candidate) =>
+      candidate.type.startsWith('image/') || candidate.type.startsWith('video/')
+    );
+    if (!file) return;
+    const type = file.type.startsWith('video/') ? 'video' : 'photo';
+    setMediaFile(file);
+    setMediaType(type);
+    setMediaPreview(URL.createObjectURL(file));
+    if ((files?.length || 0) > 1) toast.info('Crowd Clips currently posts one item at a time. The first selected item was loaded.');
   };
 
   const useCurrentLocation = () => {
@@ -273,8 +286,9 @@ export default function CrowdClips() {
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader><DialogTitle>Create Crowd Clip</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => selectMedia(e.target.files?.[0], 'photo')} />
-            <input ref={videoInputRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={(e) => selectMedia(e.target.files?.[0], 'video')} />
+            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => selectMedia(e.target.files?.[0], 'photo')} />
+            <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={(e) => selectMedia(e.target.files?.[0], 'video')} />
+            <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => selectGalleryMedia(e.target.files)} />
 
             {mediaPreview ? (
               <div className="relative overflow-hidden rounded-2xl bg-black">
@@ -285,7 +299,7 @@ export default function CrowdClips() {
               <div className="grid grid-cols-3 gap-2">
                 <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => photoInputRef.current?.click()}><Camera size={24} /> Take Photo</Button>
                 <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => videoInputRef.current?.click()}><Video size={24} /> Record Video</Button>
-                <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => { setMediaType('photo'); photoInputRef.current?.click(); }}><Upload size={24} /> Upload</Button>
+                <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => galleryInputRef.current?.click()}><Upload size={24} /> Gallery</Button>
               </div>
             )}
 
