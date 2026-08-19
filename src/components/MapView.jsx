@@ -159,9 +159,9 @@ export default function MapView({
   const [popupItem, setPopupItem] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(zoom);
   const bgColor = getLayerBackground(layer);
-  // Services are dense — only render their markers once the user zooms in
-  // past this threshold, so the map stays clean at city/region level.
-  const SERVICE_MIN_ZOOM = 13;
+  // Services and Food & Drink should be visible at normal city-level zoom.
+  // ServiceMarkers applies its own proximity filtering and clustering.
+  const SERVICE_MIN_ZOOM = 11;
   const rotating = navActive && heading != null && !isNaN(heading) && headingUp;
   const navRot = rotating ? `${-heading}deg` : '0deg';
   const initialCenterRef = useRef(null);
