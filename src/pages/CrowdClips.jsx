@@ -201,33 +201,45 @@ export default function CrowdClips() {
   };
 
   const createTrimmedVideo = async () => {
-    if (!mediaFile || mediaType !== 'video' || videoDuration <= 30) return mediaFile;
+    if (!mediaFile || mediaType !== 'video') return mediaFile;
     if (!window.MediaRecorder || !HTMLVideoElement.prototype.captureStream) {
-      throw new Error('This device/browser cannot trim videos in the browser. Please use a video of 30 seconds or less.');
+      throw new Error('This device/browser cannot process videos in the browser. Please use a video of 30 seconds or less.');
     }
     const video = document.createElement('video');
     video.src = mediaPreview;
     video.muted = true;
     video.playsInline = true;
     await new Promise((resolve, reject) => { video.onloadedmetadata = resolve; video.onerror = reject; });
-    const stream = video.captureStream();
+
+    // Preserve the source aspect ratio while capping the long edge at 1080p.
+    const scale = Math.min(1920 / video.videoWidth, 1080 / video.videoHeight, 1);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(2, Math.round(video.videoWidth * scale / 2) * 2);
+    canvas.height = Math.max(2, Math.round(video.videoHeight * scale / 2) * 2);
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const sourceStream = video.captureStream();
+    const canvasStream = canvas.captureStream(30);
+    sourceStream.getAudioTracks().forEach((track) => canvasStream.addTrack(track));
     const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
       ? 'video/webm;codecs=vp9,opus'
       : 'video/webm;codecs=vp8,opus';
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8000000 });
+    const recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 8000000, audioBitsPerSecond: 128000 });
     const chunks = [];
     recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
     const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
-    video.currentTime = videoTrimStart;
+    video.currentTime = Math.min(videoTrimStart, Math.max(0, video.duration - 0.05));
     await new Promise((resolve) => { video.onseeked = resolve; });
+    const drawFrame = () => { if (!video.paused && !video.ended) { ctx.drawImage(video, 0, 0, canvas.width, canvas.height); requestAnimationFrame(drawFrame); } };
     recorder.start(250);
     await video.play();
+    drawFrame();
     await new Promise((resolve) => setTimeout(resolve, Math.min(30000, (videoTrimEnd - videoTrimStart) * 1000)));
     video.pause();
     recorder.stop();
     await stopped;
-    stream.getTracks().forEach((track) => track.stop());
-    return new File([new Blob(chunks, { type: mimeType })], 'crowd-clip.webm', { type: mimeType });
+    sourceStream.getTracks().forEach((track) => track.stop());
+    canvasStream.getTracks().forEach((track) => track.stop());
+    return new File([new Blob(chunks, { type: mimeType })], 'crowd-clip-1080p.webm', { type: mimeType });
   };
 
   const publishClip = useMutation({
