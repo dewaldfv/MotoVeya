@@ -73,7 +73,12 @@ export default function CrowdClips() {
     mutationFn: async (clip) => {
       const existing = likes.find((l) => l.clip_id === clip.id && l.user_id === user.id);
       if (existing) await base44.entities.CrowdClipLike.delete(existing.id);
-      else await base44.entities.CrowdClipLike.create({ clip_id: clip.id, user_id: user.id });
+      else {
+        await base44.entities.CrowdClipLike.create({ clip_id: clip.id, user_id: user.id });
+        await base44.functions.invoke('crowd-clips-notify', {
+          action: 'like', clip_id: clip.id, creator_id: clip.creator_id, clip_caption: clip.caption || ''
+        });
+      }
     },
     onMutate: async (clip) => {
       await queryClient.cancelQueries({ queryKey: ['crowd-clips'] });
@@ -94,19 +99,33 @@ export default function CrowdClips() {
     mutationFn: async ({ creatorId, creatorName }) => {
       const existing = follows.find((f) => f.creator_id === creatorId && f.follower_id === user.id);
       if (existing) await base44.entities.CrowdClipFollow.delete(existing.id);
-      else await base44.entities.CrowdClipFollow.create({ creator_id: creatorId, follower_id: user.id, creator_name: creatorName });
+      else {
+        await base44.entities.CrowdClipFollow.create({ creator_id: creatorId, follower_id: user.id, creator_name: creatorName });
+        await base44.functions.invoke('crowd-clips-notify', {
+          action: 'follow', creator_id: creatorId
+        });
+      }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['crowd-clips'] }),
   });
 
   const commentMutation = useMutation({
-    mutationFn: async ({ clipId, text }) => base44.entities.CrowdClipComment.create({
-      clip_id: clipId,
-      user_id: user.id,
-      user_name: user.nickname || user.full_name || 'Rider',
-      user_avatar_url: user.avatar_url || '',
-      text: text.trim(),
-    }),
+    mutationFn: async ({ clipId, text }) => {
+      const clip = clips.find((item) => item.id === clipId);
+      const comment = await base44.entities.CrowdClipComment.create({
+        clip_id: clipId,
+        user_id: user.id,
+        user_name: user.nickname || user.full_name || 'Rider',
+        user_avatar_url: user.avatar_url || '',
+        text: text.trim(),
+      });
+      if (clip) {
+        await base44.functions.invoke('crowd-clips-notify', {
+          action: 'comment', clip_id: clipId, creator_id: clip.creator_id, clip_caption: clip.caption || ''
+        });
+      }
+      return comment;
+    },
     onSuccess: () => {
       setCommentText('');
       queryClient.invalidateQueries({ queryKey: ['crowd-clips'] });
