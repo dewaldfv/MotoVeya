@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Ticket, Siren, QrCode as QrIcon, Share2 } from 'lucide-react';
+import { Users, UserPlus, Ticket, Siren, QrCode as QrIcon, Share2, UtensilsCrossed } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import LoginPrompt from '@/components/LoginPrompt';
 import PullToRefresh from '@/components/PullToRefresh';
 import ServicesTab from '@/components/services/ServicesTab';
+import FoodDrinkTab from '@/components/services/FoodDrinkTab';
 import QrScanner from '@/components/QrScanner';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
 import GroupMembersDialog from '@/components/community/GroupMembersDialog';
@@ -246,6 +247,7 @@ export default function Community() {
             <TabsTrigger value="friends" className="flex-1">Friends</TabsTrigger>
             <TabsTrigger value="messages" className="flex-1">Messages</TabsTrigger>
             <TabsTrigger value="services" className="flex-1">Services</TabsTrigger>
+            <TabsTrigger value="food-drink" className="flex-1"><UtensilsCrossed size={15} className="mr-1" /> Food & Drink</TabsTrigger>
           </TabsList>
 
           <TabsContent value="groups" className="space-y-4">
@@ -346,6 +348,10 @@ export default function Community() {
 
           <TabsContent value="services">
             <ServicesTab user={user} />
+          </TabsContent>
+
+          <TabsContent value="food-drink">
+            <FoodDrinkTab user={user} />
           </TabsContent>
         </Tabs>
 

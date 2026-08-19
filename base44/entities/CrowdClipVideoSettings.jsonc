@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "properties": {
+    "clip_id": {
+      "type": "string"
+    },
+    "duration_seconds": {
+      "type": "number"
+    },
+    "quality": {
+      "type": "string",
+      "enum": [
+        "1080p"
+      ],
+      "default": "1080p"
+    },
+    "trim_start_seconds": {
+      "type": "number"
+    },
+    "trim_end_seconds": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "clip_id",
+    "duration_seconds",
+    "quality"
+  ],
+  "name": "CrowdClipVideoSettings"
+}
