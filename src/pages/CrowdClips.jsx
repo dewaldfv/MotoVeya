@@ -200,13 +200,44 @@ export default function CrowdClips() {
     );
   };
 
+  const createTrimmedVideo = async () => {
+    if (!mediaFile || mediaType !== 'video' || videoDuration <= 30) return mediaFile;
+    if (!window.MediaRecorder || !HTMLVideoElement.prototype.captureStream) {
+      throw new Error('This device/browser cannot trim videos in the browser. Please use a video of 30 seconds or less.');
+    }
+    const video = document.createElement('video');
+    video.src = mediaPreview;
+    video.muted = true;
+    video.playsInline = true;
+    await new Promise((resolve, reject) => { video.onloadedmetadata = resolve; video.onerror = reject; });
+    const stream = video.captureStream();
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+      ? 'video/webm;codecs=vp9,opus'
+      : 'video/webm;codecs=vp8,opus';
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8000000 });
+    const chunks = [];
+    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
+    video.currentTime = videoTrimStart;
+    await new Promise((resolve) => { video.onseeked = resolve; });
+    recorder.start(250);
+    await video.play();
+    await new Promise((resolve) => setTimeout(resolve, Math.min(30000, (videoTrimEnd - videoTrimStart) * 1000)));
+    video.pause();
+    recorder.stop();
+    await stopped;
+    stream.getTracks().forEach((track) => track.stop());
+    return new File([new Blob(chunks, { type: mimeType })], 'crowd-clip.webm', { type: mimeType });
+  };
+
   const publishClip = useMutation({
     mutationFn: async () => {
       if (!mediaFile) throw new Error('Choose a photo or video first.');
-      if (mediaType === 'video' && videoDuration > 30) {
-        throw new Error('Please select a 30-second section of the video before publishing.');
+      if (mediaType === 'video' && videoDuration > 30 && Math.round(videoTrimEnd - videoTrimStart) !== 30) {
+        throw new Error('Please select exactly 30 seconds of the video before publishing.');
       }
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: mediaFile });
+      const uploadFile = mediaType === 'video' ? await createTrimmedVideo() : mediaFile;
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: uploadFile });
       return base44.entities.CrowdClip.create({
         media_type: mediaType,
         media_url: file_url,
