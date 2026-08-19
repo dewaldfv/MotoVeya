@@ -161,7 +161,7 @@ export default function MapView({
   const bgColor = getLayerBackground(layer);
   // Services and Food & Drink should be visible at normal city-level zoom.
   // ServiceMarkers applies its own proximity filtering and clustering.
-  const SERVICE_MIN_ZOOM = 11;
+  const SERVICE_MIN_ZOOM = 13;
   const rotating = navActive && heading != null && !isNaN(heading) && headingUp;
   const navRot = rotating ? `${-heading}deg` : '0deg';
   const initialCenterRef = useRef(null);
