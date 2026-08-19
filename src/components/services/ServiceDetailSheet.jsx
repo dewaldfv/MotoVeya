@@ -12,13 +12,17 @@ export default function ServiceDetailSheet({ service, userPos, isFavorite, onFav
   const open = isOpenNow(service);
 
   return (
-    <BottomSheet open={!!service} onClose={onClose} title={service.name}>
+    <BottomSheet
+      open={!!service}
+      onClose={onClose}
+      title={service.name}
+      backgroundImage={service.photo_urls?.[0] || service.logo_url}
+      immersive={!!(service.photo_urls?.[0] || service.logo_url)}
+    >
       <div className="space-y-4">
-        {service.photo_urls?.[0]
-          ? <img src={service.photo_urls[0]} alt={service.name} className="h-44 w-full rounded-2xl object-cover" />
-          : service.logo_url
-            ? <img src={service.logo_url} alt={service.name} className="h-44 w-full rounded-2xl object-cover" />
-            : <div className="flex h-44 items-center justify-center rounded-2xl text-6xl" style={{ backgroundColor: cat.color + '20' }}>{cat.emoji}</div>}
+        {!service.photo_urls?.[0] && !service.logo_url && (
+          <div className="flex h-44 items-center justify-center rounded-2xl bg-white/10 text-6xl backdrop-blur-sm">{cat.emoji}</div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{cat.emoji} {cat.label}</Badge>
@@ -27,7 +31,7 @@ export default function ServiceDetailSheet({ service, userPos, isFavorite, onFav
           {service.is_featured && <Badge className="bg-yellow-500 text-black">Featured</Badge>}
         </div>
 
-        {service.description && <p className="text-sm text-muted-foreground">{service.description}</p>}
+        {service.description && <p className="text-sm leading-6 text-white/85">{service.description}</p>}
 
         <div className="flex flex-wrap items-center gap-4">
           {service.rating != null && (
@@ -37,26 +41,26 @@ export default function ServiceDetailSheet({ service, userPos, isFavorite, onFav
               {service.review_count != null && <span className="text-xs text-muted-foreground">({service.review_count})</span>}
             </div>
           )}
-          {distance != null && <span className="text-sm text-muted-foreground">{formatDistance(distance)} away</span>}
-          <span className={`text-sm font-semibold ${open ? 'text-green-600' : 'text-red-500'}`}>{open ? 'Open Now' : 'Closed'}</span>
+          {distance != null && <span className="text-sm text-white/70">{formatDistance(distance)} away</span>}
+          <span className={`text-sm font-semibold ${open ? 'text-green-400' : 'text-red-400'}`}>{open ? 'Open Now' : 'Closed'}</span>
         </div>
 
         {service.has_premium_discount && (
-          <div className="flex items-center gap-2 rounded-2xl bg-primary/10 p-3">
+          <div className="flex items-center gap-2 rounded-2xl bg-black/35 p-3 backdrop-blur-sm">
             <Tag size={18} className="shrink-0 text-primary" />
             <div>
               <p className="text-sm font-bold text-primary">Premium Member Discount</p>
-              {service.premium_discount_description && <p className="text-xs text-muted-foreground">{service.premium_discount_description}</p>}
+              {service.premium_discount_description && <p className="text-xs text-white/70">{service.premium_discount_description}</p>}
             </div>
           </div>
         )}
 
         <div className="space-y-2 text-sm">
-          {service.address && <div className="flex items-start gap-2 text-muted-foreground"><MapPin size={16} className="mt-0.5 shrink-0" /> {service.address}</div>}
-          {service.town && <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {service.town}{service.province ? `, ${service.province}` : ''}</div>}
-          {service.phone && <a href={`tel:${service.phone}`} className="flex items-center gap-2 text-muted-foreground"><Phone size={16} /> {service.phone}</a>}
+          {service.address && <div className="flex items-start gap-2 text-white/75"><MapPin size={16} className="mt-0.5 shrink-0" /> {service.address}</div>}
+          {service.town && <div className="flex items-center gap-2 text-white/75"><MapPin size={16} /> {service.town}{service.province ? `, ${service.province}` : ''}</div>}
+          {service.phone && <a href={`tel:${service.phone}`} className="flex items-center gap-2 text-white/75"><Phone size={16} /> {service.phone}</a>}
           {safeHttpUrl(service.website) && <a href={safeHttpUrl(service.website)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-primary"><Globe size={16} /> Visit website</a>}
-          {service.opening_hours && <div className="flex items-center gap-2 text-muted-foreground"><Clock size={16} /> {service.opening_hours}</div>}
+          {service.opening_hours && <div className="flex items-center gap-2 text-white/75"><Clock size={16} /> {service.opening_hours}</div>}
         </div>
 
         {service.photo_urls?.length > 1 && (
