@@ -5,7 +5,7 @@ import { getServiceCategory } from '@/lib/serviceCategories';
 
 // Native Google Maps markers are used here deliberately. They are more reliable
 // than HTML OverlayView markers for a large, frequently changing POI layer.
-const SERVICE_MIN_ZOOM = 11;
+const SERVICE_MIN_ZOOM = 13;
 
 function markerSvg(service, category) {
   if (service.logo_url) return service.logo_url;
