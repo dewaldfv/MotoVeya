@@ -1,0 +1,83 @@
+{
+  "type": "object",
+  "properties": {
+    "media_type": {
+      "type": "string",
+      "enum": [
+        "photo",
+        "video"
+      ],
+      "default": "photo"
+    },
+    "media_url": {
+      "type": "string"
+    },
+    "thumbnail_url": {
+      "type": "string"
+    },
+    "caption": {
+      "type": "string"
+    },
+    "creator_id": {
+      "type": "string"
+    },
+    "creator_name": {
+      "type": "string"
+    },
+    "creator_avatar_url": {
+      "type": "string"
+    },
+    "location_name": {
+      "type": "string"
+    },
+    "location_lat": {
+      "type": "number"
+    },
+    "location_lng": {
+      "type": "number"
+    },
+    "like_count": {
+      "type": "integer",
+      "default": 0
+    },
+    "comment_count": {
+      "type": "integer",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "published",
+        "hidden",
+        "removed"
+      ],
+      "default": "published"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public"
+      ],
+      "default": "public"
+    }
+  },
+  "required": [
+    "media_type",
+    "media_url",
+    "creator_id",
+    "creator_name"
+  ],
+  "rls": {
+    "create": {
+      "data.creator_id": "{{user.id}}"
+    },
+    "read": null,
+    "update": {
+      "data.creator_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.creator_id": "{{user.id}}"
+    }
+  },
+  "name": "CrowdClip"
+}

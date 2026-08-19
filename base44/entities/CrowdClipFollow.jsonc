@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "properties": {
+    "creator_id": {
+      "type": "string"
+    },
+    "follower_id": {
+      "type": "string"
+    },
+    "creator_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "creator_id",
+    "follower_id"
+  ],
+  "rls": {
+    "create": {
+      "data.follower_id": "{{user.id}}"
+    },
+    "read": null,
+    "update": {
+      "data.follower_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.follower_id": "{{user.id}}"
+    }
+  },
+  "name": "CrowdClipFollow"
+}

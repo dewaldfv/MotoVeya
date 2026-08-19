@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "properties": {
+    "clip_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "clip_id",
+    "user_id"
+  ],
+  "rls": {
+    "create": {
+      "data.user_id": "{{user.id}}"
+    },
+    "read": null,
+    "update": false,
+    "delete": {
+      "data.user_id": "{{user.id}}"
+    }
+  },
+  "name": "CrowdClipLike"
+}
