@@ -203,6 +203,9 @@ export default function CrowdClips() {
   const publishClip = useMutation({
     mutationFn: async () => {
       if (!mediaFile) throw new Error('Choose a photo or video first.');
+      if (mediaType === 'video' && videoDuration > 30) {
+        throw new Error('Please select a 30-second section of the video before publishing.');
+      }
       const { file_url } = await base44.integrations.Core.UploadFile({ file: mediaFile });
       return base44.entities.CrowdClip.create({
         media_type: mediaType,
@@ -331,9 +334,20 @@ export default function CrowdClips() {
 
             {mediaPreview ? (
               <div className="relative overflow-hidden rounded-2xl bg-black">
-                {mediaType === 'video' ? <video src={mediaPreview} controls className="max-h-72 w-full object-contain" /> : <img src={mediaPreview} alt="Selected clip" className="max-h-72 w-full object-contain" />}
-                <button type="button" onClick={() => { setMediaFile(null); setMediaPreview(''); }} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white"><X size={17} /></button>
+                {mediaType === 'video' ? <video src={mediaPreview} controls onLoadedMetadata={(e) => { const duration = e.currentTarget.duration || 0; setVideoDuration(duration); setVideoNeedsTrim(duration > 30); setVideoTrimStart(0); setVideoTrimEnd(Math.min(30, duration)); }} className="max-h-72 w-full object-contain" /> : <img src={mediaPreview} alt="Selected clip" className="max-h-72 w-full object-contain" />}
+                <button type="button" onClick={() => { setMediaFile(null); setMediaPreview(''); setVideoNeedsTrim(false); }} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white"><X size={17} /></button>
               </div>
+              {mediaType === 'video' && videoDuration > 0 && (
+                <div className="mt-3 space-y-3 rounded-2xl border border-border bg-muted/40 p-3">
+                  <div className="flex items-center justify-between">
+                    <div><p className="text-sm font-semibold">Choose your 30 seconds</p><p className="text-xs text-muted-foreground">Recommended quality: 1080p</p></div>
+                    <span className="rounded-full bg-background px-2.5 py-1 text-xs font-semibold">{Math.round(videoTrimEnd - videoTrimStart)}s</span>
+                  </div>
+                  {videoDuration > 30 ? (
+                    <><p className="text-xs text-amber-600">Your video is {Math.round(videoDuration)} seconds. Drag the slider to select the section you want to share.</p><input type="range" min="0" max={Math.max(0, videoDuration - 30)} step="0.1" value={videoTrimStart} onChange={(e) => { const start = Number(e.target.value); setVideoTrimStart(start); setVideoTrimEnd(Math.min(videoDuration, start + 30)); }} className="w-full" /><div className="flex justify-between text-[11px] text-muted-foreground"><span>Start {videoTrimStart.toFixed(1)}s</span><span>End {videoTrimEnd.toFixed(1)}s</span></div></>
+                  ) : <p className="text-xs text-muted-foreground">This video is within the 30-second limit.</p>}
+                </div>
+              )}
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => photoInputRef.current?.click()}><Camera size={24} /> Take Photo</Button>
@@ -356,7 +370,7 @@ export default function CrowdClips() {
               <p className="mt-1.5 text-xs text-muted-foreground">The location is saved with your post so it can be connected to navigation later.</p>
             </div>
 
-            <Button className="w-full min-h-[48px]" disabled={!mediaFile || publishClip.isPending} onClick={() => publishClip.mutate()}>
+            <Button className="w-full min-h-[48px]" disabled={!mediaFile || publishClip.isPending || (mediaType === 'video' && videoNeedsTrim && Math.round(videoTrimEnd - videoTrimStart) !== 30)} onClick={() => publishClip.mutate()}>
               {publishClip.isPending ? 'Publishing…' : 'Post to Crowd Clips'}
             </Button>
           </div>
