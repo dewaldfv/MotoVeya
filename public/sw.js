@@ -22,13 +22,14 @@ self.addEventListener('push', (event) => {
 
   const title = data.title || APP_NAME;
   const conversationId = data.conversationId || null;
+  const targetUrl = data.action_url || data.url || (data.type && data.type.startsWith('crowd_clip_') ? '/crowd-clips' : '/community');
   const options = {
     body: (data.body || '').slice(0, 200),
-    tag: conversationId || 'motogo-message',
+    tag: data.clipId ? `crowd-clip-${data.clipId}` : (conversationId || 'motogo-message'),
     renotify: true,
     data: {
       conversationId,
-      url: data.url || '/community',
+      url: targetUrl,
     },
     vibrate: [80, 40, 80],
   };
