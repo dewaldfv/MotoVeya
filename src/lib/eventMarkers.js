@@ -18,3 +18,18 @@ export function getEventMarkerUrl(category) {
   const found = EVENT_CATEGORIES.find((c) => c.value === category);
   return (found || EVENT_CATEGORIES[EVENT_CATEGORIES.length - 1]).markerUrl;
 }
+
+// Creates a poster-specific marker without requiring another generated image asset.
+// The event poster becomes the marker artwork, clipped into a motorcycle-app style pin,
+// with a category badge over it. If a map renderer cannot load the embedded poster,
+// the stored category marker remains the fallback.
+export function getEventPosterMarkerUrl(imageUrl, category) {
+  if (!imageUrl) return getEventMarkerUrl(category);
+  const badge = ({ rally: '🏍️', breakfast_run: '☕', pub_ride: '🍺', birthday_bash: '🎉', camping: '⛺', track_day: '🏁', charity_ride: '❤️', bike_night: '🌙', scenic_ride: '🏞️', day_jol: '🎵', other: '🏍️' })[category] || '🏍️';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="112" viewBox="0 0 96 112"><defs><clipPath id="c"><circle cx="48" cy="44" r="31"/></clipPath><filter id="s"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity=".35"/></filter></defs><path d="M48 108C42 94 18 74 18 45a30 30 0 1 1 60 0c0 29-24 49-30 63z" fill="#111" filter="url(%23s)"/><circle cx="48" cy="44" r="34" fill="#fff"/><image href="${escapeXml(imageUrl)}" x="17" y="13" width="62" height="62" preserveAspectRatio="xMidYMid slice" clip-path="url(%23c)"/><circle cx="70" cy="66" r="16" fill="#111" stroke="#fff" stroke-width="3"/><text x="70" y="72" text-anchor="middle" font-size="16">${badge}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function escapeXml(value) {
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
