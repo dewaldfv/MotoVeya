@@ -1,0 +1,50 @@
+{
+  "name": "RiderReview",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "bike": {
+      "type": "string"
+    },
+    "review": {
+      "type": "string"
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 1.0,
+      "maximum": 5.0,
+      "default": 5.0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "review"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

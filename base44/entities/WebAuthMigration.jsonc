@@ -1,0 +1,54 @@
+{
+  "name": "WebAuthMigration",
+  "type": "object",
+  "properties": {
+    "legacy_web_user_id": {
+      "type": "string"
+    },
+    "canonical_user_id": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "migrated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "linked",
+        "pending",
+        "failed"
+      ],
+      "default": "linked"
+    }
+  },
+  "required": [
+    "canonical_user_id",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

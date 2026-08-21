@@ -15,8 +15,9 @@ export default function ShareCodeSheet({ open, onClose, title, code, qrData, des
   };
 
   const handleShare = async () => {
+    const shareUrl = qrData || code;
     if (navigator.share) {
-      try { await navigator.share({ title, text: `${title}: ${code}` }); } catch (e) { /* cancelled */ }
+      try { await navigator.share({ title, text: description || title, url: shareUrl }); } catch (e) { /* cancelled */ }
     } else {
       handleCopy();
       toast.success('Code copied to clipboard');

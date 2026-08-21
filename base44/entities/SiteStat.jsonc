@@ -1,0 +1,34 @@
+{
+  "name": "SiteStat",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string"
+    },
+    "download_clicks": {
+      "type": "number",
+      "default": 0.0
+    }
+  },
+  "required": [
+    "key"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
