@@ -234,7 +234,28 @@ export default function CrowdClips() {
     }
   };
 
-  const selectGalleryMedia = (files) => {
+  const compressPhoto = async (file) => {
+    const preview = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      image.src = preview;
+      await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
+      const maxEdge = 1920;
+      const scale = Math.min(maxEdge / image.naturalWidth, maxEdge / image.naturalHeight, 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+      if (!blob) throw new Error('Photo compression failed.');
+      return new File([blob], file.name.replace(/\\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+    } finally {
+      URL.revokeObjectURL(preview);
+    }
+  };
+
+  const selectGalleryMedia = async (files) => {
     const selected = Array.from(files || []).filter((candidate) =>
       candidate.type.startsWith('image/') || candidate.type.startsWith('video/')
     );
@@ -256,13 +277,15 @@ export default function CrowdClips() {
       return;
     }
     const photos = selected.slice(0, 10);
-    const previews = photos.map((file) => URL.createObjectURL(file));
-    setMediaFile(photos[0]);
-    setMediaFiles(photos);
+    const compressedPhotos = await Promise.all(photos.map(compressPhoto));
+    const previews = compressedPhotos.map((file) => URL.createObjectURL(file));
+    setMediaFile(compressedPhotos[0]);
+    setMediaFiles(compressedPhotos);
     setMediaType('photo');
     setMediaPreview(previews[0]);
     setMediaPreviews(previews);
     if (selected.length > 10) toast.info('Crowd Clips supports up to 10 photos per post. The first 10 were selected.');
+    toast.success(`${compressedPhotos.length} photo${compressedPhotos.length === 1 ? '' : 's'} optimized for upload`);
   };
 
   const useCurrentLocation = () => {
