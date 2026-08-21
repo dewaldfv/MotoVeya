@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Camera, Clapperboard, Heart, MessageCircle, MapPin, Plus, Send,
-  UserPlus, UserCheck, Upload, Video, X, LocateFixed
+  UserPlus, UserCheck, Upload, Video, X, LocateFixed, Share2, Bookmark,
+  MoreVertical, Volume2, VolumeX, Play, Pause
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,6 +40,10 @@ export default function CrowdClips() {
   const [videoTrimStart, setVideoTrimStart] = useState(0);
   const [videoTrimEnd, setVideoTrimEnd] = useState(30);
   const [videoNeedsTrim, setVideoNeedsTrim] = useState(false);
+  const [mutedClips, setMutedClips] = useState(true);
+  const videoRefs = useRef(new Map());
+  const lastTapRef = useRef({ time: 0, clipId: null });
+  const observerRef = useRef(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['crowd-clips'],
@@ -62,6 +67,60 @@ export default function CrowdClips() {
     if (!user) return;
     setFollowing(new Set(follows.filter((f) => f.follower_id === user.id).map((f) => f.creator_id)));
   }, [follows, user]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const video = entry.target;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.65) {
+          document.querySelectorAll('[data-crowd-video]').forEach((other) => {
+            if (other !== video) other.pause();
+          });
+          video.muted = mutedClips;
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    }, { threshold: [0.2, 0.65, 0.9] });
+    observerRef.current = observer;
+    videoRefs.current.forEach((video) => observer.observe(video));
+    return () => observer.disconnect();
+  }, [clips.length, mutedClips]);
+
+  const registerVideo = (clipId, node) => {
+    if (!node) return;
+    videoRefs.current.set(clipId, node);
+    node.muted = mutedClips;
+    observerRef.current?.observe(node);
+  };
+
+  const handleVideoTap = (clipId) => {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    const video = videoRefs.current.get(clipId);
+    if (!video) return;
+    if (last.clipId === clipId && now - last.time < 280) {
+      lastTapRef.current = { time: 0, clipId: null };
+      const clip = clips.find((item) => item.id === clipId);
+      if (clip && !likeSet.has(clipId)) toggleLike.mutate(clip);
+      return;
+    }
+    lastTapRef.current = { time: now, clipId };
+    window.setTimeout(() => {
+      if (lastTapRef.current.clipId === clipId && lastTapRef.current.time === now) {
+        if (video.paused) video.play().catch(() => {}); else video.pause();
+      }
+    }, 300);
+  };
+
+  const shareClip = async (clip) => {
+    const shareData = { title: 'MotoVeya Crowd Clip', text: clip.caption || 'Check out this Crowd Clip on MotoVeya' };
+    try {
+      if (navigator.share) await navigator.share(shareData);
+      else await navigator.clipboard?.writeText(window.location.href);
+    } catch (_) {}
+  };
 
   const likeSet = useMemo(() => new Set(likes.filter((l) => l.user_id === user?.id).map((l) => l.clip_id)), [likes, user?.id]);
   const commentsByClip = useMemo(() => comments.reduce((acc, c) => {
@@ -277,89 +336,97 @@ export default function CrowdClips() {
   if (!user) return <LoginPrompt message="Log in to watch and share Crowd Clips" />;
 
   return (
-    <div className="min-h-screen bg-background pb-28" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-      <div className="sticky top-0 z-30 border-b border-border/60 bg-background/90 px-4 py-3 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Clapperboard size={22} className="text-primary" />
-              <h1 className="text-xl font-bold">Crowd Clips</h1>
-            </div>
-            <p className="text-xs text-muted-foreground">Ride. Capture. Share.</p>
+    <div className="h-[100svh] overflow-hidden bg-black" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="absolute left-0 right-0 top-0 z-30 bg-gradient-to-b from-black/75 via-black/25 to-transparent px-4 pb-8 pt-3">
+        <div className="mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2 text-white">
+            <Clapperboard size={21} />
+            <h1 className="text-lg font-bold">Crowd Clips</h1>
           </div>
-          <Button size="icon" className="rounded-full" onClick={() => setComposerOpen(true)} aria-label="Create Crowd Clip">
-            <Plus size={21} />
+          <Button size="icon" variant="ghost" className="rounded-full text-white hover:bg-white/15 hover:text-white" onClick={() => setComposerOpen(true)} aria-label="Create Crowd Clip">
+            <Plus size={22} />
           </Button>
         </div>
       </div>
 
-      <main className="mx-auto max-w-2xl px-3 py-3">
+      <main className="h-full w-full">
         {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((n) => <div key={n} className="aspect-[9/14] animate-pulse rounded-3xl bg-muted" />)}
-          </div>
+          <div className="flex h-full items-center justify-center bg-black text-white/70">Loading clips…</div>
         ) : clips.length === 0 ? (
-          <div className="flex min-h-[65vh] flex-col items-center justify-center px-8 text-center">
-            <div className="mb-4 rounded-full bg-primary/10 p-5 text-primary"><Clapperboard size={42} /></div>
+          <div className="flex h-full flex-col items-center justify-center bg-black px-8 text-center text-white">
+            <div className="mb-4 rounded-full bg-white/10 p-5"><Clapperboard size={42} /></div>
             <h2 className="text-xl font-bold">Be the first on Crowd Clips</h2>
-            <p className="mt-2 max-w-sm text-sm text-muted-foreground">Share your ride, your bike, a great road or a place other riders need to see.</p>
+            <p className="mt-2 max-w-sm text-sm text-white/60">Share your ride, your bike, a great road or a place other riders need to see.</p>
             <Button className="mt-5" onClick={() => setComposerOpen(true)}><Camera size={18} className="mr-2" /> Create a Clip</Button>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="h-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {clips.map((clip) => {
               const liked = likeSet.has(clip.id);
               const isFollowing = following.has(clip.creator_id) || clip.creator_id === user.id;
               const clipComments = commentsByClip[clip.id] || [];
               const clipLikes = likesByClip[clip.id] || [];
               return (
-                <article key={clip.id} className="overflow-hidden rounded-3xl border border-border bg-card">
-                  <div className="relative bg-black">
-                    {clip.media_type === 'video' ? (
-                      <video src={clip.media_url} controls playsInline preload="metadata" className="block max-h-[72vh] min-h-[420px] w-full object-contain" />
-                    ) : (
-                      <img src={clip.media_url} alt={clip.caption || 'Crowd Clip'} className="block max-h-[72vh] min-h-[420px] w-full object-contain" />
-                    )}
-                    {clip.location_name && (
-                      <div className="absolute bottom-3 left-3 flex max-w-[80%] items-center gap-1.5 rounded-full bg-black/65 px-3 py-1.5 text-xs font-medium text-white backdrop-blur">
-                        <MapPin size={13} /> <span className="truncate">{clip.location_name}</span>
+                <article key={clip.id} className="relative h-[100svh] w-full snap-start snap-always overflow-hidden bg-black">
+                  {clip.media_type === 'video' ? (
+                    <video
+                      ref={(node) => registerVideo(clip.id, node)}
+                      data-crowd-video
+                      src={clip.media_url}
+                      playsInline
+                      loop
+                      preload="metadata"
+                      muted={mutedClips}
+                      onClick={() => handleVideoTap(clip.id)}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : (
+                    <img src={clip.media_url} alt={clip.caption || 'Crowd Clip'} className="absolute inset-0 h-full w-full object-cover" />
+                  )}
+
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/20" />
+
+                  <div className="absolute bottom-24 left-4 right-20 z-10 text-white">
+                    <div className="mb-3 flex items-center gap-3">
+                      <img src={avatarFor(clip)} alt="" className="h-11 w-11 rounded-full border-2 border-white/80 object-cover" />
+                      <div className="min-w-0">
+                        <p className="truncate font-bold">@{(clip.creator_name || 'Rider').replace(/\\s+/g, '').toLowerCase()}</p>
+                        {clip.creator_id !== user.id && (
+                          <button type="button" onClick={() => followMutation.mutate({ creatorId: clip.creator_id, creatorName: clip.creator_name })} className="mt-0.5 text-xs font-semibold text-white/80">
+                            {isFollowing ? 'Following' : '+ Follow'}
+                          </button>
+                        )}
                       </div>
+                    </div>
+                    {clip.caption && <p className="mb-2 whitespace-pre-wrap text-sm leading-5">{clip.caption}</p>}
+                    {clip.location_name && <div className="flex items-center gap-1.5 text-xs font-medium text-white/85"><MapPin size={14} /> <span className="truncate">{clip.location_name}</span></div>}
+                  </div>
+
+                  <div className="absolute bottom-24 right-3 z-10 flex w-14 flex-col items-center gap-4 text-white">
+                    <button type="button" aria-label="Like" onClick={() => toggleLike.mutate(clip)} className="flex flex-col items-center gap-1">
+                      <Heart size={29} fill={liked ? 'currentColor' : 'none'} className={liked ? 'text-red-500' : ''} />
+                      <span className="text-xs font-semibold">{clipLikes.length}</span>
+                    </button>
+                    <button type="button" aria-label="Comments" onClick={() => setCommentClip(clip)} className="flex flex-col items-center gap-1">
+                      <MessageCircle size={29} />
+                      <span className="text-xs font-semibold">{clipComments.length}</span>
+                    </button>
+                    <button type="button" aria-label="Share" onClick={() => shareClip(clip)} className="flex flex-col items-center gap-1">
+                      <Share2 size={28} />
+                      <span className="text-xs font-semibold">Share</span>
+                    </button>
+                    <button type="button" aria-label="Save" className="flex flex-col items-center gap-1">
+                      <Bookmark size={28} />
+                      <span className="text-xs font-semibold">Save</span>
+                    </button>
+                    {clip.media_type === 'video' && (
+                      <button type="button" aria-label="Toggle sound" onClick={() => { const next = !mutedClips; setMutedClips(next); const video = videoRefs.current.get(clip.id); if (video) video.muted = next; }} className="rounded-full bg-black/35 p-2 backdrop-blur">
+                        {mutedClips ? <VolumeX size={22} /> : <Volume2 size={22} />}
+                      </button>
                     )}
                   </div>
 
-                  <div className="p-4">
-                    <div className="flex items-center gap-3">
-                      <img src={avatarFor(clip)} alt="" className="h-10 w-10 rounded-full object-cover" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold">{clip.creator_name}</p>
-                        <p className="text-xs text-muted-foreground">MotoVeya rider</p>
-                      </div>
-                      {clip.creator_id !== user.id && (
-                        <Button
-                          variant={isFollowing ? 'secondary' : 'outline'}
-                          size="sm"
-                          onClick={() => followMutation.mutate({ creatorId: clip.creator_id, creatorName: clip.creator_name })}
-                        >
-                          {isFollowing ? <UserCheck size={15} className="mr-1" /> : <UserPlus size={15} className="mr-1" />}
-                          {isFollowing ? 'Following' : 'Follow'}
-                        </Button>
-                      )}
-                    </div>
-
-                    {clip.caption && <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{clip.caption}</p>}
-
-                    <div className="mt-4 flex items-center gap-2">
-                      <Button variant="ghost" size="sm" className={`rounded-full ${liked ? 'text-red-500' : ''}`} onClick={() => toggleLike.mutate(clip)}>
-                        <Heart size={19} className="mr-1.5" fill={liked ? 'currentColor' : 'none'} /> {clipLikes.length}
-                      </Button>
-                      <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setCommentClip(clip)}>
-                        <MessageCircle size={19} className="mr-1.5" /> {clipComments.length}
-                      </Button>
-                      {clip.location_lat != null && clip.location_lng != null && (
-                        <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground"><MapPin size={14} /> Location saved</span>
-                      )}
-                    </div>
-                  </div>
+                  <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-[11px] font-medium text-white/55">Swipe up for more</div>
                 </article>
               );
             })}
