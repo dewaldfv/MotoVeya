@@ -76,8 +76,12 @@ export default function CrowdClips() {
         const video = entry.target;
         if (entry.isIntersecting && entry.intersectionRatio >= 0.65) {
           document.querySelectorAll('[data-crowd-video]').forEach((other) => {
-            if (other !== video) other.pause();
+            if (other !== video) {
+              other.pause();
+              other.currentTime = 0;
+            }
           });
+          video.currentTime = 0;
           video.muted = mutedClips;
           video.play().catch(() => {});
         } else {
