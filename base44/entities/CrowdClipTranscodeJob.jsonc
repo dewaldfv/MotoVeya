@@ -1,0 +1,64 @@
+{
+  "type": "object",
+  "properties": {
+    "clip_id": {
+      "type": "string"
+    },
+    "source_url": {
+      "type": "string"
+    },
+    "output_url": {
+      "type": "string"
+    },
+    "thumbnail_url": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "processing",
+        "ready",
+        "failed"
+      ],
+      "default": "queued"
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "duration_seconds": {
+      "type": "number"
+    },
+    "output_bytes": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "clip_id",
+    "source_url",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "name": "CrowdClipTranscodeJob"
+}

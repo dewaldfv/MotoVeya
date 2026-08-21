@@ -21,6 +21,18 @@
     "thumbnail_url": {
       "type": "string"
     },
+    "processing_status": {
+      "type": "string",
+      "enum": [
+        "processing",
+        "ready",
+        "failed"
+      ],
+      "default": "ready"
+    },
+    "source_media_url": {
+      "type": "string"
+    },
     "caption": {
       "type": "string"
     },
