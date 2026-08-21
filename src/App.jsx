@@ -53,6 +53,12 @@ import ServiceProviderDashboard from '@/pages/ServiceProviderDashboard';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
+
+  // OAuth bridge is public and must run before auth gating so the callback
+  // token can be handed back to Web.motoveya.
+  if (typeof window !== 'undefined' && window.location.pathname === '/web-auth-bridge') {
+    return <WebAuthBridge />;
+  }
   const navigate = useNavigate();
   const [introDone, setIntroDone] = useState(false);
   const [isFirstLaunch] = useState(() => localStorage.getItem('motogo_has_seen_intro') !== 'true');
