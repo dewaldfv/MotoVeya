@@ -408,7 +408,11 @@ export default function CrowdClips() {
                       className="absolute inset-0 h-full w-full object-cover"
                     />
                   ) : (
-                    <img src={clip.media_url} alt={clip.caption || 'Crowd Clip'} className="absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {(clip.media_urls?.length ? clip.media_urls : [clip.media_url]).map((url, index) => (
+                        <img key={url} src={url} alt={`${clip.caption || 'Crowd Clip'} photo ${index + 1}`} className="h-full w-full shrink-0 snap-center object-cover" />
+                      ))}
+                    </div>
                   )}
 
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/20" />
@@ -428,6 +432,12 @@ export default function CrowdClips() {
                     {clip.caption && <p className="mb-2 whitespace-pre-wrap text-sm leading-5">{clip.caption}</p>}
                     {clip.location_name && <div className="flex items-center gap-1.5 text-xs font-medium text-white/85"><MapPin size={14} /> <span className="truncate">{clip.location_name}</span></div>}
                   </div>
+
+                  {clip.media_type === 'photo' && (clip.media_urls?.length || 1) > 1 && (
+                    <div className="absolute right-4 top-20 z-10 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+                      {clip.media_urls?.length || 1} photos • swipe
+                    </div>
+                  )}
 
                   <div className="absolute bottom-24 right-3 z-10 flex w-14 flex-col items-center gap-4 text-white">
                     <button type="button" aria-label="Like" onClick={() => toggleLike.mutate(clip)} className="flex flex-col items-center gap-1">
