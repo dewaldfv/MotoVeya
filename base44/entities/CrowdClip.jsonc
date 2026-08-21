@@ -12,6 +12,12 @@
     "media_url": {
       "type": "string"
     },
+    "media_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "thumbnail_url": {
       "type": "string"
     },
