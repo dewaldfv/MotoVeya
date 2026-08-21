@@ -1,0 +1,39 @@
+{
+  "name": "EventSubmission",
+  "type": "object",
+  "properties": {
+    "source_image_url": {
+      "type": "string"
+    },
+    "extracted_data": {
+      "type": "string"
+    },
+    "confidence_score": {
+      "type": "number"
+    },
+    "location_confidence": {
+      "type": "number"
+    },
+    "processing_status": {
+      "type": "string",
+      "enum": [
+        "uploaded",
+        "processing",
+        "needs_review",
+        "ready",
+        "approved",
+        "rejected"
+      ],
+      "default": "uploaded"
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "event_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "processing_status"
+  ]
+}

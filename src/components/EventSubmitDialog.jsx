@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import { EVENT_CATEGORIES, getEventMarkerUrl } from '@/lib/eventMarkers';
 
+// Event poster automation: upload poster -> create EventSubmission -> backend AI extraction/review.
 export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
   const [saving, setSaving] = useState(false);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
