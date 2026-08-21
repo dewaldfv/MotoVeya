@@ -328,7 +328,7 @@ export default function Profile() {
 
       <EditProfileDialog user={user} open={editOpen} onClose={() => setEditOpen(false)} onSaved={(data) => setUser((u) => ({ ...u, ...data }))} />
       <EmergencySafetySheet user={user} open={emergencyOpen} onClose={() => setEmergencyOpen(false)} onSaved={(data) => setUser((u) => ({ ...u, ...data }))} />
-      <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} title="My MotoVeya Code" code={user.id} qrData={`motogo://friend?code=${user.id}`} description="Share to add as friend" />
+      <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} title="My MotoVeya Friend Link" code={user.id} qrData={`https://web-motoveya.base44.app/friend/${encodeURIComponent(user.id)}`} description="Open this link to send me a MotoVeya friend request" />
     </div>);
 
 }
