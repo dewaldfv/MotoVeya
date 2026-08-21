@@ -50,6 +50,7 @@ import ServiceHistory from '@/pages/ServiceHistory';
 import SafetyDashboard from '@/pages/SafetyDashboard';
 import Achievements from '@/pages/Achievements';
 import ServiceProviderDashboard from '@/pages/ServiceProviderDashboard';
+import FriendRequest from '@/pages/FriendRequest';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
@@ -103,6 +104,7 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/oauth/consent" element={<OAuthConsent />} />
       <Route path="/web-auth-bridge" element={<WebAuthBridge />} />
+      <Route path="/friend/:code" element={<FriendRequest />} />
       <Route path="/welcome" element={<Welcome />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
