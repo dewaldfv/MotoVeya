@@ -482,8 +482,15 @@ export default function CrowdClips() {
             {mediaPreview ? (
               <>
               <div className="relative overflow-hidden rounded-2xl bg-black">
-                {mediaType === 'video' ? <video src={mediaPreview} controls onLoadedMetadata={(e) => { const duration = e.currentTarget.duration || 0; setVideoDuration(duration); setVideoNeedsTrim(duration > 30); setVideoTrimStart(0); setVideoTrimEnd(Math.min(30, duration)); }} className="max-h-72 w-full object-contain" /> : <img src={mediaPreview} alt="Selected clip" className="max-h-72 w-full object-contain" />}
-                <button type="button" onClick={() => { setMediaFile(null); setMediaPreview(''); setVideoNeedsTrim(false); }} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white"><X size={17} /></button>
+                {mediaType === 'video' ? (
+                  <video src={mediaPreview} controls onLoadedMetadata={(e) => { const duration = e.currentTarget.duration || 0; setVideoDuration(duration); setVideoNeedsTrim(duration > 30); setVideoTrimStart(0); setVideoTrimEnd(Math.min(30, duration)); }} className="max-h-72 w-full object-contain" />
+                ) : (
+                  <div className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {mediaPreviews.map((preview, index) => <img key={preview} src={preview} alt={`Selected photo ${index + 1}`} className="h-72 w-full shrink-0 snap-center object-contain" />)}
+                  </div>
+                )}
+                {mediaType === 'photo' && mediaFiles.length > 1 && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-semibold text-white">{mediaFiles.length} photos • swipe</div>}
+                <button type="button" onClick={() => { mediaPreviews.forEach((url) => URL.revokeObjectURL(url)); setMediaFile(null); setMediaFiles([]); setMediaPreview(''); setMediaPreviews([]); setVideoNeedsTrim(false); }} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white"><X size={17} /></button>
               </div>
               {mediaType === 'video' && videoDuration > 0 && (
                 <div className="mt-3 space-y-3 rounded-2xl border border-border bg-muted/40 p-3">
@@ -504,6 +511,8 @@ export default function CrowdClips() {
                 <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => galleryInputRef.current?.click()}><Upload size={24} /> Gallery</Button>
               </div>
             )}
+
+            {mediaType === 'photo' && mediaFiles.length > 1 && <p className="text-xs text-muted-foreground">Swipe left or right to preview your {mediaFiles.length} photos. Maximum 10 photos per post.</p>}
 
             <div>
               <label htmlFor="crowd-caption" className="mb-1.5 block text-sm font-medium">Caption</label>
