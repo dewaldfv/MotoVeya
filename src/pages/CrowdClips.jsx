@@ -220,9 +220,12 @@ export default function CrowdClips() {
       toast.error(`Please select a ${type}.`);
       return;
     }
+    const preview = URL.createObjectURL(file);
     setMediaFile(file);
+    setMediaFiles([file]);
     setMediaType(type);
-    setMediaPreview(URL.createObjectURL(file));
+    setMediaPreview(preview);
+    setMediaPreviews([preview]);
     if (type === 'video') {
       setVideoDuration(0);
       setVideoTrimStart(0);
@@ -232,21 +235,34 @@ export default function CrowdClips() {
   };
 
   const selectGalleryMedia = (files) => {
-    const file = Array.from(files || []).find((candidate) =>
+    const selected = Array.from(files || []).filter((candidate) =>
       candidate.type.startsWith('image/') || candidate.type.startsWith('video/')
     );
-    if (!file) return;
-    const type = file.type.startsWith('video/') ? 'video' : 'photo';
-    setMediaFile(file);
-    setMediaType(type);
-    setMediaPreview(URL.createObjectURL(file));
-    if (type === 'video') {
+    if (!selected.length) return;
+    const hasVideo = selected.some((file) => file.type.startsWith('video/'));
+    if (hasVideo) {
+      const video = selected.find((file) => file.type.startsWith('video/'));
+      const preview = URL.createObjectURL(video);
+      setMediaFile(video);
+      setMediaFiles([video]);
+      setMediaType('video');
+      setMediaPreview(preview);
+      setMediaPreviews([preview]);
+      if (selected.length > 1) toast.info('Videos are posted one at a time. The selected video was loaded.');
       setVideoDuration(0);
       setVideoTrimStart(0);
       setVideoTrimEnd(30);
       setVideoNeedsTrim(false);
+      return;
     }
-    if ((files?.length || 0) > 1) toast.info('Crowd Clips currently posts one item at a time. The first selected item was loaded.');
+    const photos = selected.slice(0, 10);
+    const previews = photos.map((file) => URL.createObjectURL(file));
+    setMediaFile(photos[0]);
+    setMediaFiles(photos);
+    setMediaType('photo');
+    setMediaPreview(previews[0]);
+    setMediaPreviews(previews);
+    if (selected.length > 10) toast.info('Crowd Clips supports up to 10 photos per post. The first 10 were selected.');
   };
 
   const useCurrentLocation = () => {
