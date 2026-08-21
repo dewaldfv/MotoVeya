@@ -18,6 +18,8 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
   const [uploading, setUploading] = useState(false);
   const [uploadingMarker, setUploadingMarker] = useState(false);
   const [customMarker, setCustomMarker] = useState(null);
+  const [processingPoster, setProcessingPoster] = useState(false);
+  const [posterConfidence, setPosterConfidence] = useState(null);
   const [form, setForm] = useState({ title: '', description: '', event_date: '', end_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -40,6 +42,50 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
 
   const handleRemoveImage = (idx) => {
     setForm((f) => ({ ...f, photo_urls: f.photo_urls.filter((_, i) => i !== idx) }));
+  };
+
+  const handlePosterUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProcessingPoster(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const result = await base44.functions.invoke('process-event-poster', { image_url: file_url });
+      const data = result?.data || result;
+      if (!data?.data) throw new Error(data?.error || 'The poster could not be processed');
+      const extracted = data.data;
+      const toLocalDateTime = (value) => {
+        if (!value) return '';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+      setForm((f) => ({
+        ...f,
+        title: extracted.title || f.title,
+        description: extracted.description || f.description,
+        event_date: toLocalDateTime(extracted.event_date) || f.event_date,
+        end_date: toLocalDateTime(extracted.end_date) || f.end_date,
+        venue_name: extracted.venue_name || f.venue_name,
+        lat: extracted.lat != null ? String(extracted.lat) : f.lat,
+        lng: extracted.lng != null ? String(extracted.lng) : f.lng,
+        contact_phone: extracted.contact_phone || f.contact_phone,
+        contact_email: extracted.contact_email || f.contact_email,
+        booking_link: extracted.booking_link || f.booking_link,
+        entry_fee_zar: extracted.entry_fee_zar != null ? String(extracted.entry_fee_zar) : f.entry_fee_zar,
+        category: extracted.category || f.category,
+        photo_urls: [file_url, ...(f.photo_urls || []).filter((u) => u !== file_url)],
+      }));
+      setPosterConfidence({ overall: extracted.confidence_score, location: extracted.location_confidence, status: data.status, missing: extracted.missing_fields || [] });
+      toast.success(data.status === 'ready' ? 'Event details extracted and location found.' : 'Event details extracted. Please review the highlighted information.');
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || 'Could not read the event poster');
+    } finally {
+      setProcessingPoster(false);
+      e.target.value = '';
+    }
   };
 
   const handleMarkerUpload = async (e) => {
@@ -95,6 +141,25 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Submit Event</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-base">Upload Event Poster</Label>
+                <p className="mt-1 text-xs text-muted-foreground">MotoVeya will read the poster, fill the event details, identify the category and locate the venue.</p>
+              </div>
+              <label className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground">
+                {processingPoster ? <><Loader2 size={16} className="animate-spin" /> Reading...</> : <><ImagePlus size={16} /> Upload Ad</>}
+                <input type="file" accept="image/*,.pdf" className="hidden" onChange={handlePosterUpload} disabled={processingPoster} />
+              </label>
+            </div>
+            {posterConfidence && (
+              <div className="mt-2 rounded-lg bg-background/70 p-3 text-xs">
+                <div className="flex justify-between"><span>Extraction confidence</span><strong>{Math.round((posterConfidence.overall || 0) * 100)}%</strong></div>
+                <div className="flex justify-between"><span>Location confidence</span><strong>{Math.round((posterConfidence.location || 0) * 100)}%</strong></div>
+                {posterConfidence.missing?.length > 0 && <p className="mt-1 text-amber-600">Still verify: {posterConfidence.missing.join(', ')}</p>}
+              </div>
+            )}
+          </div>
           <div><Label>Event Title *</Label><Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Sunday Breakfast Run" className="min-h-[48px]" /></div>
           <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Tell riders about your event" rows={3} /></div>
           <div className="grid grid-cols-2 gap-3">
