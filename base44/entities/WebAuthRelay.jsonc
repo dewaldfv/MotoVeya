@@ -1,0 +1,20 @@
+{
+  "name": "WebAuthRelay",
+  "type": "object",
+  "properties": {
+    "target_origin": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "expires_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "target_origin",
+    "purpose",
+    "expires_at"
+  ]
+}
