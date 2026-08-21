@@ -352,6 +352,9 @@ export default function CrowdClips() {
         throw new Error('Please select exactly 30 seconds of the video before publishing.');
       }
       const uploadFiles = mediaType === 'video' ? [await createTrimmedVideo()] : mediaFiles;
+      if (mediaType === 'photo' && (!uploadFiles.length || uploadFiles.length > 10)) {
+        throw new Error('A photo post must contain between 1 and 10 photos.');
+      }
       const uploadedUrls = [];
       for (const file of uploadFiles) {
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
