@@ -9,7 +9,7 @@ export default function ShareCodeSheet({ open, onClose, title, code, qrData, des
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(code);
+    navigator.clipboard.writeText(qrData || code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
