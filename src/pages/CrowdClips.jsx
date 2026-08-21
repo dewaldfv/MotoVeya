@@ -328,11 +328,17 @@ export default function CrowdClips() {
       if (mediaType === 'video' && videoDuration > 30 && Math.round(videoTrimEnd - videoTrimStart) !== 30) {
         throw new Error('Please select exactly 30 seconds of the video before publishing.');
       }
-      const uploadFile = mediaType === 'video' ? await createTrimmedVideo() : mediaFile;
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: uploadFile });
+      const uploadFiles = mediaType === 'video' ? [await createTrimmedVideo()] : mediaFiles;
+      const uploadedUrls = [];
+      for (const file of uploadFiles) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        uploadedUrls.push(file_url);
+      }
+      const primaryUrl = uploadedUrls[0];
       return base44.entities.CrowdClip.create({
         media_type: mediaType,
-        media_url: file_url,
+        media_url: primaryUrl,
+        media_urls: uploadedUrls,
         caption: caption.trim(),
         creator_id: user.id,
         creator_name: user.nickname || user.full_name || 'Rider',
