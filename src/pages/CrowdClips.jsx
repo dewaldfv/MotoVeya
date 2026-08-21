@@ -98,8 +98,30 @@ export default function CrowdClips() {
     if (!node) return;
     videoRefs.current.set(clipId, node);
     node.muted = mutedClips;
+    node.preload = 'auto';
     observerRef.current?.observe(node);
   };
+
+  useEffect(() => {
+    const preloadNearby = () => {
+      const entries = clips.map((clip, index) => ({ clip, index, video: videoRefs.current.get(clip.id) })).filter((item) => item.video);
+      const visible = entries.find((item) => {
+        const rect = item.video.getBoundingClientRect();
+        return rect.top < window.innerHeight * 0.7 && rect.bottom > window.innerHeight * 0.3;
+      });
+      if (!visible) return;
+      [visible.index + 1, visible.index + 2].forEach((index) => {
+        const next = clips[index];
+        const video = next && videoRefs.current.get(next.id);
+        if (video && video.readyState < 3) {
+          video.preload = 'auto';
+          try { video.load(); } catch (_) {}
+        }
+      });
+    };
+    const timer = window.setTimeout(preloadNearby, 250);
+    return () => window.clearTimeout(timer);
+  }, [clips]);
 
   const handleVideoTap = (clipId) => {
     const now = Date.now();
@@ -432,7 +454,7 @@ export default function CrowdClips() {
                       src={clip.media_url}
                       playsInline
                       loop
-                      preload="metadata"
+                      preload="auto"
                       muted={mutedClips}
                       onClick={() => handleVideoTap(clip.id)}
                       className="absolute inset-0 h-full w-full object-cover"
