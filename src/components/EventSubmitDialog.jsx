@@ -9,7 +9,7 @@ import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from 
 import { ChevronDown, Check, ImagePlus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import LocationPickerMap from '@/components/LocationPickerMap';
-import { EVENT_CATEGORIES, getEventMarkerUrl } from '@/lib/eventMarkers';
+import { EVENT_CATEGORIES, getEventMarkerUrl, getEventPosterMarkerUrl } from '@/lib/eventMarkers';
 
 // Event poster automation: upload poster -> create EventSubmission -> backend AI extraction/review.
 export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
@@ -112,7 +112,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
     try {
       await base44.entities.Event.create({
         ...form,
-        markerIcon: customMarker || getEventMarkerUrl(form.category),
+        markerIcon: customMarker || getEventPosterMarkerUrl(form.photo_urls?.[0], form.category) || getEventMarkerUrl(form.category),
         event_date: new Date(form.event_date).toISOString(),
         end_date: form.category === 'rally' && form.end_date ? new Date(form.end_date).toISOString() : undefined,
         lat: form.lat ? Number(form.lat) : undefined,
@@ -134,7 +134,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
   };
 
   const categoryLabel = EVENT_CATEGORIES.find((c) => c.value === form.category)?.label || 'Rally';
-  const activeMarkerUrl = customMarker || getEventMarkerUrl(form.category);
+  const activeMarkerUrl = customMarker || getEventPosterMarkerUrl(form.photo_urls?.[0], form.category) || getEventMarkerUrl(form.category);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
