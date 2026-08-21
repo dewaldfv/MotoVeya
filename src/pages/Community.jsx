@@ -203,6 +203,13 @@ export default function Community() {
       const code = decodeURIComponent(m[2]);
       return m[1] === 'group' ? await joinGroupByCode(code) : await addFriendByCode(code);
     }
+    try {
+      const url = new URL(t);
+      const friendMatch = url.pathname.match(/^\/friend\/([^/]+)$/);
+      if (url.origin === 'https://web-motoveya.base44.app' && friendMatch) {
+        return await addFriendByCode(decodeURIComponent(friendMatch[1]));
+      }
+    } catch (e) { /* plain code, handled below */ }
     if (scanMode === 'group' && t) return await joinGroupByCode(t);
     if (scanMode === 'friend' && t) return await addFriendByCode(t);
     toast.error('Not a MotoVeya QR code');
