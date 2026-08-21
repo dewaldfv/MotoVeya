@@ -28,7 +28,9 @@ export default function CrowdClips() {
   const galleryInputRef = useRef(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [mediaFile, setMediaFile] = useState(null);
+  const [mediaFiles, setMediaFiles] = useState([]);
   const [mediaPreview, setMediaPreview] = useState('');
+  const [mediaPreviews, setMediaPreviews] = useState([]);
   const [mediaType, setMediaType] = useState('photo');
   const [caption, setCaption] = useState('');
   const [locationName, setLocationName] = useState('');
@@ -196,9 +198,12 @@ export default function CrowdClips() {
   });
 
   const resetComposer = () => {
+    mediaPreviews.forEach((url) => URL.revokeObjectURL(url));
     setComposerOpen(false);
     setMediaFile(null);
+    setMediaFiles([]);
     setMediaPreview('');
+    setMediaPreviews([]);
     setMediaType('photo');
     setCaption('');
     setLocationName('');
