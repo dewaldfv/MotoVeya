@@ -55,6 +55,14 @@ Deno.serve(async (req) => {
     });
 
     const data = normalize(result || {});
+    if ((data.lat == null || data.lng == null) && (data.address || data.venue_name || data.city)) {
+      const geo = await geocodeLocation([data.venue_name, data.address, data.city, data.province, 'South Africa'].filter(Boolean).join(', '));
+      if (geo) {
+        data.lat = geo.lat;
+        data.lng = geo.lng;
+        data.location_confidence = Math.max(data.location_confidence || 0, geo.confidence);
+      }
+    }
     const needsReview = !data.title || !data.event_date || !data.venue_name || data.confidence_score < 0.75 || data.location_confidence < 0.75 || data.lat == null || data.lng == null;
     const status = needsReview ? 'needs_review' : 'ready';
 
@@ -72,6 +80,17 @@ Deno.serve(async (req) => {
     return Response.json({ error: error?.message || 'Failed to process event poster.' }, { status: 500 });
   }
 });
+
+async function geocodeLocation(query) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=za&q=${encodeURIComponent(query)}`, { headers: { 'User-Agent': 'MotoVeya-App/1.0' } });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!rows?.[0]) return null;
+    const importance = Number(rows[0].importance || 0);
+    return { lat: Number(rows[0].lat), lng: Number(rows[0].lon), confidence: Math.min(0.9, Math.max(0.75, importance || 0.75)) };
+  } catch (_) { return null; }
+}
 
 function normalize(v) {
   const out = { ...v };
