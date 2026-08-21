@@ -349,10 +349,17 @@ export default function CrowdClips() {
     const sourceStream = video.captureStream();
     const canvasStream = canvas.captureStream(30);
     sourceStream.getAudioTracks().forEach((track) => canvasStream.addTrack(track));
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-      ? 'video/webm;codecs=vp9,opus'
-      : 'video/webm;codecs=vp8,opus';
-    const recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 8000000, audioBitsPerSecond: 128000 });
+    // Prefer a broadly supported MP4/H.264 profile when the browser exposes it.
+    // Fall back to WebM only on browsers that cannot record MP4 from MediaRecorder.
+    const preferredTypes = [
+      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+      'video/mp4;codecs=avc1.4D401F,mp4a.40.2',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+    ];
+    const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type));
+    if (!mimeType) throw new Error('This device cannot encode a supported Crowd Clip video.');
+    const recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 4500000, audioBitsPerSecond: 96000 });
     const chunks = [];
     recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
     const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
@@ -368,7 +375,8 @@ export default function CrowdClips() {
     await stopped;
     sourceStream.getTracks().forEach((track) => track.stop());
     canvasStream.getTracks().forEach((track) => track.stop());
-    return new File([new Blob(chunks, { type: mimeType })], 'crowd-clip-1080p.webm', { type: mimeType });
+    const extension = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
+    return new File([new Blob(chunks, { type: mimeType })], `crowd-clip-mobile-1080p.${extension}`, { type: mimeType });
   };
 
   const publishClip = useMutation({
