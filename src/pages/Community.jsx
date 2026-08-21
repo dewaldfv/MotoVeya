@@ -343,7 +343,7 @@ export default function Community() {
               <div className="flex gap-2">
                 <Button className="min-h-[48px] flex-1" onClick={() => setAddFriendOpen(true)}><UserPlus size={18} className="mr-2" /> Add</Button>
                 <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => { setScannerMode('friend'); setScannerOpen(true); }}><QrIcon size={18} className="mr-2" /> Scan</Button>
-                <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setShare({ title: 'My MotoVeya Friend Link', code: user.id, qrData: `https://web-motoveya.base44.app/friend/${encodeURIComponent(user.id)}`, description: 'Open this link to send me a MotoVeya friend request' })}><Share2 size={18} className="mr-2" /> My Link</Button>
+                <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setShare({ title: 'My MotoVeya Friend Link', code: user.id, qrData: `https://motoveya.base44.app/friend/${encodeURIComponent(user.id)}`, description: 'Open this link to send me a MotoVeya friend request' })}><Share2 size={18} className="mr-2" /> My Link</Button>
               </div>
             )}
             {isPremium && <FriendsDashboard user={user} friends={friends} />}
