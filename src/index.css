@@ -235,6 +235,207 @@
   0% { transform: rotate(-45deg) scale(1); opacity: 0.6; }
   100% { transform: rotate(-45deg) scale(1.9); opacity: 0; }
 }
+
+/* === MotoVeya Immersive Ride cockpit === */
+.motoveya-nav-card {
+  width: min(100%, 560px);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(18,18,18,0.88), rgba(8,8,8,0.78));
+  color: #fff;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+}
+.motoveya-nav-card__main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 74px;
+  padding: 9px 12px;
+}
+.motoveya-nav-icon {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: #ff7800;
+  color: white;
+  box-shadow: 0 8px 22px rgba(255,120,0,0.28);
+}
+.motoveya-nav-icon--large { width: 60px; height: 60px; }
+.motoveya-nav-distance {
+  font-size: clamp(26px, 7vw, 34px);
+  font-weight: 950;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+.motoveya-nav-eta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  min-width: 64px;
+  color: rgba(255,255,255,0.52);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.motoveya-nav-next {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.025);
+  color: rgba(255,255,255,0.52);
+  font-size: 11px;
+  font-weight: 700;
+}
+.motoveya-nav-progress {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+}
+.motoveya-nav-progress span {
+  display: block;
+  width: 32%;
+  height: 100%;
+  border-radius: 99px;
+  background: #ff7800;
+  box-shadow: 0 0 12px rgba(255,120,0,0.55);
+}
+
+.motoveya-ride-hud {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(15,15,15,0.91), rgba(5,5,5,0.82));
+  color: #fff;
+  box-shadow: 0 18px 48px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px) saturate(125%);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+}
+.motoveya-ride-hud__main {
+  display: grid;
+  grid-template-columns: 0.9fr 1.45fr 0.8fr;
+  align-items: stretch;
+  min-height: 86px;
+}
+.motoveya-speed-block,
+.motoveya-road-block,
+.motoveya-range-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 10px 14px;
+}
+.motoveya-speed-block { align-items: center; border-right: 1px solid rgba(255,255,255,0.07); }
+.motoveya-road-block { border-right: 1px solid rgba(255,255,255,0.07); }
+.motoveya-range-block { align-items: center; }
+.motoveya-speed-value {
+  margin-top: -2px;
+  font-size: clamp(42px, 13vw, 64px);
+  font-weight: 950;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+.motoveya-speed-unit {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.42);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+.motoveya-range-block strong {
+  margin-top: 2px;
+  font-size: 26px;
+  font-weight: 950;
+  line-height: 1;
+}
+.motoveya-ride-hud__status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 25px;
+  padding: 0 14px 8px;
+  color: rgba(255,255,255,0.4);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+.motoveya-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.35);
+}
+.motoveya-status-dot--moving {
+  background: #ff7800;
+  box-shadow: 0 0 10px rgba(255,120,0,0.85);
+  animation: motoveya-pulse 1.6s ease-in-out infinite;
+}
+.motoveya-ride-hud__details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.025);
+}
+.motoveya-ride-hud__details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 12px;
+  color: #ff7800;
+}
+.motoveya-ride-hud__details > div + div { border-left: 1px solid rgba(255,255,255,0.06); }
+.motoveya-ride-hud__details span { color: rgba(255,255,255,0.38); font-size: 8px; font-weight: 800; letter-spacing: 0.12em; }
+.motoveya-ride-hud__details strong { color: rgba(255,255,255,0.9); font-size: 11px; }
+
+.motoveya-turn-beacon { transition: width 0.2s ease, height 0.2s ease; }
+.motoveya-turn--urgent .motoveya-turn-beacon {
+  animation: motoveya-turn-pulse 0.85s ease-in-out infinite;
+  box-shadow: 0 0 0 8px rgba(255,120,0,0.12), 0 12px 36px rgba(255,120,0,0.38);
+}
+.motoveya-rider-marker { filter: drop-shadow(0 5px 8px rgba(0,0,0,0.42)); }
+
+@keyframes motoveya-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.45); opacity: 1; }
+}
+@keyframes motoveya-turn-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+
+/* Google Maps cockpit perspective: the rider sees more road ahead while the HUD stays flat. */
+.gm-rotatable {
+  transform: translate(-50%, calc(-50% + 14vh)) perspective(1200px) rotateX(28deg) rotateZ(var(--nav-rot, 0deg)) !important;
+  transform-origin: center center !important;
+  transition: transform 0.45s ease-out;
+  will-change: transform;
+}
+
+@media (max-width: 430px) {
+  .motoveya-nav-card__main { min-height: 68px; padding: 8px 10px; gap: 9px; }
+  .motoveya-nav-icon { width: 50px; height: 50px; border-radius: 16px; }
+  .motoveya-nav-icon--large { width: 54px; height: 54px; }
+  .motoveya-nav-distance { font-size: 28px; }
+  .motoveya-nav-eta { display: none; }
+  .motoveya-ride-hud__main { min-height: 78px; }
+  .motoveya-speed-value { font-size: 48px; }
+  .motoveya-speed-block, .motoveya-road-block, .motoveya-range-block { padding: 8px 10px; }
+}
+
 .motogo-landmark-marker {
   background: transparent;
   border: none;
