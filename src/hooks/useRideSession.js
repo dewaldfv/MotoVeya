@@ -62,6 +62,8 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const [fuelRemaining, setFuelRemaining] = useState(null);
   const [fuelRange, setFuelRange] = useState(null);
   const [recalculating, setRecalculating] = useState(false);
+  const [routeWarnings, setRouteWarnings] = useState([]);
+  const [reportingWarning, setReportingWarning] = useState(false);
 
   const lastPosRef = useRef(null);
   const positionsRef = useRef([]);
@@ -333,6 +335,61 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
   }, []);
+
+  // Route warnings are shared across MotoVeya, not restricted to a group ride.
+  // Poll while navigating so riders joining the same road see fresh warnings.
+  useEffect(() => {
+    if (rideStatus !== 'active' || !userPos) { setRouteWarnings([]); return; }
+    let cancelled = false;
+    const loadWarnings = async () => {
+      try {
+        const route = routeData?.coordinates || [];
+        const res = await base44.functions.invoke('get-route-warnings', {
+          lat: userPos[0],
+          lng: userPos[1],
+          route: route.length > 300 ? route.filter((_, i) => i % Math.ceil(route.length / 300) === 0) : route,
+        });
+        if (!cancelled) setRouteWarnings(res.data?.warnings || []);
+      } catch (e) { if (!cancelled) console.error('Route warnings:', e); }
+    };
+    loadWarnings();
+    const timer = setInterval(loadWarnings, 15000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [rideStatus, userPos?.[0], userPos?.[1], routeData]);
+
+  const handleReportWarning = async (warningType) => {
+    if (!userPos || reportingWarning) return;
+    setReportingWarning(true);
+    const labels = {
+      traffic: 'Traffic / Congestion', obstruction: 'Road Obstruction', accident: 'Accident Ahead',
+      weather: 'Severe Weather', mechanical: 'Mechanical Problem', unexpected_stop: 'Unexpected Stop', other: 'Warning',
+    };
+    try {
+      const now = new Date();
+      const expires = new Date(now.getTime() + 60 * 60 * 1000);
+      const warning = await base44.entities.WarningAlert.create({
+        rider_id: user?.id,
+        rider_name: user?.nickname || user?.full_name || 'Rider',
+        lat: userPos[0],
+        lng: userPos[1],
+        warning_type: warningType.type || warningType,
+        title: warningType.title || labels[warningType.type] || 'Warning',
+        message: `${labels[warningType.type] || 'Warning'} reported by a rider`,
+        status: 'active',
+        reported_at: now.toISOString(),
+        expires_at: expires.toISOString(),
+        route_name: navProgress?.nextStep?.name || destination?.name || 'Current route',
+        heading: heading,
+      });
+      setRouteWarnings((prev) => [{ ...warning, distance_from_rider_km: 0, is_self: true }, ...prev]);
+      toast.success('Warning shared with riders on this route');
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not share warning');
+    } finally {
+      setReportingWarning(false);
+    }
+  };
 
   // Route progress
   const navProgress = useMemo(() => {
@@ -660,9 +717,10 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     autoStopCountdown, gpsWeak, ending, speedLimit, beacon,
     emergencyContactsNotified, nearbyRidersNotified, crashIndicators,
     nearbyService, voiceSupported, voiceListening,
+    routeWarnings, reportingWarning,
     isActive, rideMode, recalculating,
     setDestInput, setDestination, setAutoStopCountdown, clearDestination,
-    handleDestination, handleAddStop, handleDismissService,
+    handleDestination, handleAddStop, handleDismissService, handleReportWarning,
     handleSimulateCrash, handleCancelCrash, handleResolveEmergency,
     handleDistress, startRide, endRide: handleEndRide,
     navigateTo: (dest, origin) => { startRide(dest, origin); },
