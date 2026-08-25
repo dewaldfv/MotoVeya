@@ -44,6 +44,7 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
   const failCountRef = useRef(0);
   const userPannedRef = useRef(false);
   const userZoomedRef = useRef(false);
+  const suppressZoomEventRef = useRef(false);
   const recenterTimerRef = useRef(null);
   const zoomResetTimerRef = useRef(null);
   const zoomListenerRef = useRef(null);
@@ -88,8 +89,9 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
     };
     const onDragEnd = () => scheduleReset();
     const onZoomChanged = () => {
-      // Ignore zoom events caused by our own automatic camera reset.
-      if (!userZoomedRef.current && !userPannedRef.current) return;
+      // Google Maps fires zoom_changed for both user gestures and our own setZoom.
+      // The ref lets us distinguish our automatic camera changes from a rider pinch/scroll.
+      if (suppressZoomEventRef.current) return;
       userZoomedRef.current = true;
       scheduleReset();
     };
@@ -111,8 +113,10 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
     if (!map || !recenterToken) return;
     userPannedRef.current = false;
     userZoomedRef.current = false;
+    suppressZoomEventRef.current = true;
     if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
     if (zoomResetTimerRef.current) { clearTimeout(zoomResetTimerRef.current); zoomResetTimerRef.current = null; }
+    queueMicrotask(() => { suppressZoomEventRef.current = false; });
   }, [recenterToken, map]);
 
   useEffect(() => {
@@ -125,7 +129,11 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
         map.fitBounds(bounds, 80);
       } else {
         map.setCenter({ lat: userPos[0], lng: userPos[1] });
-        if (!userZoomedRef.current) map.setZoom(targetZoom);
+        if (!userZoomedRef.current) {
+          suppressZoomEventRef.current = true;
+          map.setZoom(targetZoom);
+          queueMicrotask(() => { suppressZoomEventRef.current = false; });
+        }
       }
       failCountRef.current = 0;
     } catch (e) {
