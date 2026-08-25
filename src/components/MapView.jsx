@@ -143,6 +143,7 @@ export default function MapView({
   events = [],
   riders = [],
   distressAlerts = [],
+  routeWarnings = [],
   route = null,
   recenterSignal = 0,
   fitRouteSignal = 0,
@@ -206,6 +207,14 @@ export default function MapView({
       </CustomMapMarker>
     )),
     [distressAlerts]
+  );
+  const warningMarkers = useMemo(
+    () => routeWarnings.filter((w) => isValid(w.lat, w.lng)).map((w) => (
+      <CustomMapMarker key={`warning-${w.id}`} position={[w.lat, w.lng]} onClick={() => setPopupItem({ ...w, category: 'warning', name: w.title, description: w.message })}>
+        <div style={{ width: 38, height: 38, background: '#f59e0b', borderRadius: '50%', border: '3px solid white', boxShadow: '0 3px 12px rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>⚠️</div>
+      </CustomMapMarker>
+    )),
+    [routeWarnings]
   );
   const servicesVisible = showServices && zoomLevel >= SERVICE_MIN_ZOOM;
   const serviceMarkers = useMemo(
@@ -281,6 +290,7 @@ export default function MapView({
         />
 
         {distressMarkers}
+        {warningMarkers}
 
         {serviceMarkers}
 
