@@ -312,6 +312,7 @@ export default function Home() {
         events={eventsToShow}
         favoriteEventIds={eventFavoriteIds}
         distressAlerts={distressToShow}
+        routeWarnings={session.routeWarnings}
         services={servicesToShow}
         showServices={overlays.services || overlays.food}
         onServiceClick={setSelectedService}
