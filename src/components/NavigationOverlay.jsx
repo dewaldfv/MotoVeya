@@ -7,6 +7,7 @@ import EmergencyOverlay from '@/components/EmergencyOverlay';
 import AutoStopCountdown from '@/components/AutoStopCountdown';
 import RideInviteToggle from '@/components/RideInviteToggle';
 import ImmersiveRideHud from '@/components/ImmersiveRideHud';
+import RideWarningSheet from '@/components/RideWarningSheet';
 import NextTurnArrow from '@/components/NextTurnArrow';
 import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
 import { haversine } from '@/lib/navigation';
@@ -24,8 +25,9 @@ export default function NavigationOverlay({
     crashPhase, crashCountdown, severity, autoStopCountdown,
     emergencyContactsNotified, nearbyRidersNotified, beacon,
     voiceSupported, voiceListening, batteryLevel, heading, userPos,
+    routeWarnings, reportingWarning,
     recalculating,
-    startRide, endRide, handleDistress, handleSimulateCrash,
+    startRide, endRide, handleDistress, handleReportWarning, handleSimulateCrash,
     handleCancelCrash, handleResolveEmergency,
     handleAddStop, handleDismissService, setAutoStopCountdown, clearDestination,
   } = session;
@@ -34,6 +36,7 @@ export default function NavigationOverlay({
     () => localStorage.getItem('motogo_voice_nav') !== 'false'
   );
   const [hudExpanded, setHudExpanded] = useState(false);
+  const [warningOpen, setWarningOpen] = useState(false);
   const toggleVoice = () => {
     const next = !voiceEnabled;
     setVoiceEnabled(next);
@@ -146,6 +149,7 @@ export default function NavigationOverlay({
       <div className="absolute z-20" style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}>
         <NavActionButtons
           onDistress={handleDistress}
+          onWarning={() => setWarningOpen(true)}
           onCrash={handleSimulateCrash}
           onEnd={endRide}
           distressActive={distressActive}
@@ -156,6 +160,25 @@ export default function NavigationOverlay({
           showVoiceToggle={!!navProgress?.nextStep}
         />
       </div>
+
+      {routeWarnings?.length > 0 && (
+        <div className="absolute left-1/2 z-20 -translate-x-1/2" style={{ top: 'calc(7rem + env(safe-area-inset-top))' }}>
+          <div className="flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/90 px-3 py-1.5 text-[10px] font-black text-white shadow-xl backdrop-blur-lg">
+            <span className="animate-pulse">⚠️</span>
+            {routeWarnings.length} ROUTE WARNING{routeWarnings.length > 1 ? 'S' : ''}
+          </div>
+        </div>
+      )}
+
+      <RideWarningSheet
+        open={warningOpen}
+        onClose={() => setWarningOpen(false)}
+        reporting={reportingWarning}
+        onReport={async (warning) => {
+          await handleReportWarning(warning);
+          setWarningOpen(false);
+        }}
+      />
 
       <AutoStopCountdown
         countdown={autoStopCountdown}
