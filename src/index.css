@@ -269,6 +269,11 @@
   box-shadow: 0 8px 22px rgba(255,120,0,0.28);
 }
 .motoveya-nav-icon--large { width: 48px; height: 48px; }
+.motoveya-nav-icon--compact { width: 42px; height: 42px; border-radius: 13px; }
+.motoveya-nav-hud__main {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  min-height: 58px;
+}
 .motoveya-nav-distance {
   font-size: clamp(22px, 5.5vw, 28px);
   font-weight: 950;
@@ -279,7 +284,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 3px;
+  gap: 2px;
   min-width: 64px;
   color: rgba(255,255,255,0.52);
   font-size: 9px;
@@ -429,10 +434,12 @@
   .motoveya-nav-card__main { min-height: 52px; padding: 5px 8px; gap: 7px; }
   .motoveya-nav-icon { width: 42px; height: 42px; border-radius: 14px; }
   .motoveya-nav-icon--large { width: 44px; height: 44px; }
+  .motoveya-nav-icon--compact { width: 38px; height: 38px; border-radius: 11px; }
   .motoveya-nav-distance { font-size: 25px; }
   .motoveya-nav-eta { display: none; }
   .motoveya-nav-next { min-height: 22px; font-size: 10px; }
   .motoveya-ride-hud__main { min-height: 62px; }
+  .motoveya-nav-hud__main { min-height: 52px; }
   .motoveya-speed-value { font-size: 42px; }
   .motoveya-speed-block, .motoveya-road-block, .motoveya-range-block { padding: 6px 8px; }
   .motoveya-ride-hud__details { display: none; }
