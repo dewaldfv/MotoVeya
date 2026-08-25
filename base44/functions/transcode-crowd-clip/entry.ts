@@ -87,12 +87,11 @@ async function writeStreamToFile(stream, path) {
 }
 
 async function runCommand(command) {
-  const cmd = new Deno.Command(command[0], { args: command.slice(1), stdout: 'piped', stderr: 'piped' });
-  const result = await cmd.output();
-  const stdout = new TextDecoder().decode(result.stdout);
-  const stderr = new TextDecoder().decode(result.stderr);
-  if (!result.success) throw new Error(`${command[0]} failed: ${stderr.slice(-2000)}`);
-  return { stdout, stderr };
+  // Base44's hosted Deno runtime does not expose Deno.Command.
+  // Keep this function fail-safe rather than preventing unrelated backend
+  // functions from deploying. Actual ffmpeg execution requires a dedicated
+  // transcoding worker/runtime and is intentionally not attempted here.
+  throw new Error('Crowd Clip transcoding requires the external transcoding worker; Deno.Command is unavailable in the Base44 runtime.');
 }
 
 async function cleanup(paths) {
