@@ -161,14 +161,23 @@ export default function NavigationOverlay({
         />
       </div>
 
-      {routeWarnings?.length > 0 && (
-        <div className="absolute left-1/2 z-20 -translate-x-1/2" style={{ top: 'calc(7rem + env(safe-area-inset-top))' }}>
-          <div className="flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/90 px-3 py-1.5 text-[10px] font-black text-white shadow-xl backdrop-blur-lg">
-            <span className="animate-pulse">⚠️</span>
-            {routeWarnings.length} ROUTE WARNING{routeWarnings.length > 1 ? 'S' : ''}
+      {routeWarnings?.length > 0 && (() => {
+        const upcoming = [...routeWarnings]
+          .filter((w) => w.distance_from_rider_km != null)
+          .sort((a, b) => a.distance_from_rider_km - b.distance_from_rider_km)[0];
+        return upcoming ? (
+          <div className="absolute left-3 right-3 z-20" style={{ top: 'calc(7rem + env(safe-area-inset-top))' }}>
+            <div className="mx-auto flex max-w-md items-center gap-2 rounded-2xl border border-amber-400/25 bg-black/80 px-3 py-2 shadow-xl backdrop-blur-xl">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">⚠️</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11px] font-black text-white">{upcoming.title}</p>
+                <p className="truncate text-[10px] text-white/55">{upcoming.distance_from_rider_km < 1 ? 'Ahead' : `${upcoming.distance_from_rider_km} km ahead`} · Reported by {upcoming.rider_name || 'rider'}</p>
+              </div>
+              {routeWarnings.length > 1 && <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-1 text-[9px] font-black text-amber-300">+{routeWarnings.length - 1}</span>}
+            </div>
           </div>
-        </div>
-      )}
+        ) : null;
+      })()}
 
       <RideWarningSheet
         open={warningOpen}
