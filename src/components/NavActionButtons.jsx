@@ -1,6 +1,6 @@
-import { Siren, AlertTriangle, Square, Volume2, VolumeX } from 'lucide-react';
+import { Siren, AlertTriangle, TriangleAlert, Square, Volume2, VolumeX } from 'lucide-react';
 
-export default function NavActionButtons({ onDistress, onCrash, onEnd, distressActive, ending, disabled, voiceEnabled = true, onToggleVoice, showVoiceToggle = false }) {
+export default function NavActionButtons({ onDistress, onCrash, onWarning, onEnd, distressActive, ending, disabled, voiceEnabled = true, onToggleVoice, showVoiceToggle = false }) {
   return (
     <div className="flex flex-col gap-2.5">
       {showVoiceToggle && (
@@ -19,6 +19,10 @@ export default function NavActionButtons({ onDistress, onCrash, onEnd, distressA
           <Siren size={18} className="text-white" />
         </button>
       )}
+      <button onClick={onWarning} aria-label="Warn riders ahead"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-500 shadow-lg transition-transform active:scale-90">
+        <TriangleAlert size={19} className="text-white" />
+      </button>
       <button onClick={onCrash} aria-label="Crash detection"
         className="flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-lg ring-2 ring-destructive transition-transform active:scale-90">
         <AlertTriangle size={18} className="text-destructive" />
