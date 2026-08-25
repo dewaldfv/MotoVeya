@@ -63,6 +63,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const [fuelRange, setFuelRange] = useState(null);
   const [recalculating, setRecalculating] = useState(false);
   const [routeWarnings, setRouteWarnings] = useState([]);
+  const [externalWarnings, setExternalWarnings] = useState([]);
   const [reportingWarning, setReportingWarning] = useState(false);
 
   const lastPosRef = useRef(null);
@@ -341,7 +342,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   // Poll every 15s while navigating so riders joining the same road see fresh warnings.
   useEffect(() => { warningPosRef.current = userPos; }, [userPos]);
   useEffect(() => {
-    if (rideStatus !== 'active' || !userPos) { setRouteWarnings([]); return; }
+    if (rideStatus !== 'active' || !userPos) { setRouteWarnings([]); setExternalWarnings([]); return; }
     let cancelled = false;
     const loadWarnings = async () => {
       const pos = warningPosRef.current;
@@ -354,6 +355,13 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
           route: route.length > 300 ? route.filter((_, i) => i % Math.ceil(route.length / 300) === 0) : route,
         });
         if (!cancelled) setRouteWarnings(res.data?.warnings || []);
+        try {
+          const external = await base44.functions.invoke('get-external-route-warnings', {
+            lat: pos[0], lng: pos[1],
+            route: route.length > 300 ? route.filter((_, i) => i % Math.ceil(route.length / 300) === 0) : route,
+          });
+          if (!cancelled) setExternalWarnings(external.data?.warnings || []);
+        } catch (e) { if (!cancelled) console.error('External route warnings:', e); }
       } catch (e) { if (!cancelled) console.error('Route warnings:', e); }
     };
     loadWarnings();
@@ -721,7 +729,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     autoStopCountdown, gpsWeak, ending, speedLimit, beacon,
     emergencyContactsNotified, nearbyRidersNotified, crashIndicators,
     nearbyService, voiceSupported, voiceListening,
-    routeWarnings, reportingWarning,
+    routeWarnings: [...routeWarnings, ...externalWarnings], reportingWarning,
     isActive, rideMode, recalculating,
     setDestInput, setDestination, setAutoStopCountdown, clearDestination,
     handleDestination, handleAddStop, handleDismissService, handleReportWarning,
