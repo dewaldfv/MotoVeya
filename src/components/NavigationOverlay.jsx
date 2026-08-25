@@ -88,19 +88,7 @@ export default function NavigationOverlay({
   // Active ride — full navigation overlay
   return (
     <>
-      {navProgress?.nextStep && (
-        <div className="absolute left-3 right-3 z-20" style={{ top: 'calc(0.45rem + env(safe-area-inset-top))' }}>
-          <NavigationCard
-            step={navProgress.nextStep}
-            followingStep={navProgress.followingStep}
-            distanceToManeuver={navProgress.distanceToManeuver}
-            remainingDistance={navProgress.remainingDistance}
-            remainingDuration={navProgress.remainingDuration}
-            destinationName={destination?.name}
-            rideMode={rideMode}
-          />
-        </div>
-      )}
+
       {routeLoading && !navProgress?.nextStep && (
         <div className="absolute left-3 right-3 z-20 flex items-center gap-2 rounded-2xl bg-card/95 p-3 shadow-xl backdrop-blur-lg landscape:max-w-md" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
           <Loader2 size={20} className="animate-spin text-primary" />
@@ -143,6 +131,12 @@ export default function NavigationOverlay({
           onToggle={() => setHudExpanded((v) => !v)}
           gpsWeak={gpsWeak}
           recalculating={recalculating}
+          nextStep={navProgress?.nextStep}
+          followingStep={navProgress?.followingStep}
+          distanceToManeuver={navProgress?.distanceToManeuver}
+          remainingDistance={navProgress?.remainingDistance}
+          remainingDuration={navProgress?.remainingDuration}
+          destinationName={destination?.name}
         />
       </div>
 
