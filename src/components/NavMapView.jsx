@@ -43,7 +43,10 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
   const map = useGoogleMap();
   const failCountRef = useRef(0);
   const userPannedRef = useRef(false);
+  const userZoomedRef = useRef(false);
   const recenterTimerRef = useRef(null);
+  const zoomResetTimerRef = useRef(null);
+  const zoomListenerRef = useRef(null);
   const [recenterTick, setRecenterTick] = useState(0);
   const targetZoom = useMemo(() => {
     if (!active) return 13;
@@ -63,26 +66,43 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
     }
   }, [active, map]);
 
-  // Pause auto-center while the rider pans the map; recenter after 5s of inactivity.
+  // Allow the rider to pan or pinch-zoom manually during Ride Mode.
+  // After 5 seconds without map interaction, restore the normal navigation view.
   useEffect(() => {
     if (!map || !active) return;
+    const resetView = () => {
+      userPannedRef.current = false;
+      userZoomedRef.current = false;
+      if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
+      if (zoomResetTimerRef.current) { clearTimeout(zoomResetTimerRef.current); zoomResetTimerRef.current = null; }
+      setRecenterTick((t) => t + 1);
+    };
+    const scheduleReset = () => {
+      if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
+      zoomResetTimerRef.current = setTimeout(resetView, 5000);
+    };
     const onDragStart = () => {
       userPannedRef.current = true;
-      if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
-    };
-    const onDragEnd = () => {
       if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
-      recenterTimerRef.current = setTimeout(() => {
-        userPannedRef.current = false;
-        setRecenterTick((t) => t + 1);
-      }, 5000);
+      scheduleReset();
     };
-    map.addListener('dragstart', onDragStart);
-    map.addListener('dragend', onDragEnd);
+    const onDragEnd = () => scheduleReset();
+    const onZoomChanged = () => {
+      // Ignore zoom events caused by our own automatic camera reset.
+      if (!userZoomedRef.current && !userPannedRef.current) return;
+      userZoomedRef.current = true;
+      scheduleReset();
+    };
+    const dragStartListener = map.addListener('dragstart', onDragStart);
+    const dragEndListener = map.addListener('dragend', onDragEnd);
+    zoomListenerRef.current = map.addListener('zoom_changed', onZoomChanged);
     return () => {
-      google.maps.event.clearListeners(map, 'dragstart');
-      google.maps.event.clearListeners(map, 'dragend');
+      dragStartListener?.remove?.();
+      dragEndListener?.remove?.();
+      zoomListenerRef.current?.remove?.();
+      zoomListenerRef.current = null;
       if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+      if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
     };
   }, [map, active]);
 
@@ -90,7 +110,9 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
   useEffect(() => {
     if (!map || !recenterToken) return;
     userPannedRef.current = false;
+    userZoomedRef.current = false;
     if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
+    if (zoomResetTimerRef.current) { clearTimeout(zoomResetTimerRef.current); zoomResetTimerRef.current = null; }
   }, [recenterToken, map]);
 
   useEffect(() => {
@@ -103,7 +125,7 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
         map.fitBounds(bounds, 80);
       } else {
         map.setCenter({ lat: userPos[0], lng: userPos[1] });
-        map.setZoom(targetZoom);
+        if (!userZoomedRef.current) map.setZoom(targetZoom);
       }
       failCountRef.current = 0;
     } catch (e) {
