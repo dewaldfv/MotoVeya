@@ -436,7 +436,7 @@
   .motoveya-nav-icon--large { width: 44px; height: 44px; }
   .motoveya-nav-icon--compact { width: 38px; height: 38px; border-radius: 11px; }
   .motoveya-nav-distance { font-size: 25px; }
-  .motoveya-nav-eta { display: none; }
+  .motoveya-nav-eta { display: flex; min-width: 58px; font-size: 8px; }
   .motoveya-nav-next { min-height: 22px; font-size: 10px; }
   .motoveya-ride-hud__main { min-height: 62px; }
   .motoveya-nav-hud__main { min-height: 52px; }
