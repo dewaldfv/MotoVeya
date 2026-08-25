@@ -89,7 +89,7 @@ export default function NavigationOverlay({
   return (
     <>
       {navProgress?.nextStep && (
-        <div className="absolute left-3 right-3 z-20" style={{ top: 'calc(0.65rem + env(safe-area-inset-top))' }}>
+        <div className="absolute left-3 right-3 z-20" style={{ top: 'calc(0.45rem + env(safe-area-inset-top))' }}>
           <NavigationCard
             step={navProgress.nextStep}
             followingStep={navProgress.followingStep}
