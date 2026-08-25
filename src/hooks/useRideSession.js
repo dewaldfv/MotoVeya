@@ -28,7 +28,14 @@ function getCurrentPosition() {
 
 export function useRideSession({ user, bike, fuelProfile, services = [], autoDetectEnabled = true, notifyFriends = true }) {
   const [rideStatus, setRideStatus] = useState('idle');
-  const [userPos, setUserPos] = useState(null);
+  const [userPos, setUserPos] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('motogo_last_location') || 'null');
+      return Array.isArray(cached) && cached.length >= 2 && cached.every((v, i) => i > 1 || typeof v === 'number') ? cached : null;
+    } catch {
+      return null;
+    }
+  });
   const [heading, setHeading] = useState(null);
   const [accuracy, setAccuracy] = useState(null);
   const [speed, setSpeed] = useState(0);
@@ -116,7 +123,9 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     if (rideStatus !== 'idle' || !navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        setUserPos([pos.coords.latitude, pos.coords.longitude, pos.coords.altitude]);
+        const nextPos = [pos.coords.latitude, pos.coords.longitude, pos.coords.altitude];
+        setUserPos(nextPos);
+        try { localStorage.setItem('motogo_last_location', JSON.stringify(nextPos)); } catch {}
         if (pos.coords.heading != null && !isNaN(pos.coords.heading)) setHeading(pos.coords.heading);
         if (pos.coords.accuracy != null) setAccuracy(pos.coords.accuracy);
         const spd = pos.coords.speed != null && pos.coords.speed > 0 ? pos.coords.speed * 3.6 : 0;
@@ -136,6 +145,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         markGpsUpdate();
         const newPos = [pos.coords.latitude, pos.coords.longitude, pos.coords.altitude];
         setUserPos(newPos);
+        try { localStorage.setItem('motogo_last_location', JSON.stringify(newPos)); } catch {}
         positionsRef.current.push(newPos);
         if (pos.coords.heading != null && !isNaN(pos.coords.heading)) setHeading(pos.coords.heading);
         if (pos.coords.accuracy != null) setAccuracy(pos.coords.accuracy);
@@ -251,6 +261,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         const lng2 = lng1 + Math.atan2(Math.sin(bearing) * Math.sin(distKm / R) * Math.cos(lat1), Math.cos(distKm / R) - Math.sin(lat1) * Math.sin(lat2));
         const estimated = [lat2 * 180 / Math.PI, lng2 * 180 / Math.PI, lastPos[2]];
         setUserPos(estimated);
+        try { localStorage.setItem('motogo_last_location', JSON.stringify(estimated)); } catch {}
         const d = haversine(lastPos[0], lastPos[1], estimated[0], estimated[1]);
         if (d > 0.005) {
           setDistance((prev) => prev + d);
