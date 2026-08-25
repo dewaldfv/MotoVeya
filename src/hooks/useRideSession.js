@@ -71,6 +71,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const watchIdRef = useRef(null);
   const timerRef = useRef(null);
   const lastRecalcRef = useRef(0);
+  const warningPosRef = useRef(null);
   const beacon = useEmergencyBeacon();
   const speedLimit = useSpeedLimit(rideStatus === 'active' ? userPos : null);
 
@@ -337,16 +338,19 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   }, []);
 
   // Route warnings are shared across MotoVeya, not restricted to a group ride.
-  // Poll while navigating so riders joining the same road see fresh warnings.
+  // Poll every 15s while navigating so riders joining the same road see fresh warnings.
+  useEffect(() => { warningPosRef.current = userPos; }, [userPos]);
   useEffect(() => {
     if (rideStatus !== 'active' || !userPos) { setRouteWarnings([]); return; }
     let cancelled = false;
     const loadWarnings = async () => {
+      const pos = warningPosRef.current;
+      if (!pos) return;
       try {
         const route = routeData?.coordinates || [];
         const res = await base44.functions.invoke('get-route-warnings', {
-          lat: userPos[0],
-          lng: userPos[1],
+          lat: pos[0],
+          lng: pos[1],
           route: route.length > 300 ? route.filter((_, i) => i % Math.ceil(route.length / 300) === 0) : route,
         });
         if (!cancelled) setRouteWarnings(res.data?.warnings || []);
@@ -355,7 +359,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     loadWarnings();
     const timer = setInterval(loadWarnings, 15000);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [rideStatus, userPos?.[0], userPos?.[1], routeData]);
+  }, [rideStatus, routeData]);
 
   const handleReportWarning = async (warningType) => {
     if (!userPos || reportingWarning) return;
