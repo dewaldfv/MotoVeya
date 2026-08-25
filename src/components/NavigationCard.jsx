@@ -1,5 +1,5 @@
-import { Clock, Route as RouteIcon, ChevronRight } from 'lucide-react';
-import { getManeuverIcon, formatDistance, formatDuration } from '@/lib/navigation';
+import { ChevronRight } from 'lucide-react';
+import { getManeuverIcon, formatDistance } from '@/lib/navigation';
 
 export default function NavigationCard({ step, followingStep = null, distanceToManeuver, remainingDistance, remainingDuration, destinationName, rideMode = false }) {
   if (!step) return null;
