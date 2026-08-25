@@ -7,6 +7,7 @@ import EmergencyOverlay from '@/components/EmergencyOverlay';
 import AutoStopCountdown from '@/components/AutoStopCountdown';
 import RideInviteToggle from '@/components/RideInviteToggle';
 import RideHud from '@/components/RideHud';
+import ImmersiveRideHud from '@/components/ImmersiveRideHud';
 import NextTurnArrow from '@/components/NextTurnArrow';
 import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
 import { haversine } from '@/lib/navigation';
@@ -33,6 +34,7 @@ export default function NavigationOverlay({
   const [voiceEnabled, setVoiceEnabled] = useState(
     () => localStorage.getItem('motogo_voice_nav') !== 'false'
   );
+  const [hudExpanded, setHudExpanded] = useState(false);
   const toggleVoice = () => {
     const next = !voiceEnabled;
     setVoiceEnabled(next);
@@ -85,7 +87,7 @@ export default function NavigationOverlay({
   return (
     <>
       {navProgress?.nextStep && (
-        <div className="absolute left-3 right-3 z-20 landscape:max-w-md" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
+        <div className="absolute left-3 right-3 z-20" style={{ top: 'calc(0.65rem + env(safe-area-inset-top))' }}>
           <NavigationCard
             step={navProgress.nextStep}
             followingStep={navProgress.followingStep}
@@ -127,17 +129,18 @@ export default function NavigationOverlay({
         </div>
       )}
 
-      <div className="absolute z-20" style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}>
-        <RideHud
+      <div className="absolute bottom-0 left-1/2 z-20 -translate-x-1/2 pb-[calc(0.7rem+env(safe-area-inset-bottom))]">
+        <ImmersiveRideHud
           speed={speed}
           heading={heading}
           roadName={navProgress?.nextStep?.name || destination?.name}
           fuelRange={fuelRange}
           fuelRemaining={fuelRemaining}
-          lowFuel={lowFuel}
-          recalculating={recalculating}
-          gpsWeak={gpsWeak}
           speedLimit={speedLimit}
+          expanded={hudExpanded}
+          onToggle={() => setHudExpanded((v) => !v)}
+          gpsWeak={gpsWeak}
+          recalculating={recalculating}
         />
       </div>
 
