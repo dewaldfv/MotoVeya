@@ -1,4 +1,5 @@
-import { ChevronDown, ChevronUp, Compass, Fuel, Gauge, MapPin, Route as Road } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronRight, Compass, Fuel, Gauge, MapPin } from 'lucide-react';
+import { getManeuverIcon, formatDistance, formatDuration } from '@/lib/navigation';
 import { headingToCompass } from './RideHud';
 
 export default function ImmersiveRideHud({
@@ -12,9 +13,21 @@ export default function ImmersiveRideHud({
   onToggle,
   gpsWeak = false,
   recalculating = false,
+  nextStep = null,
+  followingStep = null,
+  distanceToManeuver = null,
+  remainingDistance = null,
+  remainingDuration = 0,
+  destinationName = null,
 }) {
   const overLimit = speedLimit != null && speed > speedLimit;
   const moving = speed >= 20;
+  const NavIcon = nextStep ? getManeuverIcon(nextStep.maneuver) : null;
+  const NextIcon = followingStep ? getManeuverIcon(followingStep.maneuver) : null;
+  const streetName = nextStep?.name || destinationName || (nextStep?.maneuver?.type === 'arrive' ? 'Destination' : 'Continue');
+  const nextStreet = followingStep?.name || (followingStep?.maneuver?.type === 'arrive' ? 'Destination' : '');
+  const eta = new Date(Date.now() + (remainingDuration || 0) * 1000);
+  const etaStr = eta.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <div className="pointer-events-auto w-[calc(100vw-1.5rem)] max-w-[560px]">
@@ -27,45 +40,45 @@ export default function ImmersiveRideHud({
           {expanded ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
         </button>
 
-        <div className="motoveya-ride-hud__main">
-          <div className="motoveya-speed-block">
-            <Gauge size={16} className={overLimit ? 'text-red-400' : 'text-[#ff7800]'} />
-            <span className={`motoveya-speed-value ${overLimit ? 'text-red-400' : ''}`}>{Math.round(speed)}</span>
-            <span className="motoveya-speed-unit">KM/H</span>
-          </div>
-
-          <div className="motoveya-road-block">
-            <div className="flex items-center gap-1.5 text-white/45">
-              <Road size={12} />
-              <span className="text-[9px] font-bold uppercase tracking-[0.18em]">{recalculating ? 'Route' : 'Road'}</span>
+        <div className="motoveya-ride-hud__main motoveya-nav-hud__main">
+          {NavIcon ? (
+            <div className="motoveya-nav-icon motoveya-nav-icon--compact">
+              <NavIcon size={28} strokeWidth={2.7} />
             </div>
-            <div className="truncate text-sm font-bold text-white">{recalculating ? 'Recalculating…' : (roadName || 'Ride')}</div>
-            <div className="mt-1 flex items-center gap-2 text-[9px] font-semibold text-white/45">
-              <span>{headingToCompass(heading)} {heading != null && !isNaN(heading) ? `${Math.round(((heading % 360) + 360) % 360)}°` : ''}</span>
-              {speedLimit != null && <span className={overLimit ? 'text-red-400' : ''}>LIMIT {speedLimit}</span>}
-            </div>
+          ) : (
+            <div className="motoveya-nav-icon motoveya-nav-icon--compact bg-white/10 text-white/60">{recalculating ? <Gauge size={22} /> : <MapPin size={22} />}</div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="motoveya-nav-distance">{recalculating ? '…' : formatDistance(distanceToManeuver)}</div>
+            <div className="truncate text-[12px] font-bold text-white/90">{recalculating ? 'Recalculating route…' : streetName}</div>
           </div>
-
-          <div className="motoveya-range-block">
-            <Fuel size={14} className={fuelRange != null && fuelRange < 50 ? 'text-red-400' : 'text-[#ff7800]'} />
-            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/45">Range</span>
-            <strong>{fuelRange != null ? fuelRange : '—'}</strong>
-            <span className="text-[8px] font-semibold text-white/40">KM</span>
+          <div className="motoveya-nav-eta">
+            <span>{etaStr}</span>
+            <span>{formatDistance(remainingDistance)}</span>
+            <span>{formatDuration(remainingDuration)}</span>
           </div>
+          <button
+            onClick={onToggle}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/55 active:scale-95"
+            aria-label={expanded ? 'Hide ride information' : 'Show ride information'}
+          >
+            {expanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+          </button>
         </div>
 
-        <div className="motoveya-ride-hud__status">
-          <span className={`motoveya-status-dot ${moving ? 'motoveya-status-dot--moving' : ''}`} />
-          <span>{moving ? 'RIDING' : 'READY'}</span>
-          {gpsWeak && <span className="text-amber-300">GPS WEAK</span>}
-          {overLimit && <span className="text-red-400">OVER LIMIT</span>}
-          {fuelRemaining != null && expanded && <span className="ml-auto">FUEL {fuelRemaining}</span>}
-        </div>
+        {NextIcon && (
+          <div className="motoveya-nav-next">
+            <NextIcon size={14} strokeWidth={2.6} />
+            <span className="truncate">Then {nextStreet || 'continue'}</span>
+            <ChevronRight size={13} className="ml-auto shrink-0 text-white/30" />
+          </div>
+        )}
+        <div className="motoveya-nav-progress"><span /></div>
 
         {expanded && (
           <div className="motoveya-ride-hud__details">
+            <div><Gauge size={13} /><span>SPEED</span><strong className={overLimit ? 'text-red-400' : ''}>{Math.round(speed)} km/h</strong></div>
             <div><Compass size={13} /><span>HEADING</span><strong>{headingToCompass(heading)}</strong></div>
-            <div><MapPin size={13} /><span>ROAD</span><strong className="truncate">{roadName || '—'}</strong></div>
             <div><Fuel size={13} /><span>RANGE</span><strong>{fuelRange != null ? `${fuelRange} km` : '—'}</strong></div>
           </div>
         )}
