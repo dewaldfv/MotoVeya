@@ -6,7 +6,6 @@ import NavActionButtons from '@/components/NavActionButtons';
 import EmergencyOverlay from '@/components/EmergencyOverlay';
 import AutoStopCountdown from '@/components/AutoStopCountdown';
 import RideInviteToggle from '@/components/RideInviteToggle';
-import RideHud from '@/components/RideHud';
 import ImmersiveRideHud from '@/components/ImmersiveRideHud';
 import NextTurnArrow from '@/components/NextTurnArrow';
 import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
@@ -21,7 +20,7 @@ export default function NavigationOverlay({
 }) {
   const {
     isActive, rideMode, speed, speedLimit, navProgress, destination,
-    routeLoading, nearbyService, gpsWeak, fuelRange, lowFuel, fuelRemaining, distressActive, ending,
+    routeLoading, nearbyService, gpsWeak, fuelRange, fuelRemaining, distressActive, ending,
     crashPhase, crashCountdown, severity, autoStopCountdown,
     emergencyContactsNotified, nearbyRidersNotified, beacon,
     voiceSupported, voiceListening, batteryLevel, heading, userPos,
