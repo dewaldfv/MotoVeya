@@ -84,16 +84,29 @@ function ZoomTracker({ onZoom }) {
 function Recenter({ center, zoom, signal }) {
   const map = useGoogleMap();
   const firstRef = useRef(true);
+  const previousCenterRef = useRef(null);
+
   useEffect(() => {
     if (!map || !center) return;
     const pos = { lat: center[0], lng: center[1] };
+    const previous = previousCenterRef.current;
+    const changed = !previous || previous.lat !== pos.lat || previous.lng !== pos.lng;
+
     if (firstRef.current) {
       map.setCenter(pos);
       if (zoom != null) map.setZoom(zoom);
       firstRef.current = false;
     } else if (signal > 0) {
+      // Manual "My Location" — snap immediately.
       map.panTo(pos);
+    } else if (changed) {
+      // The GPS position can arrive after Google Maps has already mounted.
+      // Do not leave the rider stranded on the Johannesburg fallback center.
+      map.setCenter(pos);
+      if (zoom != null) map.setZoom(zoom);
     }
+
+    previousCenterRef.current = pos;
   }, [center?.[0], center?.[1], signal, map, zoom]);
   return null;
 }
