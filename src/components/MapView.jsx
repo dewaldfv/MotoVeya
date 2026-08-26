@@ -133,11 +133,6 @@ function Recenter({ center, zoom, signal }) {
     } else if (signal > 0) {
       // Manual "My Location" — snap immediately.
       map.panTo(pos);
-    } else if (changed) {
-      // The GPS position can arrive after Google Maps has already mounted.
-      // Do not leave the rider stranded on the Johannesburg fallback center.
-      map.setCenter(pos);
-      if (zoom != null) map.setZoom(zoom);
     }
 
     previousCenterRef.current = pos;
