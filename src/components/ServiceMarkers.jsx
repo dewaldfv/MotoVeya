@@ -95,7 +95,7 @@ export default function ServiceMarkers({ services = [], userPos, onMarkerClick }
           position: { lat, lng },
           icon,
           title: service.name || category.label,
-          zIndex: 600,
+          zIndex: 200,
           optimized: true,
         });
         marker.addListener('click', () => callbackRef.current?.(service));
