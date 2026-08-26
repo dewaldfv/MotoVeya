@@ -11,7 +11,7 @@ export const ENGEN_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUMAAAE
 
 function markerSvg(service, category) {
   const name = String(service.name || service.brand || '').toLowerCase();
-  if (name.includes('engen')) return ENGEN_LOGO;
+  if (name.includes('engen')) return null;
   if (service.logo_url) return service.logo_url;
 
   const emoji = category?.emoji || '🏍️';
@@ -86,11 +86,11 @@ export default function ServiceMarkers({ services = [], userPos, onMarkerClick }
       seen.add(id);
       const category = getServiceCategory(service.category);
       const iconUrl = markerSvg(service, category);
-      const icon = {
+      const icon = iconUrl ? {
         url: iconUrl,
         scaledSize: new g.maps.Size(44, 44),
         anchor: new g.maps.Point(22, 22),
-      };
+      } : undefined;
 
       let marker = markers.get(id);
       if (!marker) {
