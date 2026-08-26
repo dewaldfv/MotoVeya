@@ -7,6 +7,7 @@ import CustomMapMarker from './CustomMapMarker';
 import ServiceMarkers from './ServiceMarkers';
 import LiveMarkers from './map/LiveMarkers';
 import NativeEventMarkers from './map/NativeEventMarkers';
+import NativePoiMarkers from './map/NativePoiMarkers';
 import MapPopupContent from './MapPopupContent';
 import { useMapCamera } from '@/hooks/useMapCamera';
 
@@ -214,16 +215,13 @@ export default function MapView({
     return [Math.round(userPos[0] * 100) / 100, Math.round(userPos[1] * 100) / 100];
   }, [userPos?.[0], userPos?.[1]]);
 
-  // Static pins (POIs, events, distress, services) stay as memoized React overlays —
-  // their positions never change, so they only render once.
-  const poiMarkers = useMemo(
-    () => pois.filter((p) => isValid(p.lat, p.lng)).map((poi) => (
-      <CustomMapMarker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} onClick={() => setPopupItem(poi)} zIndex={200} pane="overlayLayer">
-        <PoiVisual category={poi.category} />
-      </CustomMapMarker>
-    )),
-    [pois]
-  );
+  // POIs use native Google Maps markers so they receive real map click events.
+  // The previous OverlayView implementation placed them in overlayLayer, which is
+  // intentionally non-interactive in Google Maps and made the pins look tappable
+  // while swallowing the click. Native markers also match the Event marker behavior.
+  const poiMarkers = useMemo(() => (
+    <NativePoiMarkers pois={pois.filter((p) => isValid(p.lat, p.lng))} onPoiClick={setPopupItem} />
+  ), [pois]);
   const distressMarkers = useMemo(
     () => distressAlerts.filter((d) => isValid(d.lat, d.lng)).map((d) => (
       <CustomMapMarker key={`distress-${d.id}`} position={[d.lat, d.lng]} onClick={() => setPopupItem(d)}>
