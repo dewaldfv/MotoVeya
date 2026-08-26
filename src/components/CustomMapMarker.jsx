@@ -14,7 +14,7 @@ import { useGoogleMap } from '@react-google-maps/api';
  * @param {function} onClick - click handler
  * @param {string} anchor - 'center' (default) or 'bottom' (pin-style)
  */
-export default function CustomMapMarker({ position, children, onClick, zIndex = 0, anchor = 'center' }) {
+export default function CustomMapMarker({ position, children, onClick, zIndex = 0, anchor = 'center', pane = 'floatPane' }) {
   const map = useGoogleMap();
   const overlayRef = useRef(null);
   const containerRef = useRef(null);
@@ -43,8 +43,8 @@ export default function CustomMapMarker({ position, children, onClick, zIndex = 
         this._el = containerRef.current;
       }
       onAdd() {
-        const pane = this.getPanes().floatPane;
-        pane.appendChild(this._el);
+        const targetPane = this.getPanes()[pane] || this.getPanes().floatPane;
+        targetPane.appendChild(this._el);
       }
       onRemove() {
         if (this._el.parentNode) this._el.parentNode.removeChild(this._el);
@@ -81,7 +81,7 @@ export default function CustomMapMarker({ position, children, onClick, zIndex = 
         overlayRef.current = null;
       }
     };
-  }, [map, position, zIndex, anchor]);
+  }, [map, position, zIndex, anchor, pane]);
 
   // Keep click handler fresh.
   useEffect(() => {
