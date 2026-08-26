@@ -219,9 +219,9 @@ export default function MapView({
   // The previous OverlayView implementation placed them in overlayLayer, which is
   // intentionally non-interactive in Google Maps and made the pins look tappable
   // while swallowing the click. Native markers also match the Event marker behavior.
-  const poiMarkers = useMemo(() => (
-    <NativePoiMarkers pois={pois.filter((p) => isValid(p.lat, p.lng))} onPoiClick={setPopupItem} />
-  ), [pois]);
+  // POIs are intentionally managed exclusively through the Admin Portal.
+  // The map does not render the POI dataset until an admin explicitly adds them.
+  const poiMarkers = null;
   const distressMarkers = useMemo(
     () => distressAlerts.filter((d) => isValid(d.lat, d.lng)).map((d) => (
       <CustomMapMarker key={`distress-${d.id}`} position={[d.lat, d.lng]} onClick={() => setPopupItem(d)}>
