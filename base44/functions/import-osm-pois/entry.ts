@@ -69,8 +69,25 @@ export default async function(req: Request) {
         source_updated_at: tags['check_date'] || tags['survey:date'] || null,
       };
       try {
-        const existing = await base44.entities.POI.filter({ source: 'openstreetmap', source_id: place.source_id }, '-created_date', 1);
-        if (existing?.length) { imported.push({ ...place, status: 'existing' }); continue; }
+        const existingBySource = await base44.entities.POI.filter({ source: 'openstreetmap', source_id: place.source_id }, '-created_date', 1);
+        const existingByLocation = existingBySource?.length ? [] : await base44.entities.POI.filter({
+          name: place.name,
+          category: place.category,
+          lat: place.lat,
+          lng: place.lng,
+        }, '-created_date', 1);
+        const existing = existingBySource?.length ? existingBySource : existingByLocation;
+        if (existing?.length) {
+          // Older POI rows pre-date source_id/source metadata. Backfill those rows
+          // instead of creating another copy every time the OSM seed runs.
+          try {
+            await base44.entities.POI.update(existing[0].id, place);
+          } catch (updateError) {
+            console.warn('POI metadata backfill skipped:', updateError);
+          }
+          imported.push({ ...place, status: 'existing' });
+          continue;
+        }
         await base44.entities.POI.create(place);
         imported.push({ ...place, status: 'created' });
       } catch (e) { console.error('POI create failed', e); }
