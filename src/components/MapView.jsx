@@ -81,6 +81,40 @@ function ZoomTracker({ onZoom }) {
   return null;
 }
 
+function LocationLock({ center, locked, zoom }) {
+  const map = useGoogleMap();
+  const previousCenterRef = useRef(null);
+
+  useEffect(() => {
+    if (!map) return;
+    map.setOptions({
+      draggable: !locked,
+      scrollwheel: !locked,
+      disableDoubleClickZoom: locked,
+      gestureHandling: locked ? 'none' : 'auto',
+    });
+  }, [map, locked]);
+
+  useEffect(() => {
+    if (!map || !locked || !center) return;
+    const pos = { lat: center[0], lng: center[1] };
+    const previous = previousCenterRef.current;
+    const changed = !previous || previous.lat !== pos.lat || previous.lng !== pos.lng;
+    if (changed) {
+      map.panTo(pos);
+      if (zoom != null && !previous) map.setZoom(zoom);
+    }
+    previousCenterRef.current = pos;
+  }, [map, locked, center?.[0], center?.[1], zoom]);
+
+  useEffect(() => {
+    if (!map || !locked || !center) return;
+    map.panTo({ lat: center[0], lng: center[1] });
+  }, [map, locked]);
+
+  return null;
+}
+
 function Recenter({ center, zoom, signal }) {
   const map = useGoogleMap();
   const firstRef = useRef(true);
@@ -147,6 +181,7 @@ export default function MapView({
   route = null,
   recenterSignal = 0,
   fitRouteSignal = 0,
+  locationLocked = false,
   layer = 'dark',
   onMarkerClick,
   onSavePin,
@@ -254,7 +289,8 @@ export default function MapView({
           />
         ) : (
           <>
-            <Recenter center={center} zoom={zoom} signal={recenterSignal} />
+            <LocationLock center={center} locked={locationLocked} zoom={zoom} />
+            {!locationLocked && <Recenter center={center} zoom={zoom} signal={recenterSignal} />}
             <FitRoute route={route} signal={fitRouteSignal} />
           </>
         )}
