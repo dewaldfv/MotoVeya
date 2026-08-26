@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Check, X, Users, Calendar, TrendingUp, AlertTriangle, Siren, Crown, Wrench } from 'lucide-react';
+import { Shield, Check, X, Users, Calendar, TrendingUp, AlertTriangle, Siren, Crown, Wrench, MapPin } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import EditUserDialog from '@/components/admin/EditUserDialog';
-import POIManager from '@/components/admin/POIManager';
+import ServiceSubmitDialog from '@/components/services/ServiceSubmitDialog';
 import { toast } from 'sonner';
 
 export default function Admin() {
@@ -24,6 +24,7 @@ export default function Admin() {
   const [rejectTarget, setRejectTarget] = useState(null); // { type: 'event'|'service', record }
   const [rejectReason, setRejectReason] = useState('');
   const [editUser, setEditUser] = useState(null);
+  const [poiSubmitOpen, setPoiSubmitOpen] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -112,7 +113,7 @@ export default function Admin() {
           <TabsTrigger value="services" className="flex-1">Services ({pendingServices.length})</TabsTrigger>
           <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
           <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>
-          <TabsTrigger value="poi" className="flex-1">POI & Markers</TabsTrigger>
+          <TabsTrigger value="poi" className="flex-1">POIs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="events" className="space-y-3">
@@ -177,8 +178,20 @@ export default function Admin() {
           ))}
         </TabsContent>
 
-        <TabsContent value="poi">
-          <POIManager />
+        <TabsContent value="poi" className="space-y-4">
+          <div className="rounded-2xl bg-card p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><MapPin size={22} /></div>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-bold">Add POI</h2>
+                <p className="text-sm text-muted-foreground">Create a POI using the same form, fields, location picker and image handling as Services. POIs are administered here and are not automatically imported.</p>
+              </div>
+            </div>
+            <Button className="mt-4 w-full" onClick={() => setPoiSubmitOpen(true)}><MapPin size={16} className="mr-2" /> Add POI</Button>
+          </div>
+          <div className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
+            POIs are currently admin-managed only. No automatic OSM POIs are displayed on the map.
+          </div>
         </TabsContent>
 
         <TabsContent value="alerts" className="space-y-2">
@@ -222,6 +235,12 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ServiceSubmitDialog
+        open={poiSubmitOpen}
+        onOpenChange={setPoiSubmitOpen}
+        onSubmitted={() => toast.success('POI submitted for admin review')}
+      />
 
       {editUser && (
         <EditUserDialog
