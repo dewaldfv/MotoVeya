@@ -24,6 +24,16 @@ export const SERVICE_CATEGORIES = [
   { key: 'food_breakfast', label: 'Breakfast Spots', short: 'Breakfast', emoji: '🥓', color: '#eab308' },
   { key: 'food_bakery', label: 'Bakeries', short: 'Bakeries', emoji: '🥐', color: '#d97706' },
   { key: 'food_market', label: 'Food Markets', short: 'Food Markets', emoji: '🌮', color: '#16a34a' },
+  { key: 'accommodation', label: 'Accommodation', short: 'Accommodation', emoji: '🛏️', color: '#8b5cf6' },
+  { key: 'emergency', label: 'Hospitals', short: 'Hospitals', emoji: '⚕️', color: '#ef4444' },
+  { key: 'hospital', label: 'Hospitals', short: 'Hospitals', emoji: '⚕️', color: '#ef4444' },
+  { key: 'atm', label: 'ATMs', short: 'ATMs', emoji: '💳', color: '#facc15' },
+  { key: 'scenic', label: 'Scenic Locations', short: 'Scenic', emoji: '🏔️', color: '#10b981' },
+  { key: 'fuel', label: 'Fuel Stations', short: 'Fuel', emoji: '⛽', color: '#22c55e' },
+  { key: 'food', label: 'Food', short: 'Food', emoji: '🍔', color: '#f59e0b' },
+  { key: 'pub', label: 'Pubs & Bars', short: 'Pubs', emoji: '🍺', color: '#a855f7' },
+  { key: 'workshop', label: 'Motorcycle Mechanics', short: 'Mechanics', emoji: '🔧', color: '#3b82f6' },
+  { key: 'dealership', label: 'Motorcycle Dealerships', short: 'Dealers', emoji: '🏍️', color: '#06b6d4' },
 ];
 
 export function getServiceCategory(key) {
