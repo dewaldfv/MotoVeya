@@ -1,15 +1,15 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
 const TAG_QUERIES = [
-  ['fuel', 'node[amenity=fuel]'],
-  ['food', 'node[amenity~"restaurant|cafe|fast_food|food_court"]'],
-  ['pub', 'node[amenity~"pub|bar"]'],
-  ['dealership', 'node[shop=motorcycle]'],
-  ['workshop', 'node[shop=motorcycle_repair]'],
-  ['accommodation', 'node[tourism~"hotel|guest_house|hostel|motel|camp_site"]'],
-  ['hospital', 'node[amenity=hospital]'],
-  ['atm', 'node[amenity=atm]'],
-  ['scenic', 'node[tourism~"viewpoint|picnic_site"]'],
+  ['fuel', 'nwr[amenity=fuel]'],
+  ['food', 'nwr[amenity~"restaurant|cafe|fast_food|food_court"]'],
+  ['pub', 'nwr[amenity~"pub|bar"]'],
+  ['dealership', 'nwr[shop=motorcycle]'],
+  ['workshop', 'nwr[shop=motorcycle_repair]'],
+  ['accommodation', 'nwr[tourism~"hotel|guest_house|hostel|motel|camp_site"]'],
+  ['hospital', 'nwr[amenity=hospital]'],
+  ['atm', 'nwr[amenity=atm]'],
+  ['scenic', 'nwr[tourism~"viewpoint|picnic_site"]'],
 ];
 
 function esc(s: string) { return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"'); }
@@ -55,11 +55,18 @@ export default async function(req: Request) {
       const place = {
         name: normalizeName(tags), lat: Number(p[0]), lng: Number(p[1]), category,
         address: [tags['addr:housenumber'], tags['addr:street'], tags['addr:suburb'], tags['addr:city']].filter(Boolean).join(', '),
+        town: tags['addr:city'] || tags['addr:town'] || tags['addr:village'] || null,
+        province: tags['addr:province'] || tags['addr:state'] || null,
+        brand: tags.brand || null,
+        operator: tags.operator || null,
         phone: tags.phone || tags['contact:phone'] || null,
         website: tags.website || tags['contact:website'] || null,
         opening_hours: tags.opening_hours || null,
+        is_open_24h: tags.opening_hours === '24/7',
+        description: tags.description || tags['description:en'] || null,
         source: 'openstreetmap', source_id: `${el.type}/${el.id}`,
-        source_url: `https://www.openstreetmap.org/${el.type}/${el.id}`,
+        source_url: `https://www.openstreetmap.org/${el.type}/${el.id}`, 
+        source_updated_at: tags['check_date'] || tags['survey:date'] || null,
       };
       try {
         const existing = await base44.entities.POI.filter({ source: 'openstreetmap', source_id: place.source_id }, '-created_date', 1);
