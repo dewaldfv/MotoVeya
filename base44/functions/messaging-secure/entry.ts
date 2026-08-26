@@ -104,9 +104,9 @@ Deno.serve(async (req) => {
       const { conversation_id } = body;
       if (!conversation_id) return Response.json({ error: 'Missing conversation_id' }, { status: 400 });
       const conv = await svc.entities.Conversation.get(conversation_id);
-      if (!conv || !Array.isArray(conv.participant_ids) || !conv.participant_ids.includes(user.id)) {
-        return Response.json({ error: 'Forbidden' }, { status: 403 });
-      }
+      if (!conv) return Response.json({ error: 'Forbidden' }, { status: 403 });
+      const allowed = await canAccessConversation(svc, conv, user.id);
+      if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
       const messages = await svc.entities.Message.filter(
         { conversation_id },
         'created_date',
@@ -234,9 +234,9 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Missing conversation_id or content' }, { status: 400 });
       }
       const conv = await svc.entities.Conversation.get(conversation_id);
-      if (!conv || !Array.isArray(conv.participant_ids) || !conv.participant_ids.includes(user.id)) {
-        return Response.json({ error: 'Forbidden' }, { status: 403 });
-      }
+      if (!conv) return Response.json({ error: 'Forbidden' }, { status: 403 });
+      const allowed = await canAccessConversation(svc, conv, user.id);
+      if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
       const preview = content.trim().substring(0, 120);
       const now = new Date().toISOString();
@@ -396,9 +396,9 @@ Deno.serve(async (req) => {
       const { conversation_id } = body;
       if (!conversation_id) return Response.json({ error: 'Missing conversation_id' }, { status: 400 });
       const conv = await svc.entities.Conversation.get(conversation_id);
-      if (!conv || !Array.isArray(conv.participant_ids) || !conv.participant_ids.includes(user.id)) {
-        return Response.json({ error: 'Forbidden' }, { status: 403 });
-      }
+      if (!conv) return Response.json({ error: 'Forbidden' }, { status: 403 });
+      const allowed = await canAccessConversation(svc, conv, user.id);
+      if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
       await svc.entities.Conversation.update(conversation_id, { is_archived: true });
       return Response.json({ success: true });
     }
@@ -407,9 +407,9 @@ Deno.serve(async (req) => {
       const { conversation_id } = body;
       if (!conversation_id) return Response.json({ error: 'Missing conversation_id' }, { status: 400 });
       const conv = await svc.entities.Conversation.get(conversation_id);
-      if (!conv || !Array.isArray(conv.participant_ids) || !conv.participant_ids.includes(user.id)) {
-        return Response.json({ error: 'Forbidden' }, { status: 403 });
-      }
+      if (!conv) return Response.json({ error: 'Forbidden' }, { status: 403 });
+      const allowed = await canAccessConversation(svc, conv, user.id);
+      if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
       const msgs = await svc.entities.Message.filter({ conversation_id }, 'created_date', 1000);
       await Promise.all((msgs || []).map((m) => svc.entities.Message.delete(m.id).catch(() => {})));
       await svc.entities.Conversation.delete(conversation_id);
