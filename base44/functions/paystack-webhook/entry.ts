@@ -46,6 +46,24 @@ export default async function(req) {
       }
       const cycle = metadata.billing_cycle === 'annual' ? 'annual' : 'monthly';
       const reference = data.reference;
+      if (!reference) {
+        return Response.json({ error: 'Missing payment reference' }, { status: 400 });
+      }
+      if (data.currency !== 'ZAR') {
+        return Response.json({ error: 'Unexpected payment currency' }, { status: 400 });
+      }
+      const expectedAmount = cycle === 'annual' ? 89990 : 8999;
+      if (Number(data.amount) !== expectedAmount) {
+        return Response.json({ error: 'Unexpected payment amount' }, { status: 400 });
+      }
+      const expectedAppId = secrets.get('BASE44_APP_ID') || '';
+      if (expectedAppId && metadata.base44_app_id !== expectedAppId) {
+        return Response.json({ error: 'Payment is not bound to this application' }, { status: 403 });
+      }
+      const referencePrefix = `motogo_${cycle}_`;
+      if (typeof reference !== 'string' || !reference.startsWith(referencePrefix)) {
+        return Response.json({ error: 'Unexpected payment reference' }, { status: 400 });
+      }
       const amount = data.amount / 100; // cents to ZAR
       const paidAt = new Date(data.paid_at || Date.now());
       const periodEnd = new Date(
