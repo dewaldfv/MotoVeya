@@ -29,6 +29,12 @@ Deno.serve(async (req) => {
     const ev = await svc.entities.Event.get(event_id).catch(() => null);
     if (!ev) return Response.json({ error: 'Event not found' }, { status: 404 });
 
+    // Never announce unpublished/unapproved events. This function is intended
+    // to run only after moderation has made the event publicly visible.
+    if (ev.status !== 'approved') {
+      return Response.json({ error: 'Event is not approved for publication' }, { status: 409 });
+    }
+
     const title = `🏍️ New Event: ${ev.title}`;
     const notifBody = ev.venue_name
       ? `${ev.title} at ${ev.venue_name}. Tap to view details.`
