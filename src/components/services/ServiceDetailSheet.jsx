@@ -61,6 +61,8 @@ export default function ServiceDetailSheet({ service, userPos, isFavorite, onFav
           {service.phone && <a href={`tel:${service.phone}`} className="flex items-center gap-2 text-white/75"><Phone size={16} /> {service.phone}</a>}
           {safeHttpUrl(service.website) && <a href={safeHttpUrl(service.website)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-primary"><Globe size={16} /> Visit website</a>}
           {service.opening_hours && <div className="flex items-center gap-2 text-white/75"><Clock size={16} /> {service.opening_hours}</div>}
+          {service.operator && <div className="text-xs text-white/55">Operator: {service.operator}</div>}
+          {service.source === 'openstreetmap' && <div className="text-[10px] text-white/45">Map data: OpenStreetMap{service.source_updated_at ? ` · checked ${service.source_updated_at}` : ''}</div>}
         </div>
 
         {service.photo_urls?.length > 1 && (
@@ -85,7 +87,7 @@ export default function ServiceDetailSheet({ service, userPos, isFavorite, onFav
             )}
           </div>
           <div className="flex gap-2">
-            <Button size="lg" variant="secondary" className="min-h-[56px] flex-1" onClick={() => onDirections(service)}>
+            <Button size="lg" variant="secondary" className="min-h-[56px] flex-1" onClick={() => (onDirections || onNavigate)?.(service)}>
               <Route size={18} className="mr-2" /> Directions
             </Button>
             <Button size="lg" className="min-h-[56px] flex-1" onClick={() => onNavigate(service)}>
