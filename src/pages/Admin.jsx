@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import EditUserDialog from '@/components/admin/EditUserDialog';
+import POIManager from '@/components/admin/POIManager';
 import { toast } from 'sonner';
 
 export default function Admin() {
@@ -111,6 +112,7 @@ export default function Admin() {
           <TabsTrigger value="services" className="flex-1">Services ({pendingServices.length})</TabsTrigger>
           <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
           <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>
+          <TabsTrigger value="poi" className="flex-1">POI & Markers</TabsTrigger>
         </TabsList>
 
         <TabsContent value="events" className="space-y-3">
@@ -173,6 +175,10 @@ export default function Admin() {
               </div>
             </div>
           ))}
+        </TabsContent>
+
+        <TabsContent value="poi">
+          <POIManager />
         </TabsContent>
 
         <TabsContent value="alerts" className="space-y-2">
