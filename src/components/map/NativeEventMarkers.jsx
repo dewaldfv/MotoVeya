@@ -79,7 +79,7 @@ export default function NativeEventMarkers({ events = [], favoriteEventIds = [],
       };
       let m = markers.get(id);
       if (!m) {
-        m = new g.maps.Marker({ position: latLng, map, icon, zIndex: 500 });
+        m = new g.maps.Marker({ position: latLng, map, icon, zIndex: 1500 });
         m.addListener('click', () => cbRef.current?.(ev));
         markers.set(id, m);
       } else {
