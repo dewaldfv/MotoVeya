@@ -44,7 +44,7 @@ export default function Home() {
   const [distressAlerts, setDistressAlerts] = useState([]);
   const [fetchingCat, setFetchingCat] = useState(false);
   const [recenterSignal, setRecenterSignal] = useState(0);
-  const [locationLocked, setLocationLocked] = useState(true);
+  const [locationLocked, setLocationLocked] = useState(false);
   const [fitRouteSignal, setFitRouteSignal] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
@@ -286,11 +286,9 @@ export default function Home() {
   const remainingRoute = isActive ? session.navProgress?.remainingRoute || session.routeData?.coordinates || [] : null;
 
   const handleMyLocation = () => {
-    setLocationLocked((locked) => {
-      const nextLocked = !locked;
-      if (nextLocked) setRecenterSignal((s) => s + 1);
-      return nextLocked;
-    });
+    // The location button is a pure "Return to Current Location" action.
+    // It never locks the Home map or changes the user's ability to pan/zoom.
+    setRecenterSignal((s) => s + 1);
   };
   const handleSelectCategory = (key) => {setActiveCat(key);setSelected(null);};
   const handleDirections = (item) => {
