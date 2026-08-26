@@ -79,11 +79,9 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
       userZoomedRef.current = true;
     };
     const dragStartListener = map.addListener('dragstart', onDragStart);
-    const dragEndListener = map.addListener('dragend', onDragEnd);
     zoomListenerRef.current = map.addListener('zoom_changed', onZoomChanged);
     return () => {
       dragStartListener?.remove?.();
-      dragEndListener?.remove?.();
       zoomListenerRef.current?.remove?.();
       zoomListenerRef.current = null;
     };
@@ -96,8 +94,6 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
     userZoomedRef.current = false;
     setRecenterTick((t) => t + 1);
     suppressZoomEventRef.current = true;
-    if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
-    if (zoomResetTimerRef.current) { clearTimeout(zoomResetTimerRef.current); zoomResetTimerRef.current = null; }
     queueMicrotask(() => { suppressZoomEventRef.current = false; });
   }, [recenterToken, map]);
 
