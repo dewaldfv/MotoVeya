@@ -175,6 +175,19 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Free OSM/Overpass POI seeding: once per device per day, import a local rider area
+  // into MotoVeya's own POI database. This avoids paid Places APIs and builds coverage organically.
+  useEffect(() => {
+    if (!me?.id || !session.userPos) return;
+    const key = 'motoveya_osm_seed_at';
+    const last = Number(localStorage.getItem(key) || 0);
+    if (Date.now() - last < 24 * 60 * 60 * 1000) return;
+    const [lat, lng] = session.userPos;
+    base44.functions.invoke('import-osm-pois', { lat, lng, radius: 15000 })
+      .then(() => { try { localStorage.setItem(key, String(Date.now())); } catch {} })
+      .catch((e) => console.error('OSM POI seed:', e));
+  }, [me?.id, session.userPos?.[0], session.userPos?.[1]]);
+
   // Real-time friend marker updates
   const friendIdsRef = useRef(new Set());
   useEffect(() => {friendIdsRef.current = new Set(friends.map((f) => f.user_id));}, [friends]);
@@ -220,21 +233,11 @@ export default function Home() {
       const { query, category } = REMOTE_CATS[activeCat];
       const center = userPosRef.current || SA_CENTER;
       const [lat, lng] = center;
-      const viewbox = `${lng - 0.4},${lat + 0.4},${lng + 0.4},${lat - 0.4}`;
       setFetchingCat(true);
-      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=30&countrycodes=za&bounded=1&viewbox=${viewbox}`).
-      then((r) => r.json()).
-      then((data) => setRemotePois(data.map((d) => ({
-        id: `remote-${d.place_id}`,
-        name: d.display_name.split(',')[0],
-        address: d.display_name,
-        lat: parseFloat(d.lat),
-        lng: parseFloat(d.lon),
-        category,
-        source: 'remote'
-      })))).
-      catch(() => setRemotePois([])).
-      finally(() => setFetchingCat(false));
+      base44.functions.invoke('search-osm-pois', { lat, lng, category, radius: 15000, query })
+      .then((res) => setRemotePois(res.data?.pois || []))
+      .catch(() => setRemotePois([]))
+      .finally(() => setFetchingCat(false));
     } else if (activeCat === 'distress') {
       setFetchingCat(true);
       base44.entities.DistressAlert.filter({ status: 'active' }, '-created_date', 50).
