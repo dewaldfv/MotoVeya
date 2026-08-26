@@ -96,12 +96,16 @@ export default function ServiceMarkers({ services = [], userPos, onMarkerClick }
       const id = `service-${service.id}`;
       seen.add(id);
       const category = getServiceCategory(service.category);
-      const iconUrl = markerSvg(service, category);
-      const icon = {
-        url: iconUrl,
-        scaledSize: new g.maps.Size(44, 44),
-        anchor: new g.maps.Point(22, 22),
-      };
+      const icon = String(service.name || service.brand || '').toLowerCase().includes('engen')
+        ? getEngenMarkerIcon(g)
+        : (() => {
+            const iconUrl = markerSvg(service, category);
+            return {
+              url: iconUrl,
+              scaledSize: new g.maps.Size(44, 44),
+              anchor: new g.maps.Point(22, 22),
+            };
+          })();
 
       let marker = markers.get(id);
       if (!marker) {
