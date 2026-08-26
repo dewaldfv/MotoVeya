@@ -1,7 +1,6 @@
 /* global google */
 import { useEffect, useMemo, useRef } from 'react';
 import { useGoogleMap } from '@react-google-maps/api';
-import { ENGEN_LOGO } from '@/components/ServiceMarkers';
 
 const CATEGORY = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -28,7 +27,13 @@ function isEngen(poi) {
 }
 
 function markerIcon(poi) {
-  if (isEngen(poi)) return ENGEN_LOGO;
+  const custom = poi?._marker;
+  const customUrl = custom?.image_data || custom?.image_url;
+  if (customUrl) return {
+    url: customUrl,
+    scaledSize: new google.maps.Size(Number(custom.width_px) || 44, Number(custom.height_px) || 44),
+    anchor: new google.maps.Point(Number(custom.anchor_x) || 22, Number(custom.anchor_y) || 22),
+  };
 
   const config = CATEGORY[poi?.category] || CATEGORY.rest_stop;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
@@ -73,12 +78,12 @@ export default function NativePoiMarkers({ pois = [], onPoiClick }) {
     validPois.forEach((poi) => {
       const id = `poi-${poi.id || `${poi.name}-${poi.lat}-${poi.lng}`}`;
       seen.add(id);
-      const iconUrl = markerIcon(poi);
-      const icon = iconUrl ? {
-        url: iconUrl,
+      const iconConfig = markerIcon(poi);
+      const icon = iconConfig ? (typeof iconConfig === 'string' ? {
+        url: iconConfig,
         scaledSize: new g.maps.Size(46, 46),
         anchor: new g.maps.Point(23, 23),
-      } : undefined;
+      } : iconConfig) : undefined;
 
       let marker = markers.get(id);
       if (!marker) {
