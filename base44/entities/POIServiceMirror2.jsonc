@@ -1,0 +1,129 @@
+{
+  "name": "POIServiceMirror2",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "logo_url": {
+      "type": "string"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "address": {
+      "type": "string"
+    },
+    "town": {
+      "type": "string"
+    },
+    "province": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "opening_hours": {
+      "type": "string"
+    },
+    "is_open_24h": {
+      "type": "boolean",
+      "default": false
+    },
+    "price_range": {
+      "type": "string"
+    },
+    "service_menu": {
+      "type": "string"
+    },
+    "social_links": {
+      "type": "string"
+    },
+    "submitter_notes": {
+      "type": "string"
+    },
+    "rejection_reason": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number"
+    },
+    "review_count": {
+      "type": "number"
+    },
+    "view_count": {
+      "type": "number",
+      "default": 0
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_premium_partner": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false
+    },
+    "has_premium_discount": {
+      "type": "boolean",
+      "default": false
+    },
+    "premium_discount_description": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "marker_url": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "category",
+    "lat",
+    "lng"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
