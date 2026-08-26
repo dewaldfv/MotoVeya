@@ -240,7 +240,11 @@ export default function MapView({
     )),
     [routeWarnings]
   );
-  const servicesVisible = showServices && zoomLevel >= SERVICE_MIN_ZOOM;
+  // POI markers are intentionally hidden at broad map zooms to keep the Home map clean.
+  // In Ride Mode they are always visible; otherwise they appear only once the rider
+  // zooms past level 12 (13+). Safety warnings/distress remain independent of this gate.
+  const poiMarkersVisible = navActive || zoomLevel > 12;
+  const servicesVisible = showServices && poiMarkersVisible;
   const serviceMarkers = useMemo(
     () => servicesVisible ? (
       <ServiceMarkers services={services} userPos={coarseUserPos} onMarkerClick={onServiceClick} />
@@ -306,7 +310,7 @@ export default function MapView({
           </CustomMapMarker>
         )}
 
-        {poiMarkers}
+        {poiMarkersVisible && poiMarkers}
 
         <NativeEventMarkers
           events={events}
