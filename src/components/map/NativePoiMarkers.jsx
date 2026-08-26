@@ -28,14 +28,15 @@ function isEngen(poi) {
 
 function markerIcon(poi) {
   if (isEngen(poi)) {
-    // Official Engen-style red e mark + ENGEN wordmark. Keep the complete lockup
-    // together; do not invent a replacement logo or distort the proportions.
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
-      <circle cx="28" cy="28" r="25" fill="#fff" stroke="#d71920" stroke-width="2"/>
-      <g transform="translate(7 5)">
-        <path d="M10 19.5c0-7.2 5.8-13 13-13 5.4 0 10.1 3.3 12 8h-7.4c-1-1.3-2.6-2.2-4.6-2.2-4 0-7.2 3.2-7.2 7.2s3.2 7.2 7.2 7.2c2 0 3.7-.8 4.8-2.2H36c-2 4.7-6.6 8-12.1 8-7.2 0-13-5.8-13-13Z" fill="#d71920"/>
-        <path d="M16.1 20c1.1-2.8 3.9-4.8 7.1-4.8 3.4 0 6.2 2.1 7.3 5.1h-6.1c-.4-.6-.9-1-1.8-1-1.2 0-2.2.7-2.7 1.7h-3.8Z" fill="#fff"/>
-        <text x="23" y="43" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="7.4" font-weight="800" letter-spacing="0.4" fill="#004b93">ENGEN</text>
+    // Use the supplied original Engen logo asset. Do not redraw or approximate
+    // the brand mark with custom SVG paths.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="64" viewBox="0 0 56 64">
+      <defs>
+        <filter id="engenShadow" x="-30%" y="-20%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/></filter>
+      </defs>
+      <g filter="url(#engenShadow)">
+        <path d="M28 2C13.64 2 2 13.64 2 28c0 11.4 7.33 21.08 17.52 24.6L28 62l8.48-9.4C46.67 49.08 54 39.4 54 28 54 13.64 42.36 2 28 2Z" fill="#fff" stroke="#d71920" stroke-width="2"/>
+        <image href="/engen-logo.png" x="7" y="9" width="42" height="38" preserveAspectRatio="xMidYMid meet"/>
       </g>
     </svg>`;
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
