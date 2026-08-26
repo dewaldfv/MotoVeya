@@ -124,7 +124,6 @@ function Recenter({ center, zoom, signal }) {
     if (!map || !center) return;
     const pos = { lat: center[0], lng: center[1] };
     const previous = previousCenterRef.current;
-    const changed = !previous || previous.lat !== pos.lat || previous.lng !== pos.lng;
 
     if (firstRef.current) {
       map.setCenter(pos);
