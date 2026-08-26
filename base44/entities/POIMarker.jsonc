@@ -1,0 +1,76 @@
+{
+  "name": "POIMarker",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "brand": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "fuel",
+        "food",
+        "pub",
+        "workshop",
+        "dealership",
+        "emergency",
+        "rest_stop",
+        "scenic"
+      ],
+      "default": "fuel"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "image_data": {
+      "type": "string"
+    },
+    "width_px": {
+      "type": "number",
+      "default": 44
+    },
+    "height_px": {
+      "type": "number",
+      "default": 44
+    },
+    "anchor_x": {
+      "type": "number",
+      "default": 22
+    },
+    "anchor_y": {
+      "type": "number",
+      "default": 22
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
