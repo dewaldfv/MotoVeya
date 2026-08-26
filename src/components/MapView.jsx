@@ -247,7 +247,7 @@ export default function MapView({
   const servicesVisible = showServices && poiMarkersVisible;
   const serviceMarkers = useMemo(
     () => servicesVisible ? (
-      <ServiceMarkers services={services} userPos={coarseUserPos} onMarkerClick={onServiceClick} />
+      <ServiceMarkers services={services} userPos={coarseUserPos} onMarkerClick={onServiceClick || setPopupItem} />
     ) : null,
     [servicesVisible, services, coarseUserPos, onServiceClick]
   );
