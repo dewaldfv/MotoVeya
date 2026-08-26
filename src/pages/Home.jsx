@@ -99,6 +99,11 @@ export default function Home() {
     queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || []
   });
 
+  const { data: poiMarkers = [] } = useQuery({
+    queryKey: ['poi-markers'],
+    queryFn: async () => (await base44.entities.POIMarker.filter({ active: true }, '-created_date', 500)) || []
+  });
+
   const { data: eventData = null } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
@@ -264,13 +269,17 @@ export default function Home() {
 
   // Memoize the marker datasets so they keep a stable reference across the frequent
   // session/location re-renders — this stops static map pins from re-rendering on every tick.
+  const poisWithMarkers = useMemo(() => {
+    const markerMap = new Map(poiMarkers.map((m) => [m.id, m]));
+    return pois.map((p) => ({ ...p, _marker: p.marker_id ? markerMap.get(p.marker_id) || null : null }));
+  }, [pois, poiMarkers]);
   const poisToShow = useMemo(() =>
     activeCat === 'all'
-      ? pois.filter((p) => { const k = POI_OVERLAY_MAP[p.category]; return !k || overlays[k]; })
+      ? poisWithMarkers.filter((p) => p.is_active !== false).filter((p) => { const k = POI_OVERLAY_MAP[p.category]; return !k || overlays[k]; })
       : isRemoteCat ? remotePois
       : activeCat === 'distress' ? []
-      : pois.filter((p) => p.category === activeCat),
-    [pois, remotePois, activeCat, isRemoteCat, overlays]);
+      : poisWithMarkers.filter((p) => p.is_active !== false && p.category === activeCat),
+    [poisWithMarkers, remotePois, activeCat, isRemoteCat, overlays]);
   const distressToShow = useMemo(() => (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [], [distressAlerts, activeCat, overlays]);
   // Services and Food & Drink share the Service entity, but remain independently
   // controlled by their map layers.
