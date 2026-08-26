@@ -118,7 +118,6 @@ function LocationLock({ center, locked, zoom }) {
 function Recenter({ center, zoom, signal }) {
   const map = useGoogleMap();
   const firstRef = useRef(true);
-  const previousCenterRef = useRef(null);
 
   useEffect(() => {
     if (!map || !center) return;
