@@ -45,8 +45,6 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
   const userPannedRef = useRef(false);
   const userZoomedRef = useRef(false);
   const suppressZoomEventRef = useRef(false);
-  const recenterTimerRef = useRef(null);
-  const zoomResetTimerRef = useRef(null);
   const zoomListenerRef = useRef(null);
   const [recenterTick, setRecenterTick] = useState(0);
   const targetZoom = useMemo(() => {
@@ -68,32 +66,17 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
   }, [active, map]);
 
   // Allow the rider to pan or pinch-zoom manually during Ride Mode.
-  // After 5 seconds without map interaction, restore the normal navigation view.
+  // Manual interaction remains in control indefinitely. Only the explicit
+  // recenter button restores the normal navigation view.
   useEffect(() => {
     if (!map || !active) return;
-    const resetView = () => {
-      userPannedRef.current = false;
-      userZoomedRef.current = false;
-      if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
-      if (zoomResetTimerRef.current) { clearTimeout(zoomResetTimerRef.current); zoomResetTimerRef.current = null; }
-      setRecenterTick((t) => t + 1);
-    };
-    const scheduleReset = () => {
-      if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
-      zoomResetTimerRef.current = setTimeout(resetView, 5000);
-    };
     const onDragStart = () => {
       userPannedRef.current = true;
-      if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
-      scheduleReset();
     };
-    const onDragEnd = () => scheduleReset();
     const onZoomChanged = () => {
       // Google Maps fires zoom_changed for both user gestures and our own setZoom.
-      // The ref lets us distinguish our automatic camera changes from a rider pinch/scroll.
       if (suppressZoomEventRef.current) return;
       userZoomedRef.current = true;
-      scheduleReset();
     };
     const dragStartListener = map.addListener('dragstart', onDragStart);
     const dragEndListener = map.addListener('dragend', onDragEnd);
@@ -103,8 +86,6 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
       dragEndListener?.remove?.();
       zoomListenerRef.current?.remove?.();
       zoomListenerRef.current = null;
-      if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
-      if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
     };
   }, [map, active]);
 
@@ -113,6 +94,7 @@ function NavCamera({ userPos, heading, active, speed, nextManeuverDistance, rout
     if (!map || !recenterToken) return;
     userPannedRef.current = false;
     userZoomedRef.current = false;
+    setRecenterTick((t) => t + 1);
     suppressZoomEventRef.current = true;
     if (recenterTimerRef.current) { clearTimeout(recenterTimerRef.current); recenterTimerRef.current = null; }
     if (zoomResetTimerRef.current) { clearTimeout(zoomResetTimerRef.current); zoomResetTimerRef.current = null; }
