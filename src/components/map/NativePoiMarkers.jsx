@@ -1,7 +1,7 @@
 /* global google */
 import { useEffect, useMemo, useRef } from 'react';
 import { useGoogleMap } from '@react-google-maps/api';
-import { ENGEN_LOGO } from '@/components/ServiceMarkers';
+import { getEngenMarkerIcon } from '@/components/ServiceMarkers';
 
 const CATEGORY = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -73,12 +73,13 @@ export default function NativePoiMarkers({ pois = [], onPoiClick }) {
     validPois.forEach((poi) => {
       const id = `poi-${poi.id || `${poi.name}-${poi.lat}-${poi.lng}`}`;
       seen.add(id);
-      const markerIconUrl = markerIcon(poi);
-      const icon = {
-        url: markerIconUrl,
-        scaledSize: new g.maps.Size(46, 46),
-        anchor: new g.maps.Point(23, 23),
-      };
+      const icon = isEngen(poi)
+        ? getEngenMarkerIcon(g)
+        : {
+            url: markerIcon(poi),
+            scaledSize: new g.maps.Size(46, 46),
+            anchor: new g.maps.Point(23, 23),
+          };
 
       let marker = markers.get(id);
       if (!marker) {
