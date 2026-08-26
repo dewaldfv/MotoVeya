@@ -1,6 +1,7 @@
 /* global google */
 import { useEffect, useMemo, useRef } from 'react';
 import { useGoogleMap } from '@react-google-maps/api';
+import { ENGEN_LOGO } from '@/components/ServiceMarkers';
 
 const CATEGORY = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -27,20 +28,7 @@ function isEngen(poi) {
 }
 
 function markerIcon(poi) {
-  if (isEngen(poi)) {
-    // Use the supplied original Engen logo asset. Do not redraw or approximate
-    // the brand mark with custom SVG paths.
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="64" viewBox="0 0 56 64">
-      <defs>
-        <filter id="engenShadow" x="-30%" y="-20%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/></filter>
-      </defs>
-      <g filter="url(#engenShadow)">
-        <path d="M28 2C13.64 2 2 13.64 2 28c0 11.4 7.33 21.08 17.52 24.6L28 62l8.48-9.4C46.67 49.08 54 39.4 54 28 54 13.64 42.36 2 28 2Z" fill="#fff" stroke="#d71920" stroke-width="2"/>
-        <image href="/engen-logo.png" x="7" y="9" width="42" height="38" preserveAspectRatio="xMidYMid meet"/>
-      </g>
-    </svg>`;
-    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-  }
+  if (isEngen(poi)) return ENGEN_LOGO;
 
   const config = CATEGORY[poi?.category] || CATEGORY.rest_stop;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
