@@ -311,7 +311,7 @@ export default function Home() {
     <div className="relative h-screen w-full overflow-hidden" onClick={handleScreenTap}>
       <MapView
         center={session.userPos || SA_CENTER}
-        zoom={12}
+        zoom={15}
         layer={layer}
         recenterSignal={recenterSignal}
         fitRouteSignal={fitRouteSignal}
