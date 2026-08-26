@@ -44,6 +44,7 @@ export default function Home() {
   const [distressAlerts, setDistressAlerts] = useState([]);
   const [fetchingCat, setFetchingCat] = useState(false);
   const [recenterSignal, setRecenterSignal] = useState(0);
+  const [locationLocked, setLocationLocked] = useState(true);
   const [fitRouteSignal, setFitRouteSignal] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
@@ -281,7 +282,13 @@ export default function Home() {
   const completedRoute = isActive ? session.navProgress?.completedRoute || [] : null;
   const remainingRoute = isActive ? session.navProgress?.remainingRoute || session.routeData?.coordinates || [] : null;
 
-  const handleMyLocation = () => setRecenterSignal((s) => s + 1);
+  const handleMyLocation = () => {
+    setLocationLocked((locked) => {
+      const nextLocked = !locked;
+      if (nextLocked) setRecenterSignal((s) => s + 1);
+      return nextLocked;
+    });
+  };
   const handleSelectCategory = (key) => {setActiveCat(key);setSelected(null);};
   const handleDirections = (item) => {
     setSelected(null);
@@ -308,6 +315,7 @@ export default function Home() {
         layer={layer}
         recenterSignal={recenterSignal}
         fitRouteSignal={fitRouteSignal}
+        locationLocked={locationLocked}
         pois={poisToShow}
         events={eventsToShow}
         favoriteEventIds={eventFavoriteIds}
@@ -349,11 +357,11 @@ export default function Home() {
 
           <button
           onClick={handleMyLocation}
-          className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))]"
+          className={`glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg ${locationLocked ? 'bg-primary' : 'bg-[hsl(var(--muted))]'}`}
           style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}
-          aria-label="My Location">
-          
-            <LocateFixed size={22} className="text-primary" />
+          aria-label={locationLocked ? 'Unlock map' : 'Lock map to my location'}
+          title={locationLocked ? 'Unlock map' : 'Lock map to my location'}>
+          <LocateFixed size={22} className={locationLocked ? 'text-primary-foreground' : 'text-muted-foreground'} />
           </button>
 
           <button
