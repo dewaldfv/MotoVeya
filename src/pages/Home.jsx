@@ -358,11 +358,11 @@ export default function Home() {
 
           <button
           onClick={handleMyLocation}
-          className={`glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg ${locationLocked ? 'bg-primary' : 'bg-[hsl(var(--muted))]'}`}
+          className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))]"
           style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', left: 'calc(1rem + env(safe-area-inset-left))' }}
-          aria-label={locationLocked ? 'Unlock map' : 'Lock map to my location'}
-          title={locationLocked ? 'Unlock map' : 'Lock map to my location'}>
-          <LocateFixed size={22} className={locationLocked ? 'text-primary-foreground' : 'text-muted-foreground'} />
+          aria-label="Return to current location"
+          title="Return to current location">
+          <LocateFixed size={22} className="text-[hsl(var(--primary))]" />
           </button>
 
           <button
