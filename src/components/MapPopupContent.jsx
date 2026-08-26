@@ -13,9 +13,6 @@ export default function MapPopupContent({ item, onMoreInfo, onSave, onNavigate }
   const openingHours = item.opening_hours || item.hours;
   const rating = item.rating ?? item.stars;
   const sourceLabel = item.source === 'openstreetmap' || item.source === 'osm' ? 'OpenStreetMap' : item.source;
-  const mapsSearchUrl = item.lat != null && item.lng != null
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.lat},${item.lng}`)}`
-    : null;
 
   return (
     <div className="relative min-w-[220px] overflow-hidden rounded-xl bg-card">
