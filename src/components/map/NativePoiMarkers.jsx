@@ -1,6 +1,7 @@
 /* global google */
 import { useEffect, useMemo, useRef } from 'react';
 import { useGoogleMap } from '@react-google-maps/api';
+import { ENGEN_LOGO } from '@/components/ServiceMarkers';
 
 const CATEGORY = {
   fuel: { color: '#22c55e', emoji: '⛽' },
@@ -27,7 +28,7 @@ function isEngen(poi) {
 }
 
 function markerIcon(poi) {
-  if (isEngen(poi)) return undefined;
+  if (isEngen(poi)) return ENGEN_LOGO;
 
   const config = CATEGORY[poi?.category] || CATEGORY.rest_stop;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
