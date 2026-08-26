@@ -123,8 +123,6 @@ function Recenter({ center, zoom, signal }) {
   useEffect(() => {
     if (!map || !center) return;
     const pos = { lat: center[0], lng: center[1] };
-    const previous = previousCenterRef.current;
-
     if (firstRef.current) {
       map.setCenter(pos);
       if (zoom != null) map.setZoom(zoom);
@@ -133,8 +131,6 @@ function Recenter({ center, zoom, signal }) {
       // Manual "My Location" — snap immediately.
       map.panTo(pos);
     }
-
-    previousCenterRef.current = pos;
   }, [center?.[0], center?.[1], signal, map, zoom]);
   return null;
 }
