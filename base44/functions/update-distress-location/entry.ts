@@ -35,8 +35,20 @@ export default async function(req) {
       console.error('Failed to update user location:', e);
     }
 
-    // Update the DistressAlert with the latest known location
+    // A distress alert is a safety-critical record. Never allow an authenticated
+    // rider to update an alert that belongs to somebody else.
     if (distress_alert_id) {
+      const alert = await svc.entities.DistressAlert.get(distress_alert_id).catch(() => null);
+      if (!alert) {
+        return Response.json({ error: 'Distress alert not found' }, { status: 404 });
+      }
+      if (alert.rider_id !== me.id) {
+        console.warn(`Blocked distress-location ownership violation: user=${me.id} alert=${distress_alert_id}`);
+        return Response.json({ error: 'You can only update your own distress alert' }, { status: 403 });
+      }
+      if (alert.status && alert.status !== 'active') {
+        return Response.json({ error: 'Distress alert is no longer active' }, { status: 409 });
+      }
       try {
         await svc.entities.DistressAlert.update(distress_alert_id, {
           last_lat: lat,
@@ -45,6 +57,7 @@ export default async function(req) {
         });
       } catch (e) {
         console.error('Failed to update distress alert:', e);
+        return Response.json({ error: 'Unable to update distress alert' }, { status: 500 });
       }
     }
 
