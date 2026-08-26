@@ -28,13 +28,15 @@ function isEngen(poi) {
 
 function markerIcon(poi) {
   if (isEngen(poi)) {
-    // Keep the Engen identity readable at map scale instead of stretching the old
-    // raster logo into a square. This is a compact vector marker and stays crisp.
+    // Official Engen-style red e mark + ENGEN wordmark. Keep the complete lockup
+    // together; do not invent a replacement logo or distort the proportions.
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
-      <circle cx="28" cy="28" r="25" fill="#fff" stroke="#d71920" stroke-width="4"/>
-      <path d="M11 31 C17 18 31 13 45 17" fill="none" stroke="#d71920" stroke-width="5" stroke-linecap="round"/>
-      <path d="M12 36 C22 27 34 25 45 28" fill="none" stroke="#004b93" stroke-width="4" stroke-linecap="round"/>
-      <text x="28" y="43" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="800" fill="#d71920">ENGEN</text>
+      <circle cx="28" cy="28" r="25" fill="#fff" stroke="#d71920" stroke-width="2"/>
+      <g transform="translate(7 5)">
+        <path d="M10 19.5c0-7.2 5.8-13 13-13 5.4 0 10.1 3.3 12 8h-7.4c-1-1.3-2.6-2.2-4.6-2.2-4 0-7.2 3.2-7.2 7.2s3.2 7.2 7.2 7.2c2 0 3.7-.8 4.8-2.2H36c-2 4.7-6.6 8-12.1 8-7.2 0-13-5.8-13-13Z" fill="#d71920"/>
+        <path d="M16.1 20c1.1-2.8 3.9-4.8 7.1-4.8 3.4 0 6.2 2.1 7.3 5.1h-6.1c-.4-.6-.9-1-1.8-1-1.2 0-2.2.7-2.7 1.7h-3.8Z" fill="#fff"/>
+        <text x="23" y="43" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="7.4" font-weight="800" letter-spacing="0.4" fill="#004b93">ENGEN</text>
+      </g>
     </svg>`;
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
