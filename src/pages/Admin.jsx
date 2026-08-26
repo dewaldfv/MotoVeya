@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import EditUserDialog from '@/components/admin/EditUserDialog';
-import ServiceSubmitDialog from '@/components/services/ServiceSubmitDialog';
+import POISubmitDialog from '@/components/services/POISubmitDialog';
 import { toast } from 'sonner';
 
 export default function Admin() {
@@ -236,10 +236,10 @@ export default function Admin() {
         </DialogContent>
       </Dialog>
 
-      <ServiceSubmitDialog
+      <POISubmitDialog
         open={poiSubmitOpen}
         onOpenChange={setPoiSubmitOpen}
-        onSubmitted={() => toast.success('POI submitted for admin review')}
+        onSubmitted={() => loadAll()}
       />
 
       {editUser && (
