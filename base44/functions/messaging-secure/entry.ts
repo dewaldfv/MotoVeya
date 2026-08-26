@@ -58,6 +58,29 @@ async function sendPushToUsers(svc, userIds, payload) {
   return { sent };
 }
 
+async function canAccessConversation(svc, conversation, userId) {
+  if (!conversation || !userId) return false;
+
+  // Direct conversations remain protected by the explicit participant list.
+  if (!conversation.group_id) {
+    return Array.isArray(conversation.participant_ids) && conversation.participant_ids.includes(userId);
+  }
+
+  // Group conversations must use CURRENT group membership as the security
+  // boundary. participant_ids is only a cached display/notification list.
+  try {
+    const membership = await svc.entities.GroupMember.filter({
+      group_id: conversation.group_id,
+      user_id: userId,
+      status: 'active',
+    });
+    return Array.isArray(membership) && membership.length > 0;
+  } catch (error) {
+    console.error('group conversation membership check failed:', error);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
