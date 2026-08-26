@@ -98,8 +98,22 @@ This is an automated emergency alert from MotoVeya.`,
         const normalizePhone = (p) => String(p || '').replace(/\D/g, '').slice(-9);
         const ecNorm = normalizePhone(ecPhone);
         if (ecNorm) {
-          const allUsers = await base44.asServiceRole.entities.User.list('-created_date', 500);
-          const contact = (allUsers || []).find(
+          // Never scan a capped list of users for an emergency contact. That
+          // silently fails once the contact falls outside the first page.
+          // Query the User entity directly using common South African phone
+          // representations, then normalize the returned values for matching.
+          const phoneCandidates = [...new Set([
+            ecPhone,
+            `0${ecNorm}`,
+            `+27${ecNorm}`,
+            `27${ecNorm}`,
+          ].filter(Boolean))];
+          const matches = await Promise.all(
+            phoneCandidates.map((phone) =>
+              base44.asServiceRole.entities.User.filter({ phone }, '-created_date', 10).catch(() => [])
+            )
+          );
+          const contact = matches.flat().find(
             (u) => u.id !== user.id && normalizePhone(u.phone) === ecNorm
           );
           if (contact) {
