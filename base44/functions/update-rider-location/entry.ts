@@ -14,6 +14,27 @@ Deno.serve(async (req) => {
     let participant = existing?.[0];
     let ride = null;
     try { ride = await svc.entities.GroupRide.get(group_ride_id); } catch (e) {}
+    if (!ride) return Response.json({ error: 'Group ride not found' }, { status: 404 });
+
+    // Location updates are safety-sensitive. An old RideParticipant record must
+    // never remain an authorization boundary after a rider leaves the group.
+    const isLeader = ride.leader_id === me.id;
+    const isSweep = ride.sweep_id === me.id;
+    let groupMember = false;
+    if (ride.group_id) {
+      try {
+        const gm = await svc.entities.GroupMember.filter({ group_id: ride.group_id, user_id: me.id, status: 'active' });
+        groupMember = !!(gm && gm.length > 0);
+      } catch (e) {
+        return Response.json({ error: 'Unable to verify group membership' }, { status: 503 });
+      }
+    }
+    if (!isLeader && !isSweep && !groupMember) {
+      return Response.json({ access_denied: true, reason: 'You are not a current member of this group ride' }, { status: 403 });
+    }
+    if (ride.status && !['waiting', 'riding', 'paused'].includes(ride.status)) {
+      return Response.json({ error: 'Group ride is not active' }, { status: 409 });
+    }
 
     let distFromLeader = null;
     if (ride?.leader_id && ride.leader_id !== me.id) {
@@ -38,19 +59,6 @@ Deno.serve(async (req) => {
     if (participant) {
       participant = await svc.entities.RideParticipant.update(participant.id, update);
     } else {
-      // Access control: only members of the group, or the assigned leader/sweep, may join a ride.
-      const isLeader = ride?.leader_id === me.id;
-      const isSweep = ride?.sweep_id === me.id;
-      let groupMember = false;
-      if (ride?.group_id) {
-        try {
-          const gm = await svc.entities.GroupMember.filter({ group_id: ride.group_id, user_id: me.id, status: 'active' });
-          groupMember = !!(gm && gm.length > 0);
-        } catch (e) {}
-      }
-      if (!isLeader && !isSweep && !groupMember) {
-        return Response.json({ access_denied: true, reason: 'You are not a member of this group ride' }, { status: 403 });
-      }
       let bike = null;
       try { const bikes = await svc.entities.Bike.filter({ created_by_id: me.id, is_primary: true }, '-created_date', 1); bike = bikes[0]; } catch (e) {}
       participant = await svc.entities.RideParticipant.create({
