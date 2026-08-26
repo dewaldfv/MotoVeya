@@ -4,11 +4,10 @@ import { useEffect, useRef } from 'react';
 /**
  * useMapCamera — smoothly drives the Google Map camera during active navigation.
  *
- * The camera is locked to the rider: gestures are disabled and a single
- * requestAnimationFrame "catch-up" loop eases the map center toward the rider's
- * latest GPS position every frame. A new position update just moves the target;
- * the loop keeps gliding toward it without restarting, which makes high-
- * frequency GPS updates feel smooth instead of jittery.
+ * Ride Mode starts by following the rider, but manual map interaction takes
+ * control of the camera. Once the rider pans or zooms, GPS updates continue in
+ * the background without moving the camera. The "My Location" / recenter button
+ * explicitly restores rider-follow mode.
  *
  * Bottom-third placement and heading rotation are handled by CSS on the
  * rotating container (see .nav-map-heading-up in index.css), so the camera
@@ -19,13 +18,23 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
   const currentCenterRef = useRef(null);
   const currentZoomRef = useRef(null);
   const targetRef = useRef(null);
+  const followingRef = useRef(true);
+  const suppressCameraEventsRef = useRef(false);
 
-  // Lock all gestures during ride mode so the camera can't be dragged off.
+  // Ride Mode remains fully interactive. Manual pan/zoom disengages camera
+  // following; GPS tracking itself continues uninterrupted.
   useEffect(() => {
     if (!map) return;
-    map.setOptions({ draggable: false, scrollwheel: false, disableDoubleClickZoom: true, gestureHandling: 'none' });
+    map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'greedy' });
+    const onManualInteraction = () => {
+      if (suppressCameraEventsRef.current) return;
+      followingRef.current = false;
+    };
+    const dragStart = map.addListener('dragstart', onManualInteraction);
+    const zoomChanged = map.addListener('zoom_changed', onManualInteraction);
     return () => {
-      map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'auto' });
+      dragStart?.remove?.();
+      zoomChanged?.remove?.();
     };
   }, [map]);
 
@@ -42,18 +51,23 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
     if (!currentCenterRef.current) {
       currentCenterRef.current = { lat: target.lat, lng: target.lng };
       currentZoomRef.current = target.zoom;
+      suppressCameraEventsRef.current = true;
       map.setCenter(currentCenterRef.current);
       map.setZoom(currentZoomRef.current);
+      queueMicrotask(() => { suppressCameraEventsRef.current = false; });
     }
   }, [userPos?.[0], userPos?.[1], speed, nextManeuverDistance, map]);
 
   // Manual recenter token (the "My Location" button) — snap immediately.
   useEffect(() => {
     if (!map || !recenterToken || !targetRef.current) return;
+    followingRef.current = true;
     currentCenterRef.current = { lat: targetRef.current.lat, lng: targetRef.current.lng };
     currentZoomRef.current = targetRef.current.zoom;
+    suppressCameraEventsRef.current = true;
     map.setCenter(currentCenterRef.current);
     map.setZoom(currentZoomRef.current);
+    queueMicrotask(() => { suppressCameraEventsRef.current = false; });
   }, [recenterToken, map]);
 
   // Continuous catch-up loop — eases toward the target every frame.
@@ -65,7 +79,7 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
     const tick = () => {
       const target = targetRef.current;
       const cur = currentCenterRef.current;
-      if (target && cur) {
+      if (target && cur && followingRef.current) {
         const dLat = target.lat - cur.lat;
         const dLng = target.lng - cur.lng;
         const dZoom = target.zoom - (currentZoomRef.current ?? target.zoom);
@@ -74,8 +88,10 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
           cur.lat += dLat * SMOOTH;
           cur.lng += dLng * SMOOTH;
           currentZoomRef.current += dZoom * SMOOTH;
+          suppressCameraEventsRef.current = true;
           map.setCenter({ lat: cur.lat, lng: cur.lng });
           map.setZoom(currentZoomRef.current);
+          queueMicrotask(() => { suppressCameraEventsRef.current = false; });
         }
       }
       rafRef.current = requestAnimationFrame(tick);
