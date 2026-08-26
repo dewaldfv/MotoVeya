@@ -19,13 +19,19 @@ export default async function(req) {
       });
     }
 
-    const body = await req.json();
-    const { billing_cycle, user_id, user_email, origin } = body;
-
-    if (!user_email) {
-      return Response.json({ error: 'user_email is required' }, { status: 400 });
+    const base44 = createClientFromRequest(req);
+    let me;
+    try {
+      me = await base44.auth.me();
+    } catch (e) {
+      return Response.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (!me?.id || !me?.email) {
+      return Response.json({ error: 'Authenticated user could not be resolved' }, { status: 401 });
     }
 
+    const body = await req.json().catch(() => ({}));
+    const { billing_cycle, origin } = body;
     const cycle = billing_cycle === 'annual' ? 'annual' : 'monthly';
     const amount = AMOUNT_CENTS[cycle];
     const reference = `motogo_${cycle}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -47,14 +53,14 @@ export default async function(req) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: user_email,
+        email: me.email,
         amount,
         currency: 'ZAR',
         reference,
         callback_url: `${appOrigin}/premium?status=success`,
         metadata: {
-          user_id: user_id || '',
-          user_email,
+          user_id: me.id,
+          user_email: me.email,
           billing_cycle: cycle,
           base44_app_id: appId,
           custom_fields: [
