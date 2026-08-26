@@ -218,7 +218,7 @@ export default function MapView({
   // their positions never change, so they only render once.
   const poiMarkers = useMemo(
     () => pois.filter((p) => isValid(p.lat, p.lng)).map((poi) => (
-      <CustomMapMarker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} onClick={() => setPopupItem(poi)}>
+      <CustomMapMarker key={`poi-${poi.id}`} position={[poi.lat, poi.lng]} onClick={() => setPopupItem(poi)} zIndex={200} pane="overlayLayer">
         <PoiVisual category={poi.category} />
       </CustomMapMarker>
     )),
