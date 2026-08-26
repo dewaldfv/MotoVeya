@@ -35,8 +35,23 @@ export default async function(req) {
       return Response.json({ status: tx.status, active: false });
     }
 
-    // The payment reference must belong to the authenticated caller.
+    if (tx.currency !== 'ZAR') {
+      return Response.json({ error: 'Unexpected payment currency' }, { status: 400 });
+    }
+
     const metadata = tx.metadata || {};
+    const cycle = metadata.billing_cycle === 'annual' ? 'annual' : 'monthly';
+    const expectedAmount = cycle === 'annual' ? 89990 : 8999;
+    if (Number(tx.amount) !== expectedAmount) {
+      return Response.json({ error: 'Unexpected payment amount' }, { status: 400 });
+    }
+
+    const expectedAppId = secrets.get('BASE44_APP_ID') || '';
+    if (expectedAppId && metadata.base44_app_id !== expectedAppId) {
+      return Response.json({ error: 'Payment is not bound to this application' }, { status: 403 });
+    }
+
+    // The payment reference must belong to the authenticated caller.
     if (!metadata.user_id || metadata.user_id !== me.id) {
       return Response.json({ error: 'Payment reference is not bound to this user' }, { status: 403 });
     }
@@ -45,7 +60,6 @@ export default async function(req) {
     const svc = base44.asServiceRole;
     const existing = await svc.entities.Subscription.filter({ purchase_token: reference });
     if (existing.length === 0) {
-      const cycle = metadata.billing_cycle === 'annual' ? 'annual' : 'monthly';
       const amount = tx.amount / 100; // cents to ZAR
       const paidAt = new Date(tx.paid_at || Date.now());
       const periodEnd = new Date(
