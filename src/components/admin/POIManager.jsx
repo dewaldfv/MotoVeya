@@ -18,8 +18,17 @@ const blankMarker = { name:'', brand:'', category:'maintenance_repair', image_ur
 
 function validateMarkerFile(file) {
   if (!file?.type?.startsWith('image/')) throw new Error('Please select an image file.');
-  if (file.size > 5 * 1024 * 1024) throw new Error('Marker images must be 5 MB or smaller.');
+  if (file.size > 2 * 1024 * 1024) throw new Error('Marker images must be 2 MB or smaller.');
   return file;
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Could not read the marker image.'));
+    reader.readAsDataURL(file);
+  });
 }
 
 function parseCsv(text) {
@@ -62,13 +71,13 @@ export default function POIManager() {
     try {
       validateMarkerFile(file);
       setSaving(true);
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setMarker('image_url', file_url);
-      setMarker('image_data', '');
-      toast.success('Custom marker uploaded');
+      const dataUrl = await fileToDataUrl(file);
+      setMarker('image_data', dataUrl);
+      setMarker('image_url', '');
+      toast.success('Custom marker loaded — click Add Marker to save it');
     } catch(e) {
       console.error(e);
-      toast.error(e.message || 'Could not upload marker');
+      toast.error(e.message || 'Could not load marker');
     } finally { setSaving(false); }
   };
   const removePoi=async(id)=>{if(!confirm('Delete this POI?'))return;try{await base44.entities.POI.delete(id);toast.success('POI deleted');load();}catch(e){toast.error('Could not delete POI');}};
@@ -107,7 +116,7 @@ export default function POIManager() {
         <div className="grid gap-3 md:grid-cols-2">
           {['name','brand','lat','lng','address','town','province','phone','website','email','opening_hours','rating'].map(k=><div key={k}><Label>{k.replace(/_/g,' ')}</Label><Input value={poiForm[k]??''} onChange={e=>setPoi(k,e.target.value)} placeholder={k==='lat'?'e.g. -28.2554817':k==='lng'?'e.g. 29.1156999':''}/></div>)}
           <div><Label>Category</Label><Select value={poiForm.category} onValueChange={v=>setPoi('category',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{CATEGORIES.map(c=><SelectItem key={c} value={c}>{CATEGORY_LABELS[c]||c}</SelectItem>)}</SelectContent></Select></div>
-          <div><Label>Upload Custom Map Marker</Label><Input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{if(!file.type.startsWith('image/'))throw new Error('Please select an image file.');if(file.size>5*1024*1024)throw new Error('Marker images must be 5 MB or smaller.');setSaving(true);const {file_url}=await base44.integrations.Core.UploadFile({file});const marker=await base44.entities.POIMarker.create({name:`${poiForm.name || 'POI'} Marker`,brand:poiForm.brand||'',category:poiForm.category,image_url:file_url,width_px:44,height_px:44,anchor_x:22,anchor_y:22,active:true});setPoi('marker_id',marker.id);await load();toast.success('Custom map marker uploaded and assigned');}catch(err){console.error(err);toast.error(err.message||'Could not upload custom map marker');}finally{setSaving(false);e.target.value='';}}}/><p className="mt-1 text-xs text-muted-foreground">PNG, JPEG, WebP or SVG · maximum 5 MB.</p></div>
+          <div><Label>Upload Custom Map Marker</Label><Input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{validateMarkerFile(file);setSaving(true);const dataUrl=await fileToDataUrl(file);const marker=await base44.entities.POIMarker.create({name:`${poiForm.name || 'POI'} Marker`,brand:poiForm.brand||'',category:poiForm.category,image_data:dataUrl,image_url:'',width_px:44,height_px:44,anchor_x:22,anchor_y:22,active:true});setPoi('marker_id',marker.id);setMarkers(x=>[marker,...x]);toast.success('Custom map marker added and assigned to this POI');}catch(err){console.error(err);toast.error(err.message||'Could not add custom map marker');}finally{setSaving(false);e.target.value='';}}}/><p className="mt-1 text-xs text-muted-foreground">PNG, JPEG, WebP or SVG · maximum 2 MB. The marker is saved directly with MotoVeya.</p></div>
           <div className="md:col-span-2"><Label>Description</Label><Textarea value={poiForm.description} onChange={e=>setPoi('description',e.target.value)} /></div>
           <div className="flex items-center gap-2"><Switch checked={poiForm.is_open_24h} onCheckedChange={v=>setPoi('is_open_24h',v)}/><Label>Open 24 hours</Label></div><div className="flex items-center gap-2"><Switch checked={poiForm.is_active} onCheckedChange={v=>setPoi('is_active',v)}/><Label>Active on map</Label></div><div className="flex items-center gap-2"><Switch checked={poiForm.is_featured} onCheckedChange={v=>setPoi('is_featured',v)}/><Label>Featured</Label></div>
         </div>
@@ -116,8 +125,8 @@ export default function POIManager() {
       </TabsContent>
       <TabsContent value="markers" className="space-y-4 pt-4">
         <div className="grid gap-3 md:grid-cols-2"><div><Label>Marker Name</Label><Input value={markerForm.name} onChange={e=>setMarker('name',e.target.value)} placeholder="Engen Original"/></div><div><Label>Brand</Label><Input value={markerForm.brand} onChange={e=>setMarker('brand',e.target.value)} placeholder="Engen"/></div><div><Label>Category</Label><Select value={markerForm.category} onValueChange={v=>setMarker('category',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{CATEGORIES.map(c=><SelectItem key={c} value={c}>{CATEGORY_LABELS[c]||c}</SelectItem>)}</SelectContent></Select></div><div><Label>Image URL (optional)</Label><Input value={markerForm.image_url} onChange={e=>setMarker('image_url',e.target.value)} /></div>
-          <div className="md:col-span-2 rounded-xl border border-dashed p-4"><Label>Custom Map Marker</Label><div className="mt-2 flex flex-wrap items-center gap-3"><Input id="marker-upload" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={e=>{const file=e.target.files?.[0];if(file) uploadMarkerFile(file);e.target.value='';}}/><Button type="button" variant="secondary" onClick={()=>document.getElementById('marker-upload')?.click()} disabled={saving}><Upload size={16} className="mr-2"/> Upload Custom Marker</Button>{markerForm.image_url&&<Badge variant="secondary">Uploaded</Badge>}</div><p className="mt-2 text-xs text-muted-foreground">PNG, JPEG, WebP or SVG · maximum 5 MB. The original uploaded file is stored and used as the map marker without generating a replacement image.</p></div>
-          {(markerForm.image_data||markerForm.image_url)&&<div className="flex items-center gap-3 rounded-xl border p-3 md:col-span-2"><img src={markerForm.image_data||markerForm.image_url} alt="Marker preview" className="h-14 w-14 object-contain"/><span className="text-sm text-muted-foreground">Preview</span></div>}
+          <div className="md:col-span-2 rounded-xl border border-dashed p-4"><Label>Custom Map Marker</Label><div className="mt-2 flex flex-wrap items-center gap-3"><Input id="marker-upload" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={e=>{const file=e.target.files?.[0];if(file) uploadMarkerFile(file);e.target.value='';}}/><Button type="button" variant="secondary" onClick={()=>document.getElementById('marker-upload')?.click()} disabled={saving}><Upload size={16} className="mr-2"/> Upload Custom Marker</Button>{markerForm.image_url&&<Badge variant="secondary">Uploaded</Badge>}</div><p className="mt-2 text-xs text-muted-foreground">PNG, JPEG, WebP or SVG · maximum 2 MB. The original uploaded file is stored and used as the map marker without generating a replacement image.</p></div>
+          {(markerForm.image_data||markerForm.image_url)&&<div className="flex items-center gap-3 rounded-xl border p-3 md:col-span-2"><img src={markerForm.image_data||markerForm.image_url} alt="Marker preview" className="h-14 w-14 object-contain"/><div className="flex-1"><p className="text-sm font-semibold">Marker preview</p><p className="text-xs text-muted-foreground">Ready to save. Click Add Marker below.</p></div></div>}
           <div><Label>Width px</Label><Input type="number" value={markerForm.width_px} onChange={e=>setMarker('width_px',e.target.value)}/></div><div><Label>Height px</Label><Input type="number" value={markerForm.height_px} onChange={e=>setMarker('height_px',e.target.value)}/></div><div><Label>Anchor X</Label><Input type="number" value={markerForm.anchor_x} onChange={e=>setMarker('anchor_x',e.target.value)}/></div><div><Label>Anchor Y</Label><Input type="number" value={markerForm.anchor_y} onChange={e=>setMarker('anchor_y',e.target.value)}/></div><div className="md:col-span-2"><Label>Notes</Label><Textarea value={markerForm.notes} onChange={e=>setMarker('notes',e.target.value)}/></div><div className="flex items-center gap-2"><Switch checked={markerForm.active} onCheckedChange={v=>setMarker('active',v)}/><Label>Active</Label></div>
         </div>
         <div className="flex gap-2"><Button onClick={saveMarker} disabled={saving}><Upload size={16} className="mr-1"/>{editingMarker?'Update Marker':'Add Marker'}</Button>{editingMarker&&<Button variant="ghost" onClick={()=>{setEditingMarker(null);setMarkerForm(blankMarker)}}>Cancel</Button>}</div>
