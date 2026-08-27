@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MapView from '@/components/MapView';
+import FuelStationMarkers from '@/components/FuelStationMarkers';
 import BottomSheet from '@/components/BottomSheet';
 import CategoryMenu, { MAP_CATEGORIES } from '@/components/CategoryMenu';
 import LayersSheet from '@/components/LayersSheet';
@@ -97,6 +98,23 @@ export default function Home() {
   const { data: services = [] } = useQuery({
     queryKey: ['services'],
     queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || []
+  });
+
+  // Fuel stations are a dedicated map layer backed by OpenStreetMap/Overpass.
+  // Fetch a broad rider radius once a usable position is available so the Home map
+  // has real fuel coverage without reintroducing the removed POI system.
+  const fuelCenter = session.userPos || SA_CENTER;
+  const fuelCenterKey = fuelCenter ? `${Number(fuelCenter[0]).toFixed(2)},${Number(fuelCenter[1]).toFixed(2)}` : 'default';
+  const { data: fuelStations = [] } = useQuery({
+    queryKey: ['fuel-stations', fuelCenterKey],
+    queryFn: async () => {
+      const [lat, lng] = fuelCenter;
+      const res = await base44.functions.invoke('get-fuel-stations', { lat, lng, radius: 25000 });
+      return res.data?.stations || [];
+    },
+    enabled: Number.isFinite(Number(fuelCenter?.[0])) && Number.isFinite(Number(fuelCenter?.[1])),
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: poiMarkers = [] } = useQuery({
@@ -333,7 +351,9 @@ export default function Home() {
         routeWarnings={session.routeWarnings}
         services={servicesToShow}
         showServices={overlays.services || overlays.food}
+        fuelStations={overlays.fuel ? fuelStations : []}
         onServiceClick={setSelectedService}
+        onFuelStationClick={setSelectedService}
         friends={friendsToShow}
         showFriends={overlays.friends}
         onFriendClick={setSelectedFriend}
