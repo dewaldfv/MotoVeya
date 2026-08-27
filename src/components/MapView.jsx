@@ -5,6 +5,7 @@ import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
 import { MAP_LAYERS, getLayerStyles, getLayerBackground, getMapOptions } from '@/lib/mapLayers';
 import CustomMapMarker from './CustomMapMarker';
 import ServiceMarkers from './ServiceMarkers';
+import FuelStationMarkers from './FuelStationMarkers';
 import LiveMarkers from './map/LiveMarkers';
 import NativeEventMarkers from './map/NativeEventMarkers';
 import NativePoiMarkers from './map/NativePoiMarkers';
@@ -179,6 +180,7 @@ export default function MapView({
   services = [],
   showServices = false,
   onServiceClick,
+  fuelStations = [],
   friends = [],
   onFriendClick,
   groupRiders = [],
@@ -320,6 +322,7 @@ export default function MapView({
         {warningMarkers}
 
         {serviceMarkers}
+        <FuelStationMarkers stations={fuelStations} onMarkerClick={(station) => setPopupItem({ ...station, category: 'fuel' })} />
 
         <LiveMarkers
           rider={riders[0] || null}
