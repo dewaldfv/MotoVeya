@@ -4,7 +4,6 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MapView from '@/components/MapView';
-import FuelStationMarkers from '@/components/FuelStationMarkers';
 import BottomSheet from '@/components/BottomSheet';
 import CategoryMenu, { MAP_CATEGORIES } from '@/components/CategoryMenu';
 import LayersSheet from '@/components/LayersSheet';
@@ -353,7 +352,6 @@ export default function Home() {
         showServices={overlays.services || overlays.food}
         fuelStations={overlays.fuel ? fuelStations : []}
         onServiceClick={setSelectedService}
-        onFuelStationClick={setSelectedService}
         friends={friendsToShow}
         showFriends={overlays.friends}
         onFriendClick={setSelectedFriend}
