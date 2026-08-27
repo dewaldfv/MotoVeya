@@ -44,6 +44,7 @@ export default function Home() {
   const [distressAlerts, setDistressAlerts] = useState([]);
   const [fetchingCat, setFetchingCat] = useState(false);
   const [recenterSignal, setRecenterSignal] = useState(0);
+  const [compassResetSignal, setCompassResetSignal] = useState(0);
   const [locationLocked, setLocationLocked] = useState(false);
   const [fitRouteSignal, setFitRouteSignal] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -316,6 +317,10 @@ export default function Home() {
     // It never locks the Home map or changes the user's ability to pan/zoom.
     setRecenterSignal((s) => s + 1);
   };
+
+  const handleCompassReset = () => {
+    setCompassResetSignal((s) => s + 1);
+  };
   const handleSelectCategory = (key) => {setActiveCat(key);setSelected(null);};
   const handleDirections = (item) => {
     setSelected(null);
@@ -341,6 +346,7 @@ export default function Home() {
         zoom={15}
         layer={layer}
         recenterSignal={recenterSignal}
+        compassResetSignal={compassResetSignal}
         fitRouteSignal={fitRouteSignal}
         locationLocked={locationLocked}
         pois={poisToShow}
