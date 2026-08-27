@@ -12,7 +12,7 @@ import LocationPickerMap from '@/components/LocationPickerMap';
 import { EVENT_CATEGORIES, getEventMarkerUrl, getEventPosterMarkerUrl } from '@/lib/eventMarkers';
 
 // Event poster automation: upload poster -> create EventSubmission -> backend AI extraction/review.
-export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
+export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, editEvent = null, onEditClose }) {
   const [saving, setSaving] = useState(false);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -20,9 +20,22 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
   const [customMarker, setCustomMarker] = useState(null);
   const [processingPoster, setProcessingPoster] = useState(false);
   const [posterConfidence, setPosterConfidence] = useState(null);
-  const [form, setForm] = useState({ title: '', description: '', event_date: '', end_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
+  const emptyForm = { title: '', description: '', event_date: '', end_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] };
+  const [form, setForm] = useState(emptyForm);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    if (!open) return;
+    if (editEvent) {
+      const local = (v) => v ? new Date(v).toISOString().slice(0, 16) : '';
+      setForm({ ...emptyForm, ...editEvent, event_date: local(editEvent.event_date), end_date: local(editEvent.end_date), lat: editEvent.lat != null ? String(editEvent.lat) : '', lng: editEvent.lng != null ? String(editEvent.lng) : '', entry_fee_zar: editEvent.entry_fee_zar != null ? String(editEvent.entry_fee_zar) : '', photo_urls: editEvent.photo_urls || [] });
+      setCustomMarker(editEvent.markerIcon || null);
+    } else {
+      setForm(emptyForm);
+      setCustomMarker(null);
+    }
+  }, [open, editEvent]);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -110,7 +123,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
     if (form.category === 'rally' && form.end_date && new Date(form.end_date) <= new Date(form.event_date)) { toast.error('End date must be after the start date'); return; }
     setSaving(true);
     try {
-      await base44.entities.Event.create({
+      const payload = {
         ...form,
         markerIcon: customMarker || getEventPosterMarkerUrl(form.photo_urls?.[0], form.category) || getEventMarkerUrl(form.category),
         event_date: new Date(form.event_date).toISOString(),
@@ -118,10 +131,22 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
         lat: form.lat ? Number(form.lat) : undefined,
         lng: form.lng ? Number(form.lng) : undefined,
         entry_fee_zar: form.entry_fee_zar ? Number(form.entry_fee_zar) : 0,
-        status: 'pending',
-      });
-      toast.success('Event submitted! Awaiting admin approval.');
+      };
+      if (editEvent) {
+        const isAdmin = (await base44.auth.me())?.role === 'admin';
+        if (isAdmin) {
+          await base44.entities.Event.update(editEvent.id, { ...payload, status: 'approved' });
+          toast.success('Event updated and published');
+        } else {
+          await base44.entities.EventEditRequest.create({ event_id: editEvent.id, submitted_by_id: editEvent.created_by_id, change_payload: JSON.stringify(payload), status: 'pending', submitted_at: new Date().toISOString() });
+          toast.success('Changes submitted for admin approval');
+        }
+      } else {
+        await base44.entities.Event.create({ ...payload, status: 'pending' });
+        toast.success('Event submitted! Awaiting admin approval.');
+      }
       onOpenChange(false);
+      onEditClose?.();
       onSubmitted?.();
       setCustomMarker(null);
       setForm({ title: '', description: '', event_date: '', end_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
@@ -139,7 +164,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Submit Event</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{editEvent ? 'Edit Event' : 'Submit Event'}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -250,11 +275,11 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted }) {
               <input type="file" accept="image/*" className="hidden" onChange={handleMarkerUpload} disabled={uploadingMarker} />
             </label>
           </div>
-          <p className="text-xs text-muted-foreground">Your event will be reviewed by an admin before appearing on the map.</p>
+          <p className="text-xs text-muted-foreground">{editEvent ? 'Changes to published events are submitted for admin approval. The currently approved version remains live until approved.' : 'Your event will be reviewed by an admin before appearing on the map.'}</p>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button disabled={saving} onClick={handleSubmit}>{saving ? 'Submitting...' : 'Submit Event'}</Button>
+          <Button disabled={saving} onClick={handleSubmit}>{saving ? 'Saving...' : editEvent ? 'Save & Submit Changes' : 'Submit Event'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
