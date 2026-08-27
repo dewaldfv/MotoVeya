@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -138,7 +138,8 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
           await base44.entities.Event.update(editEvent.id, { ...payload, status: 'approved' });
           toast.success('Event updated and published');
         } else {
-          await base44.entities.EventEditRequest.create({ event_id: editEvent.id, submitted_by_id: editEvent.created_by_id, change_payload: JSON.stringify(payload), status: 'pending', submitted_at: new Date().toISOString() });
+          const me = await base44.auth.me();
+          await base44.entities.EventEditRequest.create({ event_id: editEvent.id, submitted_by_id: me.id, change_payload: JSON.stringify(payload), status: 'pending', submitted_at: new Date().toISOString() });
           toast.success('Changes submitted for admin approval');
         }
       } else {
