@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Calendar, MapPin, Phone, Mail, ExternalLink, Navigation, Tag, Heart } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, Phone, Mail, ExternalLink, Navigation, Tag, Heart, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import CalendarExportButton from '@/components/CalendarExportButton';
 import { formatEventDateRange } from '@/lib/eventDate';
 import { safeHttpUrl } from '@/lib/safeUrl';
+import EventSubmitDialog from '@/components/EventSubmitDialog';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -19,6 +20,8 @@ export default function EventDetail() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favId, setFavId] = useState(null);
   const [toggling, setToggling] = useState(false);
+  const [user, setUser] = useState(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -27,6 +30,10 @@ export default function EventDetail() {
       finally { setLoading(false); }
     })();
   }, [id]);
+
+  useEffect(() => {
+    (async () => { try { if (await base44.auth.isAuthenticated()) setUser(await base44.auth.me()); } catch (e) { /* ignore */ } })();
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -91,7 +98,10 @@ export default function EventDetail() {
           <Badge variant="secondary" className="capitalize">{event.category?.replace('_', ' ')}</Badge>
           {event.entry_fee_zar === 0 && <Badge className="bg-green-600">Free Entry</Badge>}
         </div>
-        <h1 className="text-2xl font-bold">{event.title}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-bold">{event.title}</h1>
+          {user && (user.role === 'admin' || (user.role === 'organizer' && event.created_by_id === user.id)) && <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}><Pencil size={14} className="mr-1" /> Edit</Button>}
+        </div>
         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"><Calendar size={16} /> {date}</div>
         <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground"><MapPin size={16} /> {event.venue_name}</div>
 
@@ -119,6 +129,7 @@ export default function EventDetail() {
         <div className="mt-2">
           <CalendarExportButton event={event} className="w-full" />
         </div>
+        <EventSubmitDialog open={editOpen} onOpenChange={setEditOpen} editEvent={event} onEditClose={() => setEditOpen(false)} onSubmitted={async () => { setEvent(await base44.entities.Event.get(id)); queryClient.invalidateQueries({ queryKey: ['events'] }); }} />
       </div>
     </div>
   );
