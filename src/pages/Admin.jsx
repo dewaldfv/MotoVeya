@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Check, X, Users, Calendar, TrendingUp, AlertTriangle, Siren, Crown, Wrench, MapPin } from 'lucide-react';
+import { Shield, Check, X, Users, Calendar, TrendingUp, AlertTriangle, Siren, Crown, Wrench, MapPin, Pencil, Eye } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import LoginPrompt from '@/components/LoginPrompt';
 import EditUserDialog from '@/components/admin/EditUserDialog';
 import POISubmitDialog from '@/components/services/POISubmitDialog';
+import EventSubmitDialog from '@/components/EventSubmitDialog';
 import { toast } from 'sonner';
 
 export default function Admin() {
@@ -25,6 +26,8 @@ export default function Admin() {
   const [rejectReason, setRejectReason] = useState('');
   const [editUser, setEditUser] = useState(null);
   const [poiSubmitOpen, setPoiSubmitOpen] = useState(false);
+  const [editEvent, setEditEvent] = useState(null);
+  const [editRequests, setEditRequests] = useState([]);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -42,6 +45,9 @@ export default function Admin() {
         base44.entities.CrashAlert.list('-created_date', 20),
         base44.entities.DistressAlert.list('-created_date', 20),
       ]);
+      let requests = [];
+      try { requests = await base44.entities.EventEditRequest.list('-created_date', 50); } catch (e) { console.error(e); }
+      setEditRequests(requests || []);
       setPendingEvents(pending || []); setAllEvents(events || []); setPendingServices(pendingSvc || []); setCrashAlerts(crashData || []); setDistressAlerts(distressData || []);
       try { const userData = await base44.entities.User.list('-created_date', 50); setUsers(userData || []); } catch (e) { console.error(e); }
     } catch (e) { console.error(e); }
@@ -109,7 +115,7 @@ export default function Admin() {
 
       <Tabs defaultValue="events">
         <TabsList className="mb-4 w-full">
-          <TabsTrigger value="events" className="flex-1">Events ({pendingEvents.length})</TabsTrigger>
+          <TabsTrigger value="events" className="flex-1">Events ({pendingEvents.length + editRequests.filter((r) => r.status === 'pending').length})</TabsTrigger>
           <TabsTrigger value="services" className="flex-1">Services ({pendingServices.length})</TabsTrigger>
           <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
           <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>
@@ -117,7 +123,17 @@ export default function Admin() {
         </TabsList>
 
         <TabsContent value="events" className="space-y-3">
-          {pendingEvents.length === 0 ? <p className="py-8 text-center text-muted-foreground">No pending events.</p> : pendingEvents.map((ev) => (
+          {editRequests.filter((r) => r.status === 'pending').map((req) => {
+            const ev = allEvents.find((e) => e.id === req.event_id);
+            return ev ? <div key={`edit-${req.id}`} className="rounded-2xl border border-primary/30 bg-card p-4">
+              <div className="flex items-start gap-3">
+                {ev.photo_urls?.[0] && <img src={ev.photo_urls[0]} alt={ev.title} className="h-16 w-16 rounded-xl object-cover" />}
+                <div className="flex-1"><Badge className="mb-1">Changes Pending</Badge><h3 className="font-bold">{ev.title}</h3><p className="text-sm text-muted-foreground">{ev.venue_name} · {new Date(ev.event_date).toLocaleDateString('en-ZA')}</p></div>
+              </div>
+              <div className="mt-3 flex gap-2"><Button size="sm" className="flex-1" onClick={() => setEditEvent(ev)}><Pencil size={16} className="mr-1" /> Review / Edit</Button><Button size="sm" variant="outline" onClick={async () => { try { await base44.entities.EventEditRequest.update(req.id, { status: 'rejected', reviewed_by_id: user.id, reviewed_at: new Date().toISOString(), review_notes: 'Changes rejected by admin' }); toast.success('Change request rejected'); loadAll(); } catch (e) { toast.error('Could not reject changes'); } }}><X size={16} className="mr-1" /> Reject</Button></div>
+            </div> : null;
+          })}
+          {pendingEvents.length === 0 ? <p className="py-8 text-center text-muted-foreground">No new event submissions.</p> : pendingEvents.map((ev) => (
             <div key={ev.id} className="rounded-2xl bg-card p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
@@ -129,6 +145,7 @@ export default function Admin() {
               </div>
               <div className="mt-3 flex gap-2">
                 <Button size="sm" className="flex-1" onClick={() => handleApproveEvent(ev.id)}><Check size={16} className="mr-1" /> Approve</Button>
+                <Button size="sm" variant="secondary" onClick={() => setEditEvent(ev)}><Pencil size={16} className="mr-1" /> Edit</Button>
                 <Button size="sm" variant="destructive" onClick={() => setRejectTarget({ type: 'event', record: ev })}><X size={16} className="mr-1" /> Reject</Button>
               </div>
             </div>
@@ -241,6 +258,8 @@ export default function Admin() {
         onOpenChange={setPoiSubmitOpen}
         onSubmitted={() => loadAll()}
       />
+
+      <EventSubmitDialog open={!!editEvent} onOpenChange={(o) => { if (!o) setEditEvent(null); }} onSubmitted={loadAll} editEvent={editEvent} onEditClose={() => setEditEvent(null)} />
 
       {editUser && (
         <EditUserDialog
