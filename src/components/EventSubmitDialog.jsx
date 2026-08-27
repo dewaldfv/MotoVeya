@@ -133,12 +133,11 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
         entry_fee_zar: form.entry_fee_zar ? Number(form.entry_fee_zar) : 0,
       };
       if (editEvent) {
-        const isAdmin = (await base44.auth.me())?.role === 'admin';
-        if (isAdmin) {
+        const me = await base44.auth.me();
+        if (me?.role === 'admin') {
           await base44.entities.Event.update(editEvent.id, { ...payload, status: 'approved' });
           toast.success('Event updated and published');
         } else {
-          const me = await base44.auth.me();
           await base44.entities.EventEditRequest.create({ event_id: editEvent.id, submitted_by_id: me.id, change_payload: JSON.stringify(payload), status: 'pending', submitted_at: new Date().toISOString() });
           toast.success('Changes submitted for admin approval');
         }
