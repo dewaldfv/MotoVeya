@@ -117,6 +117,20 @@ function LocationLock({ center, locked, zoom }) {
   return null;
 }
 
+function CompassReset({ signal }) {
+  const map = useGoogleMap();
+
+  useEffect(() => {
+    if (!map || signal <= 0) return;
+    // Reset the Google Maps camera to true north without changing the map center
+    // or zoom level. This is intentionally independent from rider location.
+    map.setHeading?.(0);
+    map.setTilt?.(0);
+  }, [map, signal]);
+
+  return null;
+}
+
 function Recenter({ center, zoom, signal }) {
   const map = useGoogleMap();
   const firstRef = useRef(true);
@@ -171,6 +185,7 @@ export default function MapView({
   routeWarnings = [],
   route = null,
   recenterSignal = 0,
+  compassResetSignal = 0,
   fitRouteSignal = 0,
   locationLocked = false,
   layer = 'dark',
@@ -270,6 +285,7 @@ export default function MapView({
         <LayerController layer={layer} />
         <MapResizer />
         <ZoomTracker onZoom={setZoomLevel} />
+        <CompassReset signal={compassResetSignal} />
 
         {navActive ? (
           <NavCamera
