@@ -162,6 +162,9 @@ export function getMapOptions(layer) {
     streetViewControl: false,
     mapTypeControl: false,
     fullscreenControl: false,
+    // Allow map rotation on supported Google Maps map types. MotoVeya provides
+    // its own Compass button to return the camera to true north.
+    rotateControl: true,
     clickableIcons: false,
   };
 }
