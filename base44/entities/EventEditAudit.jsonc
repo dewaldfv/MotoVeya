@@ -1,0 +1,56 @@
+{
+  "name": "EventEditAudit",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "actor_id": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string"
+    },
+    "changes": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "event_id",
+    "actor_id",
+    "action"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.actor_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

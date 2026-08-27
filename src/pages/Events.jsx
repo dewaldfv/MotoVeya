@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, MapPin, Plus } from 'lucide-react';
+import { Calendar, MapPin, Plus, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ export default function Events() {
   const queryClient = useQueryClient();
   const [activeCat, setActiveCat] = useState('all');
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [editEvent, setEditEvent] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['events'],
@@ -33,6 +34,7 @@ export default function Events() {
 
   const user = data?.user ?? null;
   const events = data?.events ?? [];
+  const canEdit = (ev) => user && (user.role === 'admin' || (user.role === 'organizer' && ev.created_by_id === user.id));
   const canSubmit = user && (user.role === 'organizer' || user.role === 'admin');
   const filtered = activeCat === 'all' ? events : events.filter((e) => e.category === activeCat);
   const fmtDate = (ev) => formatEventDateRange(ev);
@@ -82,7 +84,8 @@ export default function Events() {
         ) : (
           <div className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
             {filtered.map((ev) => (
-              <Link key={ev.id} to={`/events/${ev.id}`} className="block overflow-hidden rounded-2xl bg-card active:bg-secondary">
+              <div key={ev.id} className="relative overflow-hidden rounded-2xl bg-card">
+                <Link to={`/events/${ev.id}`} className="block active:bg-secondary">
                 {ev.photo_urls?.[0] && <img src={ev.photo_urls[0]} alt={ev.title} className="h-36 w-full object-cover" />}
                 <div className="p-4">
                   <div className="mb-1 flex items-center gap-2">
@@ -95,12 +98,14 @@ export default function Events() {
                     <span className="flex items-center gap-1"><MapPin size={14} /> {ev.venue_name}</span>
                   </div>
                 </div>
-              </Link>
+                </Link>
+                {canEdit(ev) && <Button size="sm" variant="secondary" className="absolute right-3 top-3 shadow-lg" onClick={() => setEditEvent(ev)}><Pencil size={14} className="mr-1" /> Edit</Button>}
+              </div>
             ))}
           </div>
         )}
 
-        <EventSubmitDialog open={submitOpen} onOpenChange={setSubmitOpen} onSubmitted={() => queryClient.invalidateQueries({ queryKey: ['events'] })} />
+        <EventSubmitDialog open={submitOpen} onOpenChange={setSubmitOpen} onSubmitted={() => queryClient.invalidateQueries({ queryKey: ['events'] })} editEvent={editEvent} onEditClose={() => setEditEvent(null)} />
       </div>
     </PullToRefresh>
   );

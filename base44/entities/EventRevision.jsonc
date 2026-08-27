@@ -1,0 +1,70 @@
+{
+  "name": "EventRevision",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "number"
+    },
+    "snapshot": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "published",
+        "submitted",
+        "approved",
+        "rejected"
+      ]
+    },
+    "actor_id": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "event_id",
+    "version",
+    "snapshot",
+    "action",
+    "actor_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.actor_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
