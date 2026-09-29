@@ -58,8 +58,8 @@ export default function FuelStationMarkers({ stations = [], onMarkerClick }) {
           position,
           icon: {
             url: ICON_URL,
-            scaledSize: new g.maps.Size(52, 52),
-            anchor: new g.maps.Point(26, 26),
+            scaledSize: new g.maps.Size(30, 30),
+            anchor: new g.maps.Point(15, 15),
           },
           title: station.name || 'Fuel Station',
           zIndex: 300,
