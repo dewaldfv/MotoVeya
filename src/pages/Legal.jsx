@@ -48,13 +48,13 @@ Last updated: July 2026
 - Send crash and distress alerts to your emergency contact and, for Premium users, emergency services.
 - Display your location to friends and group members when you choose to share.
 - Show nearby events, services, and points of interest.
-- Process Premium subscriptions via our payment provider (Stripe).
+- Process Premium subscriptions through Paystack.
 
 3. Location Sharing
 Real-time location is only shared with others when you actively join a group or enable location sharing. You can stop sharing at any time by leaving the group or ending the ride.
 
 4. Data Storage and Security
-Your data is stored securely on our servers. We use industry-standard measures to protect it. Payment details are handled entirely by Stripe and are never stored by MotoVeya.
+Your data is stored securely on our servers. We use industry-standard measures to protect it. Payment details are handled by Paystack and are never stored by MotoVeya.
 
 5. Data Sharing
 We do not sell your personal data. We share data only with service providers necessary to operate the app (such as Stripe and mapping providers), and where required by law.
@@ -83,7 +83,7 @@ You must be at least 18 years old and hold a valid motorcycle license where requ
 You are responsible for maintaining the security of your account and for all activity under your account. Provide accurate information during registration.
 
 4. Subscriptions
-MotoVeya offers a Premium subscription (monthly and annual). Subscriptions are billed via Stripe and auto-renew until cancelled. You can cancel anytime; cancellation stops future renewals but does not refund the current period. Prices are displayed in South African Rand.
+MotoVeya offers a Premium monthly subscription. Subscriptions are billed via Paystack and auto-renew according to the configured Paystack plan until cancelled. You can cancel according to the applicable Paystack subscription controls and MotoVeya terms. Prices are displayed in South African Rand.
 
 5. User Content
 You are responsible for any content you submit, such as event submissions. You grant MotoVeya a license to display such content within the app. You must not submit content that is unlawful, offensive, or infringes others' rights.
