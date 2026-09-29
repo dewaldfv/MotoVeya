@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, Navigation, Loader2, Calendar, CloudSun } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Navigation, Loader2, Calendar, CloudSun } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ import RidePlannerMap from '@/components/ride-planner/RidePlannerMap';
 import WeatherCard from '@/components/ride-planner/WeatherCard';
 import RangeWarning from '@/components/ride-planner/RangeWarning';
 import StopSuggestions from '@/components/ride-planner/StopSuggestions';
-import ShareCodeSheet from '@/components/ShareCodeSheet';
 import { savePendingNavigation } from '@/lib/rideCache';
 import { getRouteWeather } from '@/lib/weather';
 import { toast } from 'sonner';
@@ -25,8 +24,6 @@ export default function RidePlanner() {
   const [notes, setNotes] = useState('');
   const [plannedDate, setPlannedDate] = useState('');
   const [waypoints, setWaypoints] = useState([]);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [sharePlan, setSharePlan] = useState(null);
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [suggestedStops, setSuggestedStops] = useState([]);
@@ -206,10 +203,7 @@ export default function RidePlanner() {
       lastSavedSnapshot.current = planSnapshot;
       setAutoSaveStatus('saved');
       queryClient.invalidateQueries({ queryKey: ['ride-plans'] });
-      toast.success('Route saved');
-      setSharePlan({ id, title: title.trim() });
-      setShareOpen(true);
-    } catch (e) {
+      toast.success('Route saved');    } catch (e) {
       console.error(e);
       toast.error('Could not save route');
     }
@@ -230,26 +224,6 @@ export default function RidePlanner() {
     } catch (e) { toast.error('Could not load route'); }
   };
 
-  const handleShare = async () => {
-    if (!title.trim()) { toast.error('Give your route a title'); return; }
-    if (waypoints.length < 2) { toast.error('Add at least two waypoints'); return; }
-    try {
-      let id = currentPlanId;
-      if (!id) {
-        const plan = await saveMutation.mutateAsync(buildPayload());
-        id = plan.id;
-        setCurrentPlanId(id);
-        lastSavedSnapshot.current = planSnapshot;
-        setAutoSaveStatus('saved');
-        queryClient.invalidateQueries({ queryKey: ['ride-plans'] });
-      }
-      setSharePlan({ id, title: title.trim() });
-      setShareOpen(true);
-    } catch (e) {
-      console.error(e);
-      toast.error('Could not share route');
-    }
-  };
 
   const handleStartRide = () => {
     if (waypoints.length < 2) { toast.error('Add at least two waypoints first'); return; }
@@ -261,8 +235,6 @@ export default function RidePlanner() {
     });
     navigate('/');
   };
-
-  const shareLink = sharePlan ? `${window.location.origin}/ride-planner?load=${sharePlan.id}` : '';
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -344,14 +316,6 @@ export default function RidePlanner() {
 
         <div className="flex gap-3">
           <Button
-            onClick={handleShare}
-            variant="outline"
-            disabled={saveMutation.isPending || !title.trim() || waypoints.length < 2}
-            className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold"
-          >
-            <Share2 size={20} /> Share
-          </Button>
-          <Button
             onClick={handleSave}
             variant="outline"
             disabled={saveMutation.isPending || !title.trim() || waypoints.length < 2}
@@ -362,15 +326,6 @@ export default function RidePlanner() {
           </Button>
         </div>
       </div>
-
-      <ShareCodeSheet
-        open={shareOpen}
-        onClose={() => setShareOpen(false)}
-        title="Share Route"
-        code={shareLink || ''}
-        qrData={shareLink || ''}
-        description="Send this link to friends so they can load the route in MotoVeya"
-      />
     </div>
   );
 }
