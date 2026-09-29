@@ -50,6 +50,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [crashPhase, setCrashPhase] = useState(null);
   const [crashAlertId, setCrashAlertId] = useState(null);
+  const [distressAlertId, setDistressAlertId] = useState(null);
   const [distressActive, setDistressActive] = useState(false);
   const [emergencyContactsNotified, setEmergencyContactsNotified] = useState(false);
   const [nearbyRidersNotified, setNearbyRidersNotified] = useState(false);
@@ -578,6 +579,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         const data = res.data;
         if (data?.alert?.id) {
           setCrashAlertId(data.alert.id);
+          setDistressAlertId(data?.distress_alert_id || null);
           setEmergencyContactsNotified(data?.contact_notified || false);
           setNearbyRidersNotified(data?.nearby_notified > 0 || false);
           clearPendingEmergency();
@@ -598,8 +600,12 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     if (crashAlertId) {
       try { await base44.entities.CrashAlert.update(crashAlertId, { status: 'resolved' }); } catch (e) { console.error(e); }
     }
+    if (distressAlertId) {
+      try { await base44.entities.DistressAlert.update(distressAlertId, { status: 'resolved', last_updated: new Date().toISOString() }); } catch (e) { console.error(e); }
+    }
     setCrashPhase(null);
     setCrashAlertId(null);
+    setDistressAlertId(null);
     setDistressActive(false);
     setEmergencyContactsNotified(false);
     setNearbyRidersNotified(false);
@@ -618,14 +624,27 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const handleDistress = async () => {
     const pos = userPos || SA_CENTER;
     try {
-      await base44.entities.DistressAlert.create({
-        rider_id: user?.id, rider_name: user?.nickname || user?.full_name || 'Rider',
-        lat: pos[0], lng: pos[1], timestamp: new Date().toISOString(),
-        status: 'active', reason: 'Manual distress signal',
-        last_lat: pos[0], last_lng: pos[1], last_updated: new Date().toISOString(),
+      const res = await base44.functions.invoke('trigger-emergency-response', {
+        lat: pos[0],
+        lng: pos[1],
+        rider_name: user?.nickname || user?.full_name || 'Rider',
+        severity: 'medium',
+        battery_level: batteryLevel,
+        bike_make: bike?.make,
+        bike_model: bike?.model,
+        bike_year: bike?.year,
       });
-      setDistressActive(true);
-    } catch (e) { console.error(e); }
+      if (res.data?.alert?.id) {
+        setCrashAlertId(res.data.alert.id);
+        setDistressAlertId(res.data?.distress_alert_id || null);
+        setEmergencyContactsNotified(res.data?.contact_notified || false);
+        setNearbyRidersNotified(res.data?.nearby_notified > 0 || false);
+        setDistressActive(true);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not send Rider Down alert');
+    }
   };
 
   const startRide = async (destOverride, originOverride) => {
@@ -695,7 +714,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       setDestInput('');
       setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
       setHeading(null); setAccuracy(null); setDistressActive(false);
-      setCrashPhase(null); setCrashAlertId(null);
+      setCrashPhase(null); setCrashAlertId(null); setDistressAlertId(null);
       setEmergencyContactsNotified(false); setNearbyRidersNotified(false); setCrashIndicators(null);
       setSeverity('medium');
       setAutoStopCountdown(null);
