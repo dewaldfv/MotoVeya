@@ -44,7 +44,8 @@ export default async function(req) {
         console.error('Paystack charge.success missing metadata.user_id');
         return Response.json({ error: 'Missing payment user binding' }, { status: 400 });
       }
-      const cycle = metadata.billing_cycle === 'annual' ? 'annual' : 'monthly';
+      // MotoVeya currently accepts the monthly Premium plan only.
+      const cycle = 'monthly';
       const reference = data.reference;
       if (!reference) {
         return Response.json({ error: 'Missing payment reference' }, { status: 400 });
@@ -52,7 +53,7 @@ export default async function(req) {
       if (data.currency !== 'ZAR') {
         return Response.json({ error: 'Unexpected payment currency' }, { status: 400 });
       }
-      const expectedAmount = cycle === 'annual' ? 89990 : 8999;
+      const expectedAmount = 8999;
       if (Number(data.amount) !== expectedAmount) {
         return Response.json({ error: 'Unexpected payment amount' }, { status: 400 });
       }
@@ -84,6 +85,7 @@ export default async function(req) {
           expiry_date: periodEnd.toISOString(),
           purchase_token: reference,
           payment_provider: 'paystack',
+          paystack_plan_code: metadata.paystack_plan_code || null,
           auto_renew: true,
         });
 
