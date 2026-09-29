@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, KeyRound, LogOut, Trash2, Shield, ShieldCheck, Eye, FileText, ScrollText, Check, Bike, MapPin, Mic } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, KeyRound, LogOut, Trash2, Shield, ShieldCheck, Eye, FileText, ScrollText, Check, Bike, MapPin, Mic, Bell } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useTheme } from '@/hooks/useTheme';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { isBackgroundTrackingEnabled, setBackgroundTrackingEnabled, hasSeenBgExplainer, setBgExplainerSeen } from '@/lib/rideCache';
 import { usePremium } from '@/hooks/usePremium';
 import SubscriptionCard from '@/components/SubscriptionCard';
+import { enableNotifications, notificationsSupported, notificationPermission } from '@/lib/enableNotifications';
 import { toast } from 'sonner';
 
 const APP_VERSION = '1.0.0';
@@ -43,6 +44,8 @@ export default function Settings() {
   const [bgTrackingEnabled, setBgTrackingEnabled] = useState(isBackgroundTrackingEnabled());
   const [showBgExplainer, setShowBgExplainer] = useState(false);
   const [autoJoinVoice, setAutoJoinVoice] = useState(false);
+  const [notifPerm, setNotifPerm] = useState(() => notificationPermission());
+  const [enablingNotif, setEnablingNotif] = useState(false);
   const { isPremium, refresh: refreshPremium } = usePremium();
 
   useEffect(() => {
@@ -120,6 +123,21 @@ export default function Settings() {
     toast.success('Background Tracking enabled');
   };
 
+  const handleEnableNotifications = async () => {
+    setEnablingNotif(true);
+    try {
+      const result = await enableNotifications();
+      setNotifPerm(result);
+      if (result === 'granted') toast.success('Notifications enabled');
+      else if (result === 'denied') toast.error('Notifications blocked');
+      else if (result === 'unsupported') toast.error('Notifications not supported on this device');
+    } catch (e) {
+      toast.error('Could not enable notifications');
+    } finally {
+      setEnablingNotif(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-lg">
@@ -157,6 +175,30 @@ export default function Settings() {
           <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
             The app rotates automatically with your device. If Rotation Lock is enabled on your phone, the app respects that and stays in the current orientation.
           </p>
+        </Section>
+
+        <Section title="🔔 Notifications">
+          {notificationsSupported() ? (
+            notifPerm === 'granted' ? (
+              <Row icon={Bell} label="Notifications Enabled ✓" value="On" last />
+            ) : notifPerm === 'denied' ? (
+              <>
+                <Row icon={Bell} label="Notifications Blocked" value="Off" last />
+                <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                  Blocked — update site permissions to allow notifications.
+                </p>
+              </>
+            ) : (
+              <>
+                <Row icon={Bell} label="Enable Notifications" onClick={enablingNotif ? undefined : handleEnableNotifications} last />
+                <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                  Get push alerts for new messages and ride invites, even when the app is closed.
+                </p>
+              </>
+            )
+          ) : (
+            <Row icon={Bell} label="Notifications Not Supported" value="—" last />
+          )}
         </Section>
 
         <Section title="🏍️ Riding">
