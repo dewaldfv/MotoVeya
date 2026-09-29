@@ -99,7 +99,7 @@ export default function Rides() {
           </div>
           <div className="flex-1">
             <p className="text-base font-bold text-foreground">Saved Routes</p>
-            <p className="text-xs text-muted-foreground">Load, share, or delete your planned routes</p>
+            <p className="text-xs text-muted-foreground">Load or delete your private planned routes</p>
           </div>
           <ChevronRight className="text-muted-foreground" size={20} />
         </button>
