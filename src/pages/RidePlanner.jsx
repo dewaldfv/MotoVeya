@@ -203,7 +203,8 @@ export default function RidePlanner() {
       lastSavedSnapshot.current = planSnapshot;
       setAutoSaveStatus('saved');
       queryClient.invalidateQueries({ queryKey: ['ride-plans'] });
-      toast.success('Route saved');    } catch (e) {
+      toast.success('Route saved');
+    } catch (e) {
       console.error(e);
       toast.error('Could not save route');
     }
