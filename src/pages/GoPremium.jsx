@@ -19,7 +19,7 @@ const FEATURE_ICONS = {
 export default function GoPremium() {
   const navigate = useNavigate();
   const { isPremium, user, refresh } = usePremium();
-  const [cycle, setCycle] = useState('monthly');
+  const cycle = 'monthly';
   const [processing, setProcessing] = useState(false);
   const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
@@ -71,9 +71,7 @@ export default function GoPremium() {
     setProcessing(true);
     try {
       const response = await base44.functions.invoke('create-paystack-checkout', {
-        user_id: user?.id,
-        user_email: user?.email,
-        billing_cycle: cycle,
+        billing_cycle: 'monthly',
         origin: window.location.origin,
       });
       if (response.data?.url) {
@@ -103,8 +101,8 @@ export default function GoPremium() {
     }
   };
 
-  const price = cycle === 'annual' ? PRICING.premium.annual : PRICING.premium.monthly;
-  const period = cycle === 'annual' ? '/year' : '/month';
+  const price = PRICING.premium.monthly;
+  const period = '/month';
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -127,15 +125,8 @@ export default function GoPremium() {
             <span className="text-4xl font-black">R{price.toFixed(2)}</span>
             <span className="text-sm text-white/80">{period}</span>
           </div>
-          <div className="mt-3 inline-flex rounded-full bg-white/15 p-1">
-            <button
-              onClick={() => setCycle('monthly')}
-              className={`rounded-full px-4 py-1.5 text-xs font-bold transition ${cycle === 'monthly' ? 'bg-white text-primary' : 'text-white'}`}
-            >Monthly</button>
-            <button
-              onClick={() => setCycle('annual')}
-              className={`rounded-full px-4 py-1.5 text-xs font-bold transition ${cycle === 'annual' ? 'bg-white text-primary' : 'text-white'}`}
-            >Annual · 2 months free</button>
+          <div className="mt-3 inline-flex rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold">
+            Monthly subscription
           </div>
         </div>
 
