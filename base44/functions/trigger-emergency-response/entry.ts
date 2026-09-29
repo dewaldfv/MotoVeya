@@ -1,4 +1,14 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 Deno.serve(async (req) => {
   try {
@@ -7,227 +17,161 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const lat = body.lat;
-    const lng = body.lng;
+    const lat = Number(body.lat);
+    const lng = Number(body.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return Response.json({ error: 'Valid location required' }, { status: 400 });
+    }
+
     const riderName = body.rider_name || user.full_name || 'Rider';
-    // Rider Down is a universal safety feature. It is not gated by subscription.
-    const indicators = body.indicators;
     const severity = body.severity || 'low';
-    const speedAtImpact = body.speed_at_impact;
-    const headingAtImpact = body.heading_at_impact;
-    const batteryLevel = body.battery_level;
-    const bikeMake = body.bike_make;
-    const bikeModel = body.bike_model;
-    const bikeYear = body.bike_year;
-
-    if (lat == null || lng == null) return Response.json({ error: 'Location required' }, { status: 400 });
-
     const timestamp = new Date().toISOString();
     const trackingLink = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`;
     const localTime = new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' });
 
-    const alert = await base44.entities.CrashAlert.create({
+    const alert = await base44.asServiceRole.entities.CrashAlert.create({
       rider_id: user.id,
       rider_name: riderName,
-      lat, lng,
-      timestamp,
+      lat, lng, timestamp,
       status: 'active',
       severity,
-      is_premium: isPremium,
+      is_premium: false,
       notified_emergency_contact: false,
       notified_emergency_services: false,
       notified_nearby_riders: false,
       last_lat: lat,
       last_lng: lng,
       last_updated: timestamp,
-      crash_indicators: indicators ? JSON.stringify(indicators) : 'manual',
-      speed_at_impact: speedAtImpact,
-      heading_at_impact: headingAtImpact,
-      battery_level: batteryLevel,
-      bike_make: bikeMake,
-      bike_model: bikeModel,
-      bike_year: bikeYear,
+      crash_indicators: body.indicators ? JSON.stringify(body.indicators) : 'manual',
+      speed_at_impact: body.speed_at_impact,
+      heading_at_impact: body.heading_at_impact,
+      battery_level: body.battery_level,
+      bike_make: body.bike_make,
+      bike_model: body.bike_model,
+      bike_year: body.bike_year,
     });
 
+    // Keep the user's designated emergency contact notification.
     let contactNotified = false;
     let contactMessaged = false;
-    const contactEmail = user.emergency_contact_email;
-    if (contactEmail) {
+    if (user.emergency_contact_email) {
       try {
         await base44.integrations.Core.SendEmail({
-          to: contactEmail,
-          subject: `EMERGENCY (${severity.toUpperCase()}): MotoVeya Crash Alert — ${riderName}`,
-          body: `EMERGENCY ALERT — MotoVeya Rider in Distress
+          to: user.emergency_contact_email,
+          subject: `RIDER DOWN: MotoVeya alert — ${riderName}`,
+          body: `RIDER DOWN ALERT — MotoVeya
 
 Rider: ${riderName}
 Severity: ${severity.toUpperCase()}
 Time: ${localTime}
-Motorcycle: ${bikeMake || ''} ${bikeModel || ''} ${bikeYear || ''}
+Motorcycle: ${body.bike_make || ''} ${body.bike_model || ''} ${body.bike_year || ''}
 
 Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}
 Live tracking: ${trackingLink}
 
-Last known speed: ${speedAtImpact != null ? speedAtImpact + ' km/h' : 'Unknown'}
-Last known heading: ${headingAtImpact != null ? Math.round(headingAtImpact) + '°' : 'Unknown'}
-Battery level: ${batteryLevel != null ? batteryLevel + '%' : 'Unknown'}
+Last known speed: ${body.speed_at_impact != null ? body.speed_at_impact + ' km/h' : 'Unknown'}
+Last known heading: ${body.heading_at_impact != null ? Math.round(body.heading_at_impact) + '°' : 'Unknown'}
+Battery level: ${body.battery_level != null ? body.battery_level + '%' : 'Unknown'}
 
-Crash indicators: ${indicators ? JSON.stringify(indicators) : 'Manual trigger'}
+MotoVeya has detected a potential rider-down incident. The rider's live GPS location is being transmitted and updated continuously.
 
-MotoVeya has detected a potential motorcycle crash. The rider's live GPS location is being transmitted and updated continuously.
+Please attempt to contact the rider or reach them safely if you are nearby. This alert is visible to MotoVeya riders within 20 km of the incident.
 
-Please attempt to contact the rider immediately. If you cannot reach them, contact emergency services (112 in South Africa) and provide the location coordinates above.
-
-This is an automated emergency alert from MotoVeya.`,
+This is an automated Rider Down alert from MotoVeya.`,
         });
         contactNotified = true;
-      } catch (e) { console.error('Failed to send emergency email:', e); }
+      } catch (e) { console.error('Failed to send Rider Down email:', e); }
     }
 
-    // Auto-message the rider's designated emergency contact (in-app message + push)
-    // when the contact is a registered MotoVeya user, matched by phone number.
-    const ecPhone = user.emergency_contact_phone;
-    if (ecPhone) {
+    // If the emergency contact is also a MotoVeya user, send an in-app notification.
+    if (user.emergency_contact_phone) {
       try {
         const normalizePhone = (p) => String(p || '').replace(/\D/g, '').slice(-9);
-        const ecNorm = normalizePhone(ecPhone);
-        if (ecNorm) {
-          // Never scan a capped list of users for an emergency contact. That
-          // silently fails once the contact falls outside the first page.
-          // Query the User entity directly using common South African phone
-          // representations, then normalize the returned values for matching.
-          const phoneCandidates = [...new Set([
-            ecPhone,
-            `0${ecNorm}`,
-            `+27${ecNorm}`,
-            `27${ecNorm}`,
-          ].filter(Boolean))];
-          const matches = await Promise.all(
-            phoneCandidates.map((phone) =>
-              base44.asServiceRole.entities.User.filter({ phone }, '-created_date', 10).catch(() => [])
-            )
-          );
-          const contact = matches.flat().find(
-            (u) => u.id !== user.id && normalizePhone(u.phone) === ecNorm
-          );
-          if (contact) {
-            const svc = base44.asServiceRole;
-            const crashMsg = `🆘 EMERGENCY: ${riderName} may have been in a motorcycle crash (${severity} severity). Time: ${localTime}. Live location: ${trackingLink}`;
-            const preview = crashMsg.substring(0, 120);
-            const nowIso = new Date().toISOString();
-            const key = [user.id, contact.id].sort().join('_');
-            const existing = await svc.entities.Conversation.filter({ conversation_key: key });
-            let conv = existing[0];
-            const sortedParticipants = [
-              { id: user.id, name: riderName },
-              { id: contact.id, name: contact.full_name || contact.nickname || 'Rider' },
-            ].sort((a, b) => a.id.localeCompare(b.id));
-
-            if (!conv) {
-              conv = await svc.entities.Conversation.create({
-                conversation_key: key,
-                participant_ids: sortedParticipants.map((p) => p.id),
-                participant_names: sortedParticipants.map((p) => p.name),
-                last_message_preview: preview,
-                last_message_at: nowIso,
-                last_sender_id: user.id,
-              });
-            } else {
-              conv = await svc.entities.Conversation.update(conv.id, {
-                last_message_preview: preview,
-                last_message_at: nowIso,
-                last_sender_id: user.id,
-              });
-            }
-
-            await svc.entities.Message.create({
-              conversation_id: conv.id,
-              sender_id: user.id,
-              sender_name: riderName,
-              content: crashMsg,
-            });
-
-            await svc.entities.Notification.create({
-              type: 'crash_alert',
-              title: 'Rider in Distress',
-              body: preview,
-              is_read: false,
-              recipient_id: contact.id,
-              action_url: trackingLink,
-              data: JSON.stringify({ conversation_id: conv.id, sender_id: user.id, crash: true }),
-            });
-
-            contactMessaged = true;
-          }
+        const ecNorm = normalizePhone(user.emergency_contact_phone);
+        const candidates = [...new Set([
+          user.emergency_contact_phone,
+          `0${ecNorm}`,
+          `+27${ecNorm}`,
+          `27${ecNorm}`,
+        ].filter(Boolean))];
+        const matches = await Promise.all(
+          candidates.map((phone) => base44.asServiceRole.entities.User.filter({ phone }, '-created_date', 10).catch(() => []))
+        );
+        const contact = matches.flat().find((u) => u.id !== user.id && normalizePhone(u.phone) === ecNorm);
+        if (contact) {
+          await base44.asServiceRole.entities.Notification.create({
+            type: 'distress_alert',
+            title: 'RIDER DOWN',
+            body: `${riderName} may need help. Live location is available.`,
+            is_read: false,
+            recipient_id: contact.id,
+            action_url: trackingLink,
+            data: JSON.stringify({ rider_down: true, alert_id: alert.id, lat, lng, radius_km: 20 }),
+          });
+          contactMessaged = true;
         }
-      } catch (e) { console.error('Failed to auto-message emergency contact:', e); }
+      } catch (e) { console.error('Failed to notify emergency contact:', e); }
     }
 
-    try {
-      await base44.entities.DistressAlert.create({
-        rider_id: user.id,
-        rider_name: riderName,
-        lat, lng,
-        timestamp,
-        status: 'active',
-        reason: `Crash detected (${severity} severity) — emergency response activated`,
-        last_lat: lat,
-        last_lng: lng,
-        last_updated: timestamp,
-      });
-    } catch (e) { console.error('Failed to create distress alert:', e); }
+    const distress = await base44.asServiceRole.entities.DistressAlert.create({
+      rider_id: user.id,
+      rider_name: riderName,
+      lat, lng,
+      timestamp,
+      status: 'active',
+      reason: `Rider Down — ${body.indicators ? 'crash detected' : 'manual alert'}`,
+      last_lat: lat,
+      last_lng: lng,
+      last_updated: timestamp,
+    });
 
+    // Universal 20 km notification. No Premium/friend requirement.
     let nearbyNotified = 0;
-    if (isPremium) {
-      try {
-        const friends1 = await base44.entities.Friend.filter({ requester_id: user.id, status: 'accepted' });
-        const friends2 = await base44.entities.Friend.filter({ recipient_id: user.id, status: 'accepted' });
-        const allFriends = [...friends1, ...friends2];
-
-        for (const friend of allFriends) {
-          if (friend.last_lat && friend.last_lng) {
-            const dist = haversine(lat, lng, friend.last_lat, friend.last_lng);
-            if (dist <= 50) {
-              const recipientId = friend.requester_id === user.id ? friend.recipient_id : friend.requester_id;
-              try {
-                await base44.asServiceRole.entities.Notification.create({
-                  type: 'crash_alert',
-                  title: 'Rider in Distress',
-                  body: `${riderName} may need help nearby (${severity} severity). Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-                  is_read: false,
-                  recipient_id: recipientId,
-                  action_url: trackingLink,
-                });
-                nearbyNotified++;
-              } catch (e) { console.error('Failed to notify friend:', e); }
-            }
-          }
-        }
-      } catch (e) { console.error('Failed to notify nearby riders:', e); }
-    }
+    try {
+      const riders = await base44.asServiceRole.entities.User.list('-last_location_updated', 500);
+      for (const rider of riders || []) {
+        if (!rider?.id || rider.id === user.id || rider.last_lat == null || rider.last_lng == null) continue;
+        const distance = haversine(lat, lng, Number(rider.last_lat), Number(rider.last_lng));
+        if (distance > 20) continue;
+        try {
+          await base44.asServiceRole.entities.Notification.create({
+            type: 'distress_alert',
+            title: 'RIDER DOWN',
+            body: `${riderName} may need help nearby (${Math.round(distance * 10) / 10} km away).`,
+            is_read: false,
+            recipient_id: rider.id,
+            action_url: trackingLink,
+            data: JSON.stringify({
+              rider_down: true,
+              alert_id: distress.id,
+              lat,
+              lng,
+              radius_km: 20,
+            }),
+          });
+          nearbyNotified++;
+        } catch (e) { console.error('Failed to notify nearby rider:', e); }
+      }
+    } catch (e) { console.error('Failed to notify nearby riders:', e); }
 
     const contactReached = contactNotified || contactMessaged;
-    const updated = await base44.entities.CrashAlert.update(alert.id, {
+    const updated = await base44.asServiceRole.entities.CrashAlert.update(alert.id, {
       notified_emergency_contact: contactReached,
+      notified_emergency_services: false,
       notified_nearby_riders: nearbyNotified > 0,
     });
 
     return Response.json({
       alert: updated,
+      rider_down: true,
+      radius_km: 20,
       contact_notified: contactReached,
       contact_messaged: contactMessaged,
       nearby_notified: nearbyNotified,
       tracking_link: trackingLink,
     });
   } catch (error) {
-    console.error('Emergency response error:', error);
+    console.error('Rider Down response error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
-
-function haversine(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
