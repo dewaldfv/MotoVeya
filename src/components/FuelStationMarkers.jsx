@@ -5,15 +5,19 @@ import { useGoogleMap } from '@react-google-maps/api';
 const MIN_ZOOM = 13;
 
 function buildFuelMarkerSvg() {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="62" viewBox="0 0 52 62">
-    <defs>
-      <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
-        <feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity="0.35"/>
-      </filter>
-    </defs>
-    <path d="M26 2C12.75 2 2 12.75 2 26c0 16.4 18.8 30.8 23 33.7.58.4 1.42.4 2 0C31.2 56.8 50 42.4 50 26 50 12.75 39.25 2 26 2Z" fill="#111827" stroke="#ffffff" stroke-width="3" filter="url(#shadow)"/>
-    <circle cx="26" cy="25" r="17" fill="#FF6F00"/>
-    <path d="M20 16h9c1.1 0 2 .9 2 2v14h2v-8.2l3.1 2.1c.56.38.9 1.01.9 1.69V36h-2v-7.3l-2-1.35V35c0 1.1-.9 2-2 2h-2v-2h2V18h-7v19h-2V16Zm3 4h5v6h-5v-6Z" fill="#fff"/>
+  // MotoVeya fuel-station marker: orange rounded-square outline with the
+  // supplied petrol-pump symbol. The checkerboard in the source image is
+  // transparency, so it is intentionally not included.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+    <g fill="none" stroke="#FFA500" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="2" width="60" height="60" rx="13"/>
+      <path d="M22 53V12h17v41"/>
+      <path d="M22 12h17v14H22z" fill="#FFA500"/>
+      <path d="M39 17l9 8c2 1.8 3 4.4 3 7v16"/>
+      <path d="M51 48c0 3.3-2.7 6-6 6h-2c-3.3 0-6-2.7-6-6V29h2c3.3 0 6 2.7 6 6v13"/>
+      <path d="M14 54h34"/>
+    </g>
+    <rect x="25" y="18" width="11" height="9" fill="#fff"/>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
@@ -54,8 +58,8 @@ export default function FuelStationMarkers({ stations = [], onMarkerClick }) {
           position,
           icon: {
             url: ICON_URL,
-            scaledSize: new g.maps.Size(42, 50),
-            anchor: new g.maps.Point(21, 50),
+            scaledSize: new g.maps.Size(52, 52),
+            anchor: new g.maps.Point(26, 26),
           },
           title: station.name || 'Fuel Station',
           zIndex: 300,
