@@ -26,7 +26,7 @@ export default function About() {
             The app is built for every kind of South African rider — daily commuters, weekend jolters, long-haul
             tourers, adventure riders, club members, and track-day enthusiasts. Free users get core GPS navigation,
             crash detection, fuel calculation, and access to motorcycle events. MotoVeya Premium unlocks the full
-            experience: rider-in-distress alerts, automatic emergency services notification, a friends network with
+            experience: universal Rider Down alerts within 20 km, emergency contact notifications, a friends network with
             live location tracking, group rides of up to 32 riders with real-time voice channels, premium route
             planning, and full ride history with statistics.
           </p>
