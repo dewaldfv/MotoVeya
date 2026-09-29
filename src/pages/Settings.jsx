@@ -6,6 +6,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { isBackgroundTrackingEnabled, setBackgroundTrackingEnabled, hasSeenBgExplainer, setBgExplainerSeen } from '@/lib/rideCache';
+import { usePremium } from '@/hooks/usePremium';
+import SubscriptionCard from '@/components/SubscriptionCard';
 import { toast } from 'sonner';
 
 const APP_VERSION = '1.0.0';
@@ -41,6 +43,7 @@ export default function Settings() {
   const [bgTrackingEnabled, setBgTrackingEnabled] = useState(isBackgroundTrackingEnabled());
   const [showBgExplainer, setShowBgExplainer] = useState(false);
   const [autoJoinVoice, setAutoJoinVoice] = useState(false);
+  const { isPremium, refresh: refreshPremium } = usePremium();
 
   useEffect(() => {
     (async () => {
@@ -127,6 +130,14 @@ export default function Settings() {
       </div>
 
       <div className="mx-auto max-w-2xl p-4">
+        {isPremium && (
+          <Section title="👑 Subscription">
+            <div className="p-4">
+              <SubscriptionCard onCancelled={refreshPremium} />
+            </div>
+          </Section>
+        )}
+
         <Section title="🎨 Display">
           {themeOptions.map((opt, i) =>
           <button

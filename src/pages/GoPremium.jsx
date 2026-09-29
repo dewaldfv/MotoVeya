@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { PRICING, PREMIUM_FEATURES } from '@/lib/plans';
 import { usePremium } from '@/hooks/usePremium';
 import PremiumBadge from '@/components/PremiumBadge';
+import SubscriptionCard from '@/components/SubscriptionCard';
 import { toast } from 'sonner';
 
 
@@ -117,9 +118,8 @@ export default function GoPremium() {
         </div>
 
         {isPremium ? (
-          <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-primary/10 p-4 text-center">
-            <Crown size={20} className="text-primary" fill="currentColor" />
-            <span className="font-bold text-primary">You're a Premium member</span>
+          <div className="mt-4">
+            <SubscriptionCard onCancelled={refresh} />
           </div>
         ) : (
           <div className="mt-4 space-y-2.5">
