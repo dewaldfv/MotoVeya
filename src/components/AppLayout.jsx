@@ -56,8 +56,7 @@ export default function AppLayout() {
   const { isLandscape } = useScreenOrientation();
   const { visible: mapUiVisible } = useIdleMapUi();
   const isHome = location.pathname === '/';
-  const isCrowdClips = location.pathname === '/crowd-clips';
-  const navHidden = isCrowdClips || (isHome && !mapUiVisible);
+  const navHidden = isHome && !mapUiVisible;
 
   useEffect(() => {
     const handler = (e) => {
