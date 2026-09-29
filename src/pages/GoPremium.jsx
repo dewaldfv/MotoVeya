@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, Crown, ChevronLeft, Loader2, RefreshCw, Zap } from 'lucide-react';
+import { Check, X, Crown, ChevronLeft, Loader2, RefreshCw } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { PRICING, PREMIUM_FEATURES } from '@/lib/plans';
@@ -48,20 +48,6 @@ export default function GoPremium() {
       window.history.replaceState({}, '', '/premium');
     }
   }, []);
-
-  const handleStartTrial = async () => {
-    setProcessing(true);
-    try {
-      await base44.functions.invoke('start-premium-trial', {});
-      await refresh();
-      toast.success('7-day Premium trial activated!');
-    } catch (e) {
-      console.error(e);
-      toast.error(e?.response?.data?.error || 'Could not start trial');
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   const handleSubscribe = async () => {
     if (isInIframe) {
@@ -137,14 +123,6 @@ export default function GoPremium() {
           </div>
         ) : (
           <div className="mt-4 space-y-2.5">
-            <Button
-              onClick={handleStartTrial}
-              disabled={processing}
-              className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-orange-600 text-base font-bold shadow-lg"
-            >
-              {processing ? <Loader2 size={20} className="animate-spin" /> : <Zap size={20} fill="white" />}
-              Start 7-Day Free Trial
-            </Button>
             <Button
               onClick={handleSubscribe}
               disabled={processing}
