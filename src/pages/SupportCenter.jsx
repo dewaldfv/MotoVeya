@@ -75,7 +75,7 @@ const FAQS = [
       },
       {
         q: 'How do I pay for Premium?',
-        a: 'Payments are processed securely through Paystack. Go to Go Premium, choose monthly or annual, and you will be redirected to Paystack checkout. You can pay by card or EFT.',
+        a: 'Payments are processed securely through Paystack. Go to Go Premium and subscribe for R89.99 per month. You will be redirected to Paystack checkout, where available payment methods are shown.',
       },
       {
         q: 'How do I cancel my subscription?',
