@@ -163,6 +163,7 @@ This is an automated Rider Down alert from MotoVeya.`,
 
     return Response.json({
       alert: updated,
+      distress_alert_id: distress.id,
       rider_down: true,
       radius_km: 20,
       contact_notified: contactReached,
