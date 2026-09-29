@@ -6,13 +6,13 @@ export const PRICING = {
 export const PREMIUM_FEATURES = [
   { icon: 'Navigation', label: 'GPS Navigation', free: 'Basic', premium: 'Unlimited' },
   { icon: 'Shield', label: 'Crash Detection', free: true, premium: true },
-  { icon: 'Phone', label: 'Emergency Contact Notification', free: '1 contact', premium: 'Automatic services' },
+  { icon: 'Phone', label: 'Emergency Contact Notification', free: '1 contact', premium: 'Enhanced alerts' },
   { icon: 'Users', label: 'Group Size', free: '2 riders', premium: '32 riders' },
   { icon: 'Calendar', label: 'Motorcycle Events', free: 'View', premium: 'View + Discounts' },
   { icon: 'Fuel', label: 'Fuel Calculator', free: true, premium: true },
   { icon: 'MapPin', label: 'Restaurant & Fuel Suggestions', free: true, premium: true },
-  { icon: 'Siren', label: 'Rider in Distress Alerts', free: false, premium: true },
-  { icon: 'Ambulance', label: 'Auto Emergency Services', free: false, premium: true },
+  { icon: 'Siren', label: 'Universal Rider Down Alerts', free: true, premium: true },
+  { icon: 'Ambulance', label: '20 km Rider Down Coverage', free: true, premium: true },
   { icon: 'UserPlus', label: 'Friends List', free: false, premium: true },
   { icon: 'Radar', label: 'Live Rider Tracking', free: false, premium: true },
   { icon: 'Route', label: 'Premium Route Planning', free: false, premium: true },
@@ -30,7 +30,7 @@ export function isPremiumUser(user) {
 
 export function requiresPremium(feature, user) {
   const premiumFeatures = [
-    'distress_alerts', 'auto_emergency', 'friends', 'live_tracking',
+    'friends', 'live_tracking',
     'premium_routing', 'ride_stats', 'large_groups', 'event_discounts',
   ];
   if (!premiumFeatures.includes(feature)) return false;
