@@ -1,10 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
 
-const AMOUNT_CENTS = {
-  monthly: 8999,   // R89.99
-  annual: 89990,   // R899.90
-};
+const MONTHLY_PLAN_CODE = 'PLN_craplpijnkc6osc';
+
+// The Paystack plan controls the recurring amount and interval.
+// Keep PAYSTACK_SECRET_KEY server-side in Base44.
 
 export default async function(req) {
   try {
@@ -32,16 +32,16 @@ export default async function(req) {
 
     const body = await req.json().catch(() => ({}));
     const { billing_cycle, origin } = body;
-    const cycle = billing_cycle === 'annual' ? 'annual' : 'monthly';
-    const amount = AMOUNT_CENTS[cycle];
+    // MotoVeya currently uses the configured Paystack monthly Premium plan.
+    // Annual billing is not enabled until a separate annual Paystack plan exists.
+    const cycle = 'monthly';
     const reference = `motogo_${cycle}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     const appId = secrets.get('BASE44_APP_ID') || '';
 
     // Strict origin whitelist to prevent open-redirect via callback_url injection
     const TRUSTED_ORIGINS = [
-      'https://motogo.app',
-      'https://app.base44.com',
-      'https://www.motogo.app',
+      'https://motoveya.base44.app',
+      'https://web-motoveya.base44.app',
     ];
     const candidateOrigin = (typeof origin === 'string' ? origin : '') || req.headers.get('origin') || '';
     const appOrigin = TRUSTED_ORIGINS.includes(candidateOrigin) ? candidateOrigin : TRUSTED_ORIGINS[0];
@@ -54,14 +54,17 @@ export default async function(req) {
       },
       body: JSON.stringify({
         email: me.email,
-        amount,
+        // Paystack uses the plan for the recurring subscription amount.
+        amount: 8999,
         currency: 'ZAR',
+        plan: MONTHLY_PLAN_CODE,
         reference,
         callback_url: `${appOrigin}/premium?status=success`,
         metadata: {
           user_id: me.id,
           user_email: me.email,
           billing_cycle: cycle,
+          paystack_plan_code: MONTHLY_PLAN_CODE,
           base44_app_id: appId,
           custom_fields: [
             { display_name: 'App ID', variable_name: 'app_id', value: appId },
