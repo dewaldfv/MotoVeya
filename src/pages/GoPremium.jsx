@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, Crown, ChevronLeft, Loader2, RefreshCw, Zap } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
