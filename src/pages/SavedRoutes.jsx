@@ -1,10 +1,7 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, MapPin, Trash2, Route } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import ShareCodeSheet from '@/components/ShareCodeSheet';
-import { toast } from 'sonner';
 
 export default function SavedRoutes() {
   const navigate = useNavigate();
