@@ -203,7 +203,7 @@ export default function Profile() {
               <h3 className="font-bold">Upgrade to Premium</h3>
             </div>
             <p className="relative mt-1 text-sm text-muted-foreground">Rider In Distress, 32-rider groups, friends network, emergency services.</p>
-            <Button className="relative mt-3 min-h-[48px] w-full" onClick={() => navigate('/premium')}>Go Premium — R79.99/mo</Button>
+            <Button className="relative mt-3 min-h-[48px] w-full" onClick={() => navigate('/premium')}>Go Premium — R89.99/month</Button>
           </motion.div>
         }
 
