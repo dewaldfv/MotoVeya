@@ -1,10 +1,46 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
 
-const MONTHLY_PLAN_CODE = 'PLN_craplpijnkc6osc';
+const PLAN_AMOUNT = 8999; // kobo = R89.99
+const PLAN_CURRENCY = 'ZAR';
+const PLAN_INTERVAL = 'monthly';
+const PLAN_NAME = 'MotoVeya Premium Monthly';
 
-// The Paystack plan controls the recurring amount and interval.
 // Keep PAYSTACK_SECRET_KEY server-side in Base44.
+
+// Resolve the recurring plan dynamically so a stale/deleted plan code never
+// breaks checkout. Reuses an existing plan matching amount/currency/interval,
+// otherwise creates one. Works across test/live key swaps.
+async function resolvePlanCode(secret) {
+  const listRes = await fetch('https://api.paystack.co/plan', {
+    headers: { Authorization: `Bearer ${secret}` },
+  });
+  const listData = await listRes.json().catch(() => ({}));
+  const plans = Array.isArray(listData?.data) ? listData.data : [];
+  const match = plans.find(
+    (p) => Number(p.amount) === PLAN_AMOUNT && p.currency === PLAN_CURRENCY && p.interval === PLAN_INTERVAL
+  );
+  if (match?.plan_code) return match.plan_code;
+
+  const createRes = await fetch('https://api.paystack.co/plan', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: PLAN_NAME,
+      amount: PLAN_AMOUNT,
+      interval: PLAN_INTERVAL,
+      currency: PLAN_CURRENCY,
+    }),
+  });
+  const createData = await createRes.json().catch(() => ({}));
+  if (!createRes.ok || !createData?.data?.plan_code) {
+    throw new Error(createData?.message || 'Failed to resolve Paystack plan');
+  }
+  return createData.data.plan_code;
+}
 
 export default async function(req) {
   try {
@@ -37,6 +73,8 @@ export default async function(req) {
     const cycle = 'monthly';
     const reference = `motogo_${cycle}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     const appId = secrets.get('BASE44_APP_ID') || '';
+    const secret = secrets.get('PAYSTACK_SECRET_KEY');
+    const planCode = await resolvePlanCode(secret);
 
     // Strict origin whitelist to prevent open-redirect via callback_url injection
     const TRUSTED_ORIGINS = [
@@ -49,22 +87,22 @@ export default async function(req) {
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${secrets.get('PAYSTACK_SECRET_KEY')}`,
+        'Authorization': `Bearer ${secret}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         email: me.email,
         // Paystack uses the plan for the recurring subscription amount.
-        amount: 8999,
-        currency: 'ZAR',
-        plan: MONTHLY_PLAN_CODE,
+        amount: PLAN_AMOUNT,
+        currency: PLAN_CURRENCY,
+        plan: planCode,
         reference,
         callback_url: `${appOrigin}/premium?status=success`,
         metadata: {
           user_id: me.id,
           user_email: me.email,
           billing_cycle: cycle,
-          paystack_plan_code: MONTHLY_PLAN_CODE,
+          paystack_plan_code: planCode,
           base44_app_id: appId,
           custom_fields: [
             { display_name: 'App ID', variable_name: 'app_id', value: appId },
