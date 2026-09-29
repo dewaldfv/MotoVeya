@@ -4,6 +4,7 @@
 // whether or not the rider has a live app session.
 
 import { haversine } from './geo.ts';
+import { sendPushToUsers } from './webPush.ts';
 
 // Returns { status, body } — the caller wraps it in Response.json.
 export async function runEmergencyResponse(base44, user, body) {
@@ -116,17 +117,19 @@ This is an automated Rider Down alert from MotoVeya.`,
   });
 
   let nearbyNotified = 0;
+  const nearbyIds = [];
   try {
     const riders = await svc.entities.User.list('-last_location_updated', 500);
     for (const rider of riders || []) {
       if (!rider?.id || rider.id === user.id || rider.last_lat == null || rider.last_lng == null) continue;
       const distance = haversine(lat, lng, Number(rider.last_lat), Number(rider.last_lng));
       if (distance > 20) continue;
+      const body = `${riderName} may need help nearby (${Math.round(distance * 10) / 10} km away).`;
       try {
         await svc.entities.Notification.create({
           type: 'distress_alert',
           title: 'RIDER DOWN',
-          body: `${riderName} may need help nearby (${Math.round(distance * 10) / 10} km away).`,
+          body,
           is_read: false,
           recipient_id: rider.id,
           action_url: trackingLink,
@@ -138,9 +141,27 @@ This is an automated Rider Down alert from MotoVeya.`,
           }),
         });
         nearbyNotified++;
+        nearbyIds.push(rider.id);
       } catch (e) { console.error('Failed to notify nearby rider:', e); }
     }
   } catch (e) { console.error('Failed to notify nearby riders:', e); }
+
+  // Deliver an OS-level Web Push to nearby riders so the alert reaches them
+  // immediately even if the app is closed.
+  if (nearbyIds.length > 0) {
+    try {
+      await sendPushToUsers(svc, nearbyIds, {
+        title: 'RIDER DOWN',
+        body: `${riderName} may need help within 20 km. Tap to view live location.`,
+        type: 'distress_alert',
+        action_url: trackingLink,
+        rider_down: true,
+        alert_id: distress.id,
+        lat, lng,
+        radius_km: 20,
+      });
+    } catch (e) { console.error('Failed to push Rider Down to nearby riders:', e); }
+  }
 
   const contactReached = contactNotified || contactMessaged;
   const updated = await svc.entities.CrashAlert.update(alert.id, {
