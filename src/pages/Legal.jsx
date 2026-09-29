@@ -57,7 +57,7 @@ Real-time location is only shared with others when you actively join a group or 
 Your data is stored securely on our servers. We use industry-standard measures to protect it. Payment details are handled by Paystack and are never stored by MotoVeya.
 
 5. Data Sharing
-We do not sell your personal data. We share data only with service providers necessary to operate the app (such as Stripe and mapping providers), and where required by law.
+We do not sell your personal data. We share data only with service providers necessary to operate the app (such as Paystack and mapping providers), and where required by law.
 
 6. Your Rights
 You can view and update your profile information at any time. You can delete your account and associated data from Settings > Account > Delete Account. This action is permanent and cannot be undone.
