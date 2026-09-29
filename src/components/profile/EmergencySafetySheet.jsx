@@ -87,7 +87,7 @@ export default function EmergencySafetySheet({ user, open, onClose, onSaved }) {
             <a href="tel:112" className="mt-3 flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-destructive text-base font-bold text-destructive-foreground">
               <Phone size={20} /> Call 112
             </a>
-            <Button variant="outline" className="mt-2 w-full" onClick={() => setSosActive(false)}>I'm Safe — End</Button>
+            <Button variant="outline" className="mt-2 w-full" onClick={() => setSosActive(false)}>I'm Safe — End Rider Down Alert</Button>
           </div>
         ) : (
           <button
@@ -96,7 +96,7 @@ export default function EmergencySafetySheet({ user, open, onClose, onSaved }) {
             className="flex min-h-[64px] w-full items-center justify-center gap-2 rounded-2xl bg-destructive text-lg font-bold text-destructive-foreground transition-transform active:scale-95 disabled:opacity-60"
           >
             {sosSending ? <Loader2 size={22} className="animate-spin" /> : <Siren size={22} />}
-            {sosSending ? 'Sending...' : 'SOS — Emergency'}
+            {sosSending ? 'Sending...' : 'RIDER DOWN — Alert Nearby Riders'}
           </button>
         )}
 
