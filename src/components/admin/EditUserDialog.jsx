@@ -56,7 +56,7 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
             user_id: user.id,
             plan: form.isPremium ? 'premium' : 'free',
             status: 'active',
-            amount_zar: form.isPremium ? 69.99 : 0,
+            amount_zar: form.isPremium ? 89.99 : 0,
             purchase_date: new Date().toISOString(),
             auto_renew: true,
           });
