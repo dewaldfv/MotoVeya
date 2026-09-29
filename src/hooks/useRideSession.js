@@ -679,6 +679,9 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     if (crashAlertId) {
       try { await base44.entities.CrashAlert.update(crashAlertId, { status: 'resolved' }); } catch (e) { console.error(e); }
     }
+    if (distressAlertId) {
+      try { await base44.entities.DistressAlert.update(distressAlertId, { status: 'resolved', last_updated: new Date().toISOString() }); } catch (e) { console.error(e); }
+    }
     if (watchIdRef.current) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     const mins = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 60000));
