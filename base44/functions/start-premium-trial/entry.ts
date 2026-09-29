@@ -1,6 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
-
 export default async function(req) {
+  return Response.json({ error: 'Premium trials are no longer available. Premium is R89.99 per month.' }, { status: 410 });
+  /*
   try {
     const base44 = createClientFromRequest(req);
     const me = await base44.auth.me();
@@ -36,4 +36,5 @@ export default async function(req) {
     console.error('start-premium-trial error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
+  */
 }
