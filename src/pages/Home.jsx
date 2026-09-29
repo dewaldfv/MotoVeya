@@ -138,6 +138,32 @@ export default function Home() {
     refetchInterval: 10000
   });
 
+  // Universal Rider Down feed: every signed-in rider receives active alerts
+  // within 20 km of their current GPS position, regardless of subscription.
+  const { data: nearbyRiderDown = [] } = useQuery({
+    queryKey: ['nearby-rider-down', session?.userPos?.[0], session?.userPos?.[1]],
+    queryFn: async () => {
+      const pos = session.userPos;
+      if (!pos) return [];
+      const res = await base44.functions.invoke('get-nearby-rider-down', { lat: pos[0], lng: pos[1] });
+      return res.data?.alerts || [];
+    },
+    enabled: !!me?.id && !!session?.userPos,
+    refetchInterval: 10000,
+    staleTime: 5000,
+  });
+
+  const seenRiderDownRef = useRef(new Set());
+  useEffect(() => {
+    for (const alert of nearbyRiderDown) {
+      if (alert.rider_id === me?.id || seenRiderDownRef.current.has(alert.id)) continue;
+      seenRiderDownRef.current.add(alert.id);
+      toast.error(`RIDER DOWN — ${alert.rider_name || 'A rider'} is ${alert.distance_from_rider_km ?? 'nearby'} km away`, {
+        duration: 8000,
+      });
+    }
+  }, [nearbyRiderDown, me?.id]);
+
   const { data: activeGroupRide } = useQuery({
     queryKey: ['active-group-ride'],
     queryFn: async () => {
@@ -262,11 +288,7 @@ export default function Home() {
       .catch(() => setRemotePois([]))
       .finally(() => setFetchingCat(false));
     } else if (activeCat === 'distress') {
-      setFetchingCat(true);
-      base44.entities.DistressAlert.filter({ status: 'active' }, '-created_date', 50).
-      then(setDistressAlerts).
-      catch(() => setDistressAlerts([])).
-      finally(() => setFetchingCat(false));
+      setFetchingCat(false);
     } else {
       setRemotePois([]);
       setDistressAlerts([]);
@@ -298,7 +320,10 @@ export default function Home() {
       : activeCat === 'distress' ? []
       : poisWithMarkers.filter((p) => p.is_active !== false && p.category === activeCat),
     [poisWithMarkers, remotePois, activeCat, isRemoteCat, overlays]);
-  const distressToShow = useMemo(() => (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? distressAlerts : [], [distressAlerts, activeCat, overlays]);
+  const distressToShow = useMemo(() => {
+    const alerts = nearbyRiderDown.length ? nearbyRiderDown : distressAlerts;
+    return (activeCat === 'all' ? overlays.distress : activeCat === 'distress') ? alerts : [];
+  }, [nearbyRiderDown, distressAlerts, activeCat, overlays]);
   // Services and Food & Drink share the Service entity, but remain independently
   // controlled by their map layers.
   const servicesToShow = useMemo(() => services.filter((service) =>
