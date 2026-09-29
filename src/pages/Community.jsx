@@ -228,7 +228,9 @@ export default function Community() {
     let info = {};
     try { info = JSON.parse(inv.data) || {}; } catch (e) { console.error(e); }
     try { await base44.entities.Notification.update(inv.id, { is_read: true }); } catch (e) { console.error(e); }
-    if (info.group_ride_id) {
+    if (info.type === 'route_share' && info.share_id) {
+      navigate(`/ride-planner?share=${encodeURIComponent(info.share_id)}`);
+    } else if (info.group_ride_id) {
       navigate(`/ride/group/${info.group_ride_id}`);
     } else if (info.lat != null && info.lng != null) {
       navigate('/ride/active', { state: { destination: { lat: info.lat, lng: info.lng, name: info.name || 'Group ride' } } });
