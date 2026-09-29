@@ -12,7 +12,7 @@ export const MAP_CATEGORIES = [
   { key: 'hospital', label: 'Hospitals', icon: Hospital },
   { key: 'atm', label: 'ATMs', icon: Banknote },
   { key: 'scenic', label: 'Scenic Routes', icon: Mountain },
-  { key: 'distress', label: 'Rider in Distress', icon: Siren },
+  { key: 'distress', label: 'Rider Down — 20 km', icon: Siren },
 ];
 
 export default function CategoryMenu({ open, onClose, activeCat, onSelect }) {
