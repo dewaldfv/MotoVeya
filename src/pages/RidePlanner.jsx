@@ -306,6 +306,17 @@ export default function RidePlanner() {
     navigate('/');
   };
 
+  const { data: activeShares = [] } = useQuery({
+    queryKey: ['ride-plan-shares', currentPlanId],
+    queryFn: () => base44.entities.RidePlanShare.filter({ ride_plan_id: currentPlanId }, '-created_date', 50),
+    enabled: !!currentPlanId && !sharedRoute,
+  });
+
+  const revokeShareMutation = useMutation({
+    mutationFn: (id) => base44.entities.RidePlanShare.delete(id),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['ride-plan-shares', currentPlanId] }),
+  });
+
   const { data: friendRows = [] } = useQuery({
     queryKey: ['ride-plan-share-friends', user?.id],
     queryFn: () => base44.entities.Friend.filter({ status: 'accepted' }, '-created_date', 100),
@@ -398,6 +409,21 @@ export default function RidePlanner() {
         >
           <Navigation size={20} /> Start Ride
         </Button>
+
+        {activeShares.length > 0 && !sharedRoute && <div className="rounded-2xl border border-border bg-card p-4">
+          <p className="mb-2 text-sm font-bold">Shared With</p>
+          <div className="space-y-2">
+            {activeShares.filter((s) => !s.revoked_at).map((share) => (
+              <div key={share.id} className="flex items-center justify-between rounded-xl bg-secondary p-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{share.shared_with_name || 'MotoVeya rider'}</p>
+                  <p className="text-xs text-muted-foreground">View only</p>
+                </div>
+                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => revokeShareMutation.mutate(share.id)} disabled={revokeShareMutation.isPending}>Revoke</Button>
+              </div>
+            ))}
+          </div>
+        </div>}
 
         <div className="flex gap-3">
           <Button
