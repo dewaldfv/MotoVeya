@@ -293,20 +293,29 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     }
   }, [speed, autoStopCountdown]);
 
-  // Emergency location updates
+  // Rider Down live location updates
   useEffect(() => {
-    if (crashPhase !== 'active' || !crashAlertId || !userPos) return;
-    const interval = setInterval(async () => {
+    if ((!crashPhase && !distressActive) || !crashAlertId || !userPos) return;
+    const updateLocation = async () => {
       try {
         await base44.functions.invoke('update-emergency-location', {
           alert_id: crashAlertId,
           lat: userPos[0],
           lng: userPos[1],
         });
+        if (distressAlertId) {
+          await base44.entities.DistressAlert.update(distressAlertId, {
+            last_lat: userPos[0],
+            last_lng: userPos[1],
+            last_updated: new Date().toISOString(),
+          });
+        }
       } catch (e) { console.error(e); }
-    }, 10000);
+    };
+    updateLocation();
+    const interval = setInterval(updateLocation, 10000);
     return () => clearInterval(interval);
-  }, [crashPhase, crashAlertId, userPos]);
+  }, [crashPhase, distressActive, crashAlertId, distressAlertId, userPos]);
 
   // Online sync (pending rides + emergency)
   useEffect(() => {
