@@ -27,6 +27,22 @@ function isEngen(poi) {
 }
 
 function markerIcon(poi) {
+  // Fuel stations always use the dedicated MotoVeya petrol-pump symbol.
+  if (poi?.category === 'fuel') {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+      <g fill="none" stroke="#FFA500" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="60" height="60" rx="13"/>
+        <path d="M22 53V12h17v41"/>
+        <path d="M22 12h17v14H22z" fill="#FFA500"/>
+        <path d="M39 17l9 8c2 1.8 3 4.4 3 7v16"/>
+        <path d="M51 48c0 3.3-2.7 6-6 6h-2c-3.3 0-6-2.7-6-6V29h2c3.3 0 6 2.7 6 6v13"/>
+        <path d="M14 54h34"/>
+      </g>
+      <rect x="25" y="18" width="11" height="9" fill="#fff"/>
+    </svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  }
+
   const custom = poi?._marker;
   const customUrl = custom?.image_data || custom?.image_url;
   if (customUrl) return {
