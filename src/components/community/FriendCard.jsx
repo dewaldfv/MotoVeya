@@ -6,11 +6,13 @@ import StreakBadge from './StreakBadge';
 import MiniActivityChart from './MiniActivityChart';
 import RiderQuickActions from './RiderQuickActions';
 import RemoveFriendButton from './RemoveFriendButton';
-import { formatDistance, formatDuration, formatRelativeDate, onlineStatus } from '@/lib/riderStats';
+import { isOnline } from '@/hooks/usePresence';
+import { formatDistance, formatDuration, formatRelativeDate } from '@/lib/riderStats';
 
 export default function FriendCard({ rider, friend, user, index = 0, onOpen, onShowLocation, onNavigate, onInvite, onRemove }) {
   const name = rider?.nickname || rider?.full_name || (friend?.requester_id === user?.id ? friend?.recipient_name : friend?.requester_name) || 'Rider';
-  const status = onlineStatus(rider?.weekly?.last_ride_date);
+  const online = isOnline(friend?.last_seen_at) || friend?.online;
+  const status = online ? { key: 'online', label: 'Online', dot: 'bg-emerald-500' } : { key: 'offline', label: 'Offline', dot: 'bg-muted-foreground' };
   const locShared = friend?.location_shared && friend?.last_lat != null;
 
   return (

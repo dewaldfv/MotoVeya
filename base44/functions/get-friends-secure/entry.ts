@@ -98,6 +98,8 @@ Deno.serve(async (req) => {
       }
 
       const hasDistress = distressMap.has(friendUid);
+      const lastSeenAt = profile?.last_seen_at || null;
+      const online = !!(lastSeenAt && Date.now() - new Date(lastSeenAt).getTime() < 3 * 60 * 1000);
       friends.push({
         friend_id: f.id,
         user_id: friendUid,
@@ -116,6 +118,8 @@ Deno.serve(async (req) => {
         phone: hasDistress ? (profile?.phone || null) : null,
         share_live_location: privacy.share_live_location,
         location_group_rides_only: privacy.location_group_rides_only,
+        online,
+        last_seen_at: lastSeenAt,
       });
     }
 

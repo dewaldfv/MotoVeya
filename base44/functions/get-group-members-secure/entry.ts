@@ -30,6 +30,8 @@ export default async function(req) {
     for (const m of sorted) {
       let profile = null;
       try { profile = await svc.entities.User.get(m.user_id); } catch (e) { /* private */ }
+      const lastSeenAt = profile?.last_seen_at || null;
+      const online = !!(lastSeenAt && Date.now() - new Date(lastSeenAt).getTime() < 3 * 60 * 1000);
       result.push({
         id: m.id,
         user_id: m.user_id,
@@ -38,6 +40,8 @@ export default async function(req) {
         nickname: profile?.nickname || m.user_nickname || null,
         avatar_url: profile?.avatar_url || null,
         cover_url: profile?.cover_url || null,
+        online,
+        last_seen_at: lastSeenAt,
       });
     }
 

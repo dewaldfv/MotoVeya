@@ -30,6 +30,32 @@ export default function FriendsDashboard({ user, friends = [] }) {
     staleTime: 60_000,
   });
 
+  // True presence: online/last_seen_at from the secure friends endpoint.
+  const { data: presence = [] } = useQuery({
+    queryKey: ['friends-presence'],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('get-friends-secure', {});
+      return res.data?.friends || [];
+    },
+    enabled: friendIds.length > 0,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+
+  const presenceById = useMemo(() => {
+    const m = new Map();
+    presence.forEach((p) => m.set(p.user_id, p));
+    return m;
+  }, [presence]);
+
+  const friendsWithPresence = useMemo(
+    () => friends.map((f) => {
+      const p = presenceById.get((f.requester_id === user.id ? f.recipient_id : f.requester_id));
+      return p ? { ...f, online: p.online, last_seen_at: p.last_seen_at } : f;
+    }),
+    [friends, presenceById]
+  );
+
   const riderById = useMemo(() => {
     const m = new Map();
     riders.forEach((r) => m.set(r.user_id, r));
@@ -90,7 +116,7 @@ export default function FriendsDashboard({ user, friends = [] }) {
     <div className="space-y-4">
       <WeeklyLeaderboard riders={riders} onSelect={openProfile} />
       <div className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
-        {friends.map((f, i) => {
+        {friendsWithPresence.map((f, i) => {
           const fid = fidOf(f);
           const rider = riderById.get(fid);
           if (isLoading && !rider) return <div key={f.id} className="h-56 animate-pulse rounded-3xl bg-card" />;

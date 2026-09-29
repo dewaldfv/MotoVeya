@@ -111,13 +111,19 @@ export default function GroupMembersDialog({ group, open, onOpenChange, onLeaveG
                   )}
                 </div>
               </div>
-              {m.role === 'leader' ? (
-                <Badge className="shrink-0 bg-primary/90 text-white">
-                  <Crown size={12} className="mr-1" /> Leader
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="shrink-0">Member</Badge>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${m.online ? 'bg-emerald-500' : 'bg-white/30'}`} />
+                </span>
+                <span className="text-xs font-medium text-white/90">{m.online ? 'Online' : 'Offline'}</span>
+                {m.role === 'leader' ? (
+                  <Badge className="shrink-0 bg-primary/90 text-white">
+                    <Crown size={12} className="mr-1" /> Leader
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="shrink-0">Member</Badge>
+                )}
+              </div>
             </div>
           </button>
         ))

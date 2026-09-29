@@ -14,6 +14,7 @@ import { getActiveRide } from '@/lib/rideCache';
 import { subscribeRideActive } from '@/lib/rideStatus';
 import { useScreenOrientation } from '@/hooks/useScreenOrientation';
 import { useIdleMapUi } from '@/hooks/useIdleMapUi';
+import { usePresence } from '@/hooks/usePresence';
 
 const pageVariants = {
   initial: { opacity: 0, x: '100%' },
@@ -46,6 +47,7 @@ export default function AppLayout() {
   usePushNotifications();
   const navigate = useNavigate();
   const { user, isLoadingAuth } = useAuth();
+  usePresence(!!user && !isLoadingAuth);
 
   useEffect(() => {
     if (!isLoadingAuth && user && user.onboarding_completed !== true) {
