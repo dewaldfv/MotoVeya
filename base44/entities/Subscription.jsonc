@@ -19,7 +19,8 @@
         "active",
         "cancelled",
         "expired",
-        "trialing"
+        "trialing",
+        "past_due"
       ],
       "default": "active"
     },
@@ -51,6 +52,19 @@
     },
     "payment_provider": {
       "type": "string"
+    },
+    "paystack_plan_code": {
+      "type": "string"
+    },
+    "paystack_subscription_code": {
+      "type": "string"
+    },
+    "paystack_email_token": {
+      "type": "string"
+    },
+    "grace_until": {
+      "type": "string",
+      "format": "date-time"
     },
     "auto_renew": {
       "type": "boolean",
