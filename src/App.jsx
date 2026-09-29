@@ -59,12 +59,6 @@ const AuthenticatedApp = () => {
   const [introDone, setIntroDone] = useState(false);
   const [isFirstLaunch] = useState(() => localStorage.getItem('motogo_has_seen_intro') !== 'true');
 
-  // OAuth bridge is public and must run before auth gating so the callback
-  // token can be handed back to Web.motoveya.
-  if (typeof window !== 'undefined' && window.location.pathname === '/web-auth-bridge') {
-    return <WebAuthBridge />;
-  }
-
   const loading = isLoadingAuth || isLoadingPublicSettings;
 
   const handleSplashComplete = useCallback(() => {
@@ -78,6 +72,11 @@ const AuthenticatedApp = () => {
       navigate('/login', { replace: true });
     }
   }, [isFirstLaunch, isAuthenticated, navigate, authError]);
+
+  // Run all hooks before the public OAuth bridge bypasses auth gating.
+  if (typeof window !== 'undefined' && window.location.pathname === '/web-auth-bridge') {
+    return <WebAuthBridge />;
+  }
 
   // Show splash screen during intro animation and/or initial loading
   if (!introDone || loading) {
