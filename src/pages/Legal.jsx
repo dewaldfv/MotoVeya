@@ -45,7 +45,7 @@ Last updated: July 2026
 
 2. How We Use Your Information
 - Provide navigation, ride recording, and safety features.
-- Send crash and distress alerts to your emergency contact and, for Premium users, emergency services.
+- Send crash and Rider Down alerts to your emergency contact and MotoVeya users within 20 km of the incident.
 - Display your location to friends and group members when you choose to share.
 - Show nearby events, services, and points of interest.
 - Process Premium subscriptions through Paystack.
