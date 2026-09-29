@@ -125,8 +125,8 @@ export default function NativePoiMarkers({ pois = [], onPoiClick }) {
       const iconConfig = item.type === 'cluster' ? { url: clusterIcon(item.items.length), scaledSize: new g.maps.Size(38, 38), anchor: new g.maps.Point(19, 19) } : markerIcon(poi);
       const icon = iconConfig ? (typeof iconConfig === 'string' ? {
         url: iconConfig,
-        scaledSize: new g.maps.Size(46, 46),
-        anchor: new g.maps.Point(23, 23),
+        scaledSize: new g.maps.Size(item.type === 'poi' && poi?.category === 'fuel' ? 30 : 46, item.type === 'poi' && poi?.category === 'fuel' ? 30 : 46),
+        anchor: new g.maps.Point(item.type === 'poi' && poi?.category === 'fuel' ? 15 : 23, item.type === 'poi' && poi?.category === 'fuel' ? 15 : 23),
       } : iconConfig) : undefined;
 
       let marker = markers.get(id);
