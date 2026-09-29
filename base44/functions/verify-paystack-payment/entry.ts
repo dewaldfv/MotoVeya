@@ -40,8 +40,9 @@ export default async function(req) {
     }
 
     const metadata = tx.metadata || {};
-    const cycle = metadata.billing_cycle === 'annual' ? 'annual' : 'monthly';
-    const expectedAmount = cycle === 'annual' ? 89990 : 8999;
+    // MotoVeya Premium is currently monthly.
+    const cycle = 'monthly';
+    const expectedAmount = 8999;
     if (Number(tx.amount) !== expectedAmount) {
       return Response.json({ error: 'Unexpected payment amount' }, { status: 400 });
     }
@@ -77,6 +78,7 @@ export default async function(req) {
         expiry_date: periodEnd.toISOString(),
         purchase_token: reference,
         payment_provider: 'paystack',
+        paystack_plan_code: metadata.paystack_plan_code || null,
         auto_renew: true,
       });
 
