@@ -51,6 +51,7 @@ import SafetyDashboard from '@/pages/SafetyDashboard';
 import Achievements from '@/pages/Achievements';
 import ServiceProviderDashboard from '@/pages/ServiceProviderDashboard';
 import FriendRequest from '@/pages/FriendRequest';
+import BackgroundTracking from '@/pages/BackgroundTracking';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
@@ -126,6 +127,7 @@ const AuthenticatedApp = () => {
         <Route path="/settings" element={<Settings />} />
         <Route path="/privacy" element={<PrivacySettings />} />
         <Route path="/location-sharing" element={<LocationSharing />} />
+        <Route path="/background-tracking" element={<BackgroundTracking />} />
         <Route path="/legal/:doc" element={<Legal />} />
         <Route path="/fuel-tracker" element={<FuelTracker />} />
         <Route path="/ride-planner" element={<RidePlanner />} />

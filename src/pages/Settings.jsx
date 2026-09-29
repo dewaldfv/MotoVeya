@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, KeyRound, LogOut, Trash2, Shield, Eye, FileText, ScrollText, Check, Bike, MapPin, Mic } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, KeyRound, LogOut, Trash2, Shield, ShieldCheck, Eye, FileText, ScrollText, Check, Bike, MapPin, Mic } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useTheme } from '@/hooks/useTheme';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -180,6 +180,7 @@ export default function Settings() {
             <span className="flex-1 text-sm font-medium">Background Ride Tracking</span>
             <Switch checked={bgTrackingEnabled} onCheckedChange={toggleBgTracking} />
           </div>
+          <Row icon={ShieldCheck} label="Always-On Tracking (Native)" value="Manage" onClick={() => navigate('/background-tracking')} />
           <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
             Keeps tracking your ride while the app is in your pocket or the screen is locked. Required for navigation, crash detection, and emergency alerts.
           </p>
