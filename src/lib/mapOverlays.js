@@ -7,7 +7,7 @@ export const MAP_OVERLAYS = [
   { key: 'services', label: 'Motorcycle Services', emoji: '🔧', default: true },
   { key: 'fuel', label: 'Fuel Stations', emoji: '⛽', default: true },
   { key: 'food', label: 'Restaurants & Cafés', emoji: '🍔', default: true },
-  { key: 'distress', label: 'Rider in Distress', emoji: '🚨', default: true, premium: true },
+  { key: 'distress', label: 'Rider Down — 20 km', emoji: '🚨', default: true },
   { key: 'friends', label: 'Friends & Groups', emoji: '👥', default: true },
   { key: 'saved', label: 'Saved Locations', emoji: '📍', default: true },
 ];
