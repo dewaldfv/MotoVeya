@@ -1,0 +1,80 @@
+{
+  "name": "RidePlanShare",
+  "type": "object",
+  "properties": {
+    "ride_plan_id": {
+      "type": "string"
+    },
+    "owner_id": {
+      "type": "string"
+    },
+    "shared_with_user_id": {
+      "type": "string"
+    },
+    "shared_with_name": {
+      "type": "string"
+    },
+    "permission": {
+      "type": "string",
+      "enum": [
+        "view"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "waypoints": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "planned_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "weather": {
+      "type": "string"
+    },
+    "share_token": {
+      "type": "string"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "ride_plan_id",
+    "owner_id",
+    "shared_with_user_id",
+    "permission",
+    "title",
+    "waypoints"
+  ],
+  "rls": {
+    "create": {
+      "data.owner_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.owner_id": "{{user.id}}"
+        },
+        {
+          "data.shared_with_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "data.owner_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.owner_id": "{{user.id}}"
+    }
+  }
+}
