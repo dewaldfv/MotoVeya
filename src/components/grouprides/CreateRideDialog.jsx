@@ -8,6 +8,7 @@ import { notifyFriendsOfGroupRide } from '@/lib/rideInvite';
 import { getOrCreateVoiceChannelForRide } from '@/lib/voiceChannel';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import SelectSheet from '@/components/SelectSheet';
 
 export default function CreateRideDialog({ open, onClose, user, groups = [], onCreated }) {
   const [title, setTitle] = useState('');
@@ -79,9 +80,13 @@ export default function CreateRideDialog({ open, onClose, user, groups = [], onC
           </div>
           <div>
             <Label>Group *</Label>
-            <select value={groupId} onChange={(e) => setGroupId(e.target.value)} className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm">
-              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
+            <SelectSheet
+              value={groupId}
+              onChange={setGroupId}
+              label="Select a group"
+              placeholder="Select a group…"
+              options={groups.map((g) => ({ value: g.id, label: g.name }))}
+            />
           </div>
           <div>
             <Label>Destination</Label>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import SelectSheet from '@/components/SelectSheet';
 
 export const INTEREST_OPTIONS = [
   'Breakfast Runs', 'Charity Rides', 'Adventure Riding', 'Touring', 'Racing',
@@ -122,10 +123,14 @@ export function EmergencyStep({ form, set, onNext, saving }) {
         <div><Label>Email (for crash alerts)</Label><Input type="email" value={form.emergency_contact_email} onChange={(e) => set('emergency_contact_email', e.target.value)} placeholder="jane@example.com" className="min-h-[48px]" /></div>
         <div>
           <Label>Relationship</Label>
-          <select value={form.emergency_contact_relationship} onChange={(e) => set('emergency_contact_relationship', e.target.value)} className="flex min-h-[48px] w-full rounded-md border border-input bg-transparent px-3 text-base">
-            <option value="">Select…</option>
-            {RELATIONSHIPS.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
+          <SelectSheet
+            value={form.emergency_contact_relationship}
+            onChange={(v) => set('emergency_contact_relationship', v)}
+            label="Relationship"
+            placeholder="Select…"
+            triggerClassName="min-h-[48px] text-base"
+            options={RELATIONSHIPS.map((r) => ({ value: r, label: r }))}
+          />
         </div>
         <div><Label>Medical Notes</Label><Textarea value={form.medical_notes} onChange={(e) => set('medical_notes', e.target.value)} placeholder="Allergies, blood type, conditions (optional)" rows={2} /></div>
       </div>

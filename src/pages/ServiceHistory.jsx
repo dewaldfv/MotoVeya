@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import { toast } from 'sonner';
+import SelectSheet from '@/components/SelectSheet';
 
 const SERVICE_TYPES = [
   { value: 'oil_change', label: 'Oil Change', icon: '🛢️' },
@@ -197,10 +198,14 @@ export default function ServiceHistory() {
           <div className="space-y-3">
             <div>
               <Label>Motorcycle</Label>
-              <select value={form.bike_id} onChange={(e) => setForm({ ...form, bike_id: e.target.value })} className="mt-1 flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none">
-                <option value="">Select bike...</option>
-                {bikes.map((b) => <option key={b.id} value={b.id}>{b.make} {b.model}{b.nickname ? ` "${b.nickname}"` : ''}</option>)}
-              </select>
+              <SelectSheet
+                value={form.bike_id}
+                onChange={(v) => setForm({ ...form, bike_id: v })}
+                label="Select motorcycle"
+                placeholder="Select bike..."
+                triggerClassName="mt-1 h-10"
+                options={bikes.map((b) => ({ value: b.id, label: `${b.make} ${b.model}${b.nickname ? ` "${b.nickname}"` : ''}` }))}
+              />
             </div>
             <div>
               <Label>Service type</Label>
