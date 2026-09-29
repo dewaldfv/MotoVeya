@@ -35,11 +35,11 @@ const FAQS = [
       },
       {
         q: 'How do I add an emergency contact?',
-        a: 'Go to Profile → Emergency & Safety (or Settings) and add a contact name and phone number. Premium riders also get automatic escalation to emergency services.',
+        a: 'Go to Profile → Emergency & Safety (or Settings) and add a contact name and phone number. Rider Down alerts are visible to all MotoVeya users within 20 km, regardless of subscription.',
       },
       {
         q: 'What is the SOS button?',
-        a: 'The SOS / Distress button on the Home screen lets you manually declare an emergency. It broadcasts your live location to your emergency contacts and, on Premium, to nearby riders.',
+        a: 'The Rider Down button on the Home screen broadcasts the incident and live location to MotoVeya users within 20 km, regardless of subscription. Your emergency contact can also be notified.',
       },
     ],
   },
@@ -67,7 +67,7 @@ const FAQS = [
     questions: [
       {
         q: 'What is the difference between Free and Premium?',
-        a: 'Free includes core navigation, crash detection, fuel calculation, and event access. Premium adds rider-in-distress alerts, automatic emergency services, friends network with live tracking, 32-rider group rides with voice channels, and full ride history statistics.',
+        a: 'Free includes core navigation, crash detection, fuel calculation, event access, and universal Rider Down alerts within 20 km. Premium adds friends network with live tracking, 32-rider group rides with voice channels, and full ride history statistics.',
       },
       {
         q: 'How much does Premium cost?',
