@@ -4,13 +4,13 @@ import { useNavigate } from 'react-router-dom';
 const SECTIONS = [
   {
     icon: Siren,
-    title: 'Emergency Response Procedures',
+    title: 'Rider Down Response Procedures',
     color: 'text-red-500',
     items: [
       'If MotoVeya triggers a crash alert, a 30-second countdown begins. Tap "I\'m OK" to cancel a false alarm before it escalates.',
       'If the countdown is not cancelled, MotoVeya automatically notifies your emergency contacts with your live GPS location.',
-      'Premium riders get automatic escalation to emergency services with exact coordinates and rider details.',
-      'Use the SOS / Distress button on the Home screen to manually declare an emergency at any time, even without a detected crash.',
+      'Rider Down alerts are visible to all MotoVeya users within 20 km of the incident, regardless of subscription.',
+      'Use the Rider Down button on the Home screen to manually alert nearby MotoVeya riders at any time, even without a detected crash.',
       'Keep your phone mounted and charged — crash detection relies on sensor data and will not fire if the device is asleep or dead.',
       'Always confirm your emergency contact is set up under Settings → Emergency & Safety before you ride.',
     ],
