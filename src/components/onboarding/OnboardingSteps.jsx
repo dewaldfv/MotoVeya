@@ -188,7 +188,7 @@ export function SubscriptionStep({ set, onNext, saving }) {
         <div className="rounded-2xl border-2 border-primary bg-primary/5 p-4">
           <p className="font-bold text-primary">Premium</p>
           <p className="mt-1 text-sm text-muted-foreground">Up to 32-rider groups, Rider in Distress, friends list, premium navigation, emergency services, advanced analytics.</p>
-          <p className="mt-1 text-lg font-black text-primary">R69.99<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+          <p className="mt-1 text-lg font-black text-primary">R89.99<span className="text-sm font-normal text-muted-foreground">/month</span></p>
         </div>
       </div>
       <div className="mt-6 space-y-2">
