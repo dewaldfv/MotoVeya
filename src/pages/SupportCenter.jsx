@@ -71,7 +71,7 @@ const FAQS = [
       },
       {
         q: 'How much does Premium cost?',
-        a: 'Premium is R89.99 per month. A 7-day free trial is available to try every feature before paying.',
+        a: 'Premium is R89.99 per month.'
       },
       {
         q: 'How do I pay for Premium?',
