@@ -600,7 +600,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         if (i < 4) await new Promise((r) => setTimeout(r, 5000 * (i + 1)));
       }
     }
-    toast.error('Could not reach emergency services. Will retry when connected.');
+    toast.error('Could not send Rider Down alert. Will retry when connected.');
     setDistressActive(true);
   };
 
