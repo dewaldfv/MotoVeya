@@ -138,32 +138,6 @@ export default function Home() {
     refetchInterval: 10000
   });
 
-  // Universal Rider Down feed: every signed-in rider receives active alerts
-  // within 20 km of their current GPS position, regardless of subscription.
-  const { data: nearbyRiderDown = [] } = useQuery({
-    queryKey: ['nearby-rider-down', session?.userPos?.[0], session?.userPos?.[1]],
-    queryFn: async () => {
-      const pos = session.userPos;
-      if (!pos) return [];
-      const res = await base44.functions.invoke('get-nearby-rider-down', { lat: pos[0], lng: pos[1] });
-      return res.data?.alerts || [];
-    },
-    enabled: !!me?.id && !!session?.userPos,
-    refetchInterval: 10000,
-    staleTime: 5000,
-  });
-
-  const seenRiderDownRef = useRef(new Set());
-  useEffect(() => {
-    for (const alert of nearbyRiderDown) {
-      if (alert.rider_id === me?.id || seenRiderDownRef.current.has(alert.id)) continue;
-      seenRiderDownRef.current.add(alert.id);
-      toast.error(`RIDER DOWN — ${alert.rider_name || 'A rider'} is ${alert.distance_from_rider_km ?? 'nearby'} km away`, {
-        duration: 8000,
-      });
-    }
-  }, [nearbyRiderDown, me?.id]);
-
   const { data: activeGroupRide } = useQuery({
     queryKey: ['active-group-ride'],
     queryFn: async () => {
@@ -188,6 +162,32 @@ export default function Home() {
     autoDetectEnabled: localStorage.getItem('motogo_auto_ride_detection') !== 'false',
     notifyFriends
   });
+
+  // Universal Rider Down feed: every signed-in rider receives active alerts
+  // within 20 km of their current GPS position, regardless of subscription.
+  const { data: nearbyRiderDown = [] } = useQuery({
+    queryKey: ['nearby-rider-down', session.userPos?.[0], session.userPos?.[1]],
+    queryFn: async () => {
+      const pos = session.userPos;
+      if (!pos) return [];
+      const res = await base44.functions.invoke('get-nearby-rider-down', { lat: pos[0], lng: pos[1] });
+      return res.data?.alerts || [];
+    },
+    enabled: !!me?.id && !!session.userPos,
+    refetchInterval: 10000,
+    staleTime: 5000,
+  });
+
+  const seenRiderDownRef = useRef(new Set());
+  useEffect(() => {
+    for (const alert of nearbyRiderDown) {
+      if (alert.rider_id === me?.id || seenRiderDownRef.current.has(alert.id)) continue;
+      seenRiderDownRef.current.add(alert.id);
+      toast.error(`RIDER DOWN — ${alert.rider_name || 'A rider'} is ${alert.distance_from_rider_km ?? 'nearby'} km away`, {
+        duration: 8000,
+      });
+    }
+  }, [nearbyRiderDown, me?.id]);
 
   // Fuel stations are a dedicated map layer backed by OpenStreetMap/Overpass.
   // Fetch a broad rider radius once a usable position is available so the Home map
