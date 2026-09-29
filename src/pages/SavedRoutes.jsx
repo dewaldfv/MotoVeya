@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, MapPin, Share2, Trash2, Route, Loader2 } from 'lucide-react';
+import { ChevronLeft, MapPin, Trash2, Route } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
 import { toast } from 'sonner';
@@ -9,9 +9,6 @@ import { toast } from 'sonner';
 export default function SavedRoutes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [shareOpen, setShareOpen] = useState(false);
-  const [sharePlan, setSharePlan] = useState(null);
-
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['ride-plans'],
     queryFn: () => base44.entities.RidePlan.filter({}, '-created_date', 50),
@@ -26,18 +23,11 @@ export default function SavedRoutes() {
     navigate(`/ride-planner?load=${plan.id}`);
   };
 
-  const handleShare = (plan) => {
-    setSharePlan({ id: plan.id, title: plan.title });
-    setShareOpen(true);
-  };
-
   const handleDelete = (plan) => {
     if (confirm('Delete this route?')) {
       deleteMutation.mutate(plan.id);
     }
   };
-
-  const shareLink = sharePlan ? `${window.location.origin}/ride-planner?load=${sharePlan.id}` : '';
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -68,9 +58,6 @@ export default function SavedRoutes() {
                   {plan.planned_date ? ` · ${new Date(plan.planned_date).toLocaleDateString()}` : ''}
                 </p>
               </button>
-              <button onClick={() => handleShare(plan)} className="rounded-lg p-2 text-primary" aria-label="Share route">
-                <Share2 size={18} />
-              </button>
               <button onClick={() => handleDelete(plan)} className="rounded-lg p-2 text-destructive" aria-label="Delete route">
                 <Trash2 size={18} />
               </button>
@@ -78,15 +65,6 @@ export default function SavedRoutes() {
           ))
         )}
       </div>
-
-      <ShareCodeSheet
-        open={shareOpen}
-        onClose={() => setShareOpen(false)}
-        title="Share Route"
-        code={shareLink || ''}
-        qrData={shareLink || ''}
-        description="Send this link to friends so they can load the route in MotoVeya"
-      />
     </div>
   );
 }
