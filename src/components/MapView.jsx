@@ -198,6 +198,7 @@ export default function MapView({
   fuelStations = [],
   friends = [],
   onFriendClick,
+  onLongPress,
   groupRiders = [],
   userPos = null,
   className = '',
@@ -281,6 +282,10 @@ export default function MapView({
         center={initialCenterRef.current}
         zoom={zoom}
         options={getMapOptions(layer)}
+        onRightClick={(event) => {
+          if (!onLongPress || navActive || !event?.latLng) return;
+          onLongPress({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+        }}
       >
         <LayerController layer={layer} />
         <MapResizer />
