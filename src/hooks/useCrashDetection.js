@@ -1,11 +1,16 @@
 import { useRef, useEffect } from 'react';
 
-const G_FORCE_MODERATE = 3.5;
-const G_FORCE_MEDIUM = 5;
-const G_FORCE_HIGH = 8;
-const ROTATION_HIGH = 300;
-const DECEL_MODERATE = 30;
+// Crash detection uses correlated signals rather than a single sensor spike.
+const G_FORCE_MODERATE = 4.0;
+const G_FORCE_MEDIUM = 5.5;
+const G_FORCE_HIGH = 8.0;
+const ROTATION_HIGH = 360;
+const DECEL_MODERATE = 35;
 const DECEL_HIGH = 50;
+const MIN_CRASH_SPEED = 25;
+const HIGH_SPEED = 50;
+const IMPACT_WINDOW = 1500;
+const INDICATOR_WINDOW = 1500;
 
 function calculateSeverity(activeCount, gForce, decel, speed) {
   if (gForce > G_FORCE_HIGH || (activeCount >= 3 && gForce > G_FORCE_MEDIUM) || decel > DECEL_HIGH) {
