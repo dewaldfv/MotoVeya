@@ -30,10 +30,6 @@ export default async function(req:any) {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (!user || !['admin','moderator'].includes(user.role)) {
-      return Response.json({ error: 'Admin or moderator access required' }, { status: 403 });
-    }
-
     const body = await req.json();
     const eventId = body?.event_id;
     if (!eventId) return Response.json({ error: 'event_id is required' }, { status: 400 });
