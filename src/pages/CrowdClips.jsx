@@ -58,8 +58,34 @@ export default function CrowdClips() {
       // getUserMedia when the bridge is not present.
       const nativeBridge = window.MotoVeyaNative || window.AndroidMotoVeya;
       if (typeof nativeBridge?.requestCameraAndMicrophonePermissions === 'function') {
-        const granted = await Promise.resolve(nativeBridge.requestCameraAndMicrophonePermissions());
-        if (granted === true || granted?.granted === true) {
+        const callbackName = '__motoveyaMediaPermissionResult';
+        const nativeResult = await new Promise((resolve) => {
+          let settled = false;
+          const finish = (granted) => {
+            if (settled) return;
+            settled = true;
+            delete window[callbackName];
+            resolve(!!granted);
+          };
+          window[callbackName] = finish;
+          try {
+            const immediate = nativeBridge.requestCameraAndMicrophonePermissions(callbackName);
+            if (immediate === true || immediate?.granted === true) finish(true);
+            else if (immediate === false || immediate?.granted === false) {
+              // A native wrapper may return false while opening the Android
+              // permission dialog. Give its callback a chance to resolve.
+              window.setTimeout(() => {
+                if (!settled && typeof nativeBridge.isCameraAndMicrophoneGranted === 'function') {
+                  finish(nativeBridge.isCameraAndMicrophoneGranted() === true);
+                }
+              }, 50);
+            }
+          } catch {
+            finish(false);
+          }
+          window.setTimeout(() => finish(false), 60000);
+        });
+        if (nativeResult) {
           setMediaPermission('granted');
           return true;
         }
