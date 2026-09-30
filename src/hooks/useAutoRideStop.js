@@ -1,9 +1,11 @@
 import { useRef, useEffect } from 'react';
 import { haversine } from '@/lib/navigation';
 
-const STOP_SPEED = 10;
-const STATIONARY_DURATION = 300000;
-const STATIONARY_RADIUS_KM = 0.025;
+// Auto-stop is deliberately conservative enough to avoid stopping at normal traffic lights.
+const STOP_SPEED = 5; // km/h
+const STATIONARY_DURATION = 180000; // 3 minutes
+const STATIONARY_RADIUS_KM = 0.04; // 40m GPS movement tolerance
+const MOVEMENT_CANCEL_SPEED = 10; // km/h
 
 export function useAutoRideStop({ enabled, isActive, speed, userPos, onPromptStop, isCountingDown }) {
   const stationaryStartRef = useRef(null);
