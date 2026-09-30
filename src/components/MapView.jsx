@@ -1,6 +1,6 @@
 /* global google */
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { GoogleMap, Polyline, InfoWindow, useGoogleMap } from '@react-google-maps/api';
+import { GoogleMap, Polyline, Circle, InfoWindow, useGoogleMap } from '@react-google-maps/api';
 import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
 import { MAP_LAYERS, getLayerStyles, getLayerBackground, getMapOptions } from '@/lib/mapLayers';
 import CustomMapMarker from './CustomMapMarker';
@@ -199,6 +199,7 @@ export default function MapView({
   friends = [],
   onFriendClick,
   onLongPress,
+  savedPlaces = [],
   groupRiders = [],
   userPos = null,
   className = '',
@@ -324,6 +325,15 @@ export default function MapView({
         {!navActive && route && route.length > 1 && (
           <Polyline path={toLatLngPath(route)} options={{ strokeColor: '#FF6F00', strokeWeight: 5, strokeOpacity: 0.85 }} />
         )}
+
+        {savedPlaces.map((place) => isValid(place.lat, place.lng) && (
+          <Circle
+            key={`saved-place-${place.id}`}
+            center={{ lat: Number(place.lat), lng: Number(place.lng) }}
+            radius={Number(place.radius_m || 1000)}
+            options={{ strokeColor: '#FF6F00', strokeOpacity: 0.85, strokeWeight: 2, fillColor: '#FF6F00', fillOpacity: 0.10, clickable: false }}
+          />
+        ))}
 
         {destination && (
           <CustomMapMarker position={[destination.lat, destination.lng]} anchor="bottom">
