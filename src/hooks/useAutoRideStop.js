@@ -35,26 +35,62 @@ export function useAutoRideStop({ enabled, isActive, speed, userPos, onPromptSto
     const interval = setInterval(() => {
       if (isCountingDownRef.current || promptShownRef.current) return;
 
-      const currentSpeed = speedRef.current;
+      const currentSpeed = Number(speedRef.current) || 0;
       const currentPos = userPosRef.current;
 
-      if (currentSpeed < STOP_SPEED) {
-        if (!stationaryStartRef.current) {
-          stationaryStartRef.current = Date.now();
-          stationaryCenterRef.current = currentPos;
-        } else if (stationaryCenterRef.current && currentPos) {
-          const dist = haversine(stationaryCenterRef.current[0], stationaryCenterRef.current[1], currentPos[0], currentPos[1]);
-          if (dist > STATIONARY_RADIUS_KM) {
-            stationaryStartRef.current = Date.now();
-            stationaryCenterRef.current = currentPos;
-          } else if (Date.now() - stationaryStartRef.current >= STATIONARY_DURATION) {
-            promptShownRef.current = true;
-            onPromptStopRef.current?.();
-          }
-        }
-      } else {
+      // A reliable moving-speed reading cancels stationary detection immediately.
+      if (currentSpeed >= MOVEMENT_CANCEL_SPEED) {
         stationaryStartRef.current = null;
         stationaryCenterRef.current = null;
+        lastPosRef.current = currentPos;
+        return;
+      }
+
+      // GPS displacement is a fallback when the browser reports 0/null speed.
+      let gpsMoving = false;
+      if (lastPosRef.current && currentPos) {
+        const distFromLastSample = haversine(
+          lastPosRef.current[0],
+          lastPosRef.current[1],
+          currentPos[0],
+          currentPos[1]
+        );
+        gpsMoving = distFromLastSample > 0.003; // >3m between samples
+      }
+      lastPosRef.current = currentPos;
+
+      if (currentSpeed >= STOP_SPEED || gpsMoving) {
+        stationaryStartRef.current = null;
+        stationaryCenterRef.current = null;
+        return;
+      }
+
+      // Only start the stationary timer below 5 km/h.
+      if (!stationaryStartRef.current) {
+        stationaryStartRef.current = Date.now();
+        stationaryCenterRef.current = currentPos;
+        return;
+      }
+
+      if (stationaryCenterRef.current && currentPos) {
+        const dist = haversine(
+          stationaryCenterRef.current[0],
+          stationaryCenterRef.current[1],
+          currentPos[0],
+          currentPos[1]
+        );
+
+        // Ignore GPS drift / movement beyond 40m.
+        if (dist > STATIONARY_RADIUS_KM) {
+          stationaryStartRef.current = Date.now();
+          stationaryCenterRef.current = currentPos;
+          return;
+        }
+      }
+
+      if (Date.now() - stationaryStartRef.current >= STATIONARY_DURATION) {
+        promptShownRef.current = true;
+        onPromptStopRef.current?.();
       }
     }, 1000);
 
