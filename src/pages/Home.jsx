@@ -16,6 +16,7 @@ import { useRideSession } from '@/hooks/useRideSession';
 import { useIdleMapUi, revealMapUi } from '@/hooks/useIdleMapUi';
 import NavigationOverlay from '@/components/NavigationOverlay';
 import TutorialWalkthrough from '@/components/TutorialWalkthrough';
+import SavedPlaceDialog from '@/components/SavedPlaceDialog';
 import { setRideActive } from '@/lib/rideStatus';
 import { getPendingNavigation, clearPendingNavigation } from '@/lib/rideCache';
 import { toast } from 'sonner';
@@ -56,6 +57,7 @@ export default function Home() {
   const { overlays, toggle: toggleOverlay } = useMapOverlays();
   const [headingUp, setHeadingUp] = useState(true);
   const [notifyFriends, setNotifyFriends] = useState(true);
+  const [savedPlacePosition, setSavedPlacePosition] = useState(null);
   const userPosRef = useRef(null);
   const { visible: mapUiVisible, toggle: toggleMapUi } = useIdleMapUi();
 
@@ -119,6 +121,19 @@ export default function Home() {
     queryFn: async () => (await base44.entities.EventFavorite.filter({})).map((f) => f.event_id),
     enabled: !!me?.id
   });
+
+  const { data: savedPlaces = [] } = useQuery({
+    queryKey: ['saved-places', me?.id],
+    queryFn: async () => (await base44.entities.SavedPlace.filter({ active: true }, '-created_date', 50)) || [],
+    enabled: !!me?.id
+  });
+
+  useEffect(() => {
+    if (!me?.id || !session.userPos || !savedPlaces.length) return;
+    const [lat,lng]=session.userPos;
+    base44.functions.invoke('saved-place-geofence',{action:'check',lat,lng})
+      .catch((e)=>console.error('saved place geofence check',e));
+  }, [me?.id, session.userPos?.[0], session.userPos?.[1], savedPlaces.length]);
 
   const { data: friends = [] } = useQuery({
     queryKey: ['map-friends'],
@@ -357,6 +372,15 @@ export default function Home() {
   const handleNavigatePin = (item) => {
     session.navigateTo({ lat: item.lat, lng: item.lng, name: item.name || item.title || item.rider_name || 'Destination' });
   };
+  const handleMapLongPress = (position) => {
+    if (!me?.id || isActive) return;
+    setSavedPlacePosition(position);
+  };
+
+  const handleSavedPlaceCreated = () => {
+    queryClient.invalidateQueries({ queryKey: ['saved-places', me?.id] });
+  };
+
   const handleServiceNavigate = (service) => {
     setSelectedService(null);
     session.navigateTo({ lat: service.lat, lng: service.lng, name: service.name });
@@ -386,6 +410,7 @@ export default function Home() {
         friends={friendsToShow}
         showFriends={overlays.friends}
         onFriendClick={setSelectedFriend}
+        onLongPress={handleMapLongPress}
         onMarkerClick={setSelected}
         onSavePin={handleSavePin}
         onNavigatePin={handleNavigatePin}
@@ -538,6 +563,8 @@ export default function Home() {
         setSelectedFriend(null);
         session.navigateTo({ lat: f.lat, lng: f.lng, name: f.name });
       }} />
+
+      {savedPlacePosition && <SavedPlaceDialog position={savedPlacePosition} user={me} onClose={() => setSavedPlacePosition(null)} onSaved={handleSavedPlaceCreated} />}
 
       <TutorialWalkthrough open={showTutorial} onClose={handleCloseTutorial} />
     </div>);
