@@ -45,6 +45,7 @@ import SafetyGuidelines from '@/pages/SafetyGuidelines';
 import SupportCenter from '@/pages/SupportCenter';
 import RidePlanner from '@/pages/RidePlanner';
 import SavedRoutes from '@/pages/SavedRoutes';
+import SavedPlaces from '@/pages/SavedPlaces';
 import BikeGarage from '@/pages/BikeGarage';
 import ServiceHistory from '@/pages/ServiceHistory';
 import SafetyDashboard from '@/pages/SafetyDashboard';
@@ -132,6 +133,7 @@ const AuthenticatedApp = () => {
         <Route path="/fuel-tracker" element={<FuelTracker />} />
         <Route path="/ride-planner" element={<RidePlanner />} />
         <Route path="/rides/saved" element={<SavedRoutes />} />
+        <Route path="/saved-places" element={<SavedPlaces />} />
         <Route path="/bike-garage" element={<BikeGarage />} />
         <Route path="/service-history" element={<ServiceHistory />} />
         <Route path="/safety-dashboard" element={<SafetyDashboard />} />
