@@ -27,6 +27,8 @@ export default function CrowdClips() {
   const videoInputRef = useRef(null);
   const galleryInputRef = useRef(null);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [mediaPermission, setMediaPermission] = useState('unknown');
+  const [requestingMediaPermission, setRequestingMediaPermission] = useState(false);
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaFiles, setMediaFiles] = useState([]);
   const [mediaPreview, setMediaPreview] = useState('');
