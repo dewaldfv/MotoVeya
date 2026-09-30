@@ -85,10 +85,16 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
         const oldest = recentSpeedsRef.current[0];
         const newest = recentSpeedsRef.current[recentSpeedsRef.current.length - 1];
         const drop = oldest.speed - newest.speed;
-        if (drop > 30 && oldest.speed > 20) {
+        if (drop > DECEL_MODERATE && oldest.speed >= MIN_CRASH_SPEED) {
           indicatorsRef.current.suddenDecel = true;
-          setTimeout(() => { indicatorsRef.current.suddenDecel = false; }, 2000);
+          indicatorTimesRef.current.suddenDecel = now;
           checkTrigger(0, drop);
+          setTimeout(() => {
+            if (Date.now() - indicatorTimesRef.current.suddenDecel >= INDICATOR_WINDOW) {
+              indicatorsRef.current.suddenDecel = false;
+              indicatorTimesRef.current.suddenDecel = 0;
+            }
+          }, INDICATOR_WINDOW + 50);
         }
       }
     }, 500);
