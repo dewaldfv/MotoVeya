@@ -24,7 +24,9 @@ function calculateSeverity(activeCount, gForce, decel, speed) {
 
 export function useCrashDetection({ enabled, speed, onCrashDetected }) {
   const indicatorsRef = useRef({ highGForce: false, highRotation: false, suddenDecel: false });
+  const indicatorTimesRef = useRef({ highGForce: 0, highRotation: 0, suddenDecel: 0 });
   const recentSpeedsRef = useRef([]);
+  const lastMotionRef = useRef({ gForce: 0, rotation: 0, time: 0 });
   const cooldownRef = useRef(0);
   const speedRef = useRef(speed);
   const onCrashRef = useRef(onCrashDetected);
