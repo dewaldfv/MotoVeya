@@ -76,6 +76,11 @@ function LongPressHandler({ onLongPress, disabled }) {
   const timerRef = useRef(null);
   const startRef = useRef(null);
   const projectionRef = useRef(null);
+  const onLongPressRef = useRef(onLongPress);
+
+  useEffect(() => {
+    onLongPressRef.current = onLongPress;
+  }, [onLongPress]);
 
   useEffect(() => {
     if (!map || disabled || !onLongPress) return;
