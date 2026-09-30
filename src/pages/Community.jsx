@@ -251,12 +251,12 @@ export default function Community() {
       <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
         <h1 className="mb-4 text-2xl font-bold">Community</h1>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 w-full">
-            <TabsTrigger value="groups" className="flex-1">Groups</TabsTrigger>
-            <TabsTrigger value="friends" className="flex-1">Friends</TabsTrigger>
-            <TabsTrigger value="messages" className="flex-1">Messages</TabsTrigger>
-            <TabsTrigger value="services" className="flex-1">Services</TabsTrigger>
-            <TabsTrigger value="food-drink" className="flex-1"><UtensilsCrossed size={15} className="mr-1" /> Food & Drink</TabsTrigger>
+          <TabsList className="mb-4 w-full px-1">
+            <TabsTrigger value="groups" className="flex-1 text-xs px-1">Groups</TabsTrigger>
+            <TabsTrigger value="friends" className="flex-1 text-xs px-1">Friends</TabsTrigger>
+            <TabsTrigger value="messages" className="flex-1 text-xs px-1">Chats</TabsTrigger>
+            <TabsTrigger value="services" className="flex-1 text-xs px-1">Services</TabsTrigger>
+            <TabsTrigger value="food-drink" className="flex-1 text-xs px-1"><UtensilsCrossed size={13} className="mr-0.5" /> Food</TabsTrigger>
           </TabsList>
 
           <TabsContent value="groups" className="space-y-4">
