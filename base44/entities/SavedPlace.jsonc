@@ -1,0 +1,62 @@
+{
+  "name": "SavedPlace",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "radius_m": {
+      "type": "number",
+      "default": 1000
+    },
+    "notify_enter": {
+      "type": "boolean",
+      "default": true
+    },
+    "notify_exit": {
+      "type": "boolean",
+      "default": true
+    },
+    "group_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "last_inside": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "name",
+    "lat",
+    "lng",
+    "radius_m"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
