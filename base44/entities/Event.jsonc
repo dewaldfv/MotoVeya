@@ -48,7 +48,8 @@
       "enum": [
         "pending",
         "approved",
-        "rejected"
+        "rejected",
+        "cancelled"
       ],
       "default": "pending"
     },
@@ -74,6 +75,26 @@
     },
     "markerIcon": {
       "type": "string"
+    },
+    "motoveya_event_id": {
+      "type": "string",
+      "description": "Stable MotoVeya event ID used to synchronize with Web.MotoVeya."
+    },
+    "web_sync_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "synced",
+        "failed"
+      ],
+      "default": "pending"
+    },
+    "web_sync_error": {
+      "type": "string"
+    },
+    "web_synced_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [
