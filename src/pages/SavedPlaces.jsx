@@ -38,7 +38,7 @@ export default function SavedPlaces() {
   const limit=premium?16:2;
   const activeCount=places.filter(p=>p.active!==false).length;
 
-  const startEdit=(p)=>setEditing(p.id)||setForm({...p,group_ids:p.group_ids||[]});
+  const startEdit=(p)=>{setEditing(p.id);setForm({...p,group_ids:p.group_ids||[]});};
   const cancel=()=>{setEditing(null);setForm(null);};
 
   const save=async()=>{
