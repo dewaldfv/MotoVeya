@@ -7,7 +7,7 @@ const navItems = [
 { key: 'rides', icon: Route, label: 'Rides' },
 { key: 'events', icon: Calendar, label: 'Events' },
 { key: 'community', icon: Users, label: 'Community' },
-{ key: 'crowd-clips', icon: Clapperboard, label: 'Crowd Clips' },
+{ key: 'crowd-clips', icon: Clapperboard, label: 'Clips' },
 { key: 'profile', icon: User, label: 'Profile' }];
 
 
@@ -25,17 +25,17 @@ export default function BottomNav({ hidden = false }) {
         boxShadow: '0 -2px 12px rgba(0, 0, 0, 0.08)'
       }}>
       
-      <div className="mx-auto flex max-w-2xl items-center justify-around gap-1 px-2 landscape:py-1 my-1">
+      <div className="mx-auto flex max-w-2xl items-center justify-around gap-0.5 px-1.5 landscape:py-1 my-1">
         {navItems.map(({ key, icon: Icon, label }) =>
         <button
           key={key}
           onClick={() => switchToTab(key)}
-          className={`flex min-h-[50px] min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-xl transition-colors bg-[hsl(var(--card))] opacity-100 ${
+          className={`flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl transition-colors bg-[hsl(var(--card))] opacity-100 ${
           currentTab === key ? 'text-primary' : 'text-muted-foreground'}`
           }>
           
-            <Icon size={24} strokeWidth={2.2} />
-            <span className="text-[11px] font-semibold">{label}</span>
+            <Icon size={21} strokeWidth={2.2} />
+            <span className="text-[10px] font-semibold leading-tight">{label}</span>
           </button>
         )}
       </div>
