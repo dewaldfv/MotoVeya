@@ -128,13 +128,6 @@ export default function Home() {
     enabled: !!me?.id
   });
 
-  useEffect(() => {
-    if (!me?.id || !session.userPos || !savedPlaces.length) return;
-    const [lat,lng]=session.userPos;
-    base44.functions.invoke('saved-place-geofence',{action:'check',lat,lng})
-      .catch((e)=>console.error('saved place geofence check',e));
-  }, [me?.id, session.userPos?.[0], session.userPos?.[1], savedPlaces.length]);
-
   const { data: friends = [] } = useQuery({
     queryKey: ['map-friends'],
     queryFn: async () => {
@@ -177,6 +170,13 @@ export default function Home() {
     autoDetectEnabled: localStorage.getItem('motogo_auto_ride_detection') !== 'false',
     notifyFriends
   });
+
+  useEffect(() => {
+    if (!me?.id || !session.userPos || !savedPlaces.length) return;
+    const [lat,lng]=session.userPos;
+    base44.functions.invoke('saved-place-geofence',{action:'check',lat,lng})
+      .catch((e)=>console.error('saved place geofence check',e));
+  }, [me?.id, session.userPos?.[0], session.userPos?.[1], savedPlaces.length]);
 
   // Universal Rider Down feed: every signed-in rider receives active alerts
   // within 20 km of their current GPS position, regardless of subscription.
