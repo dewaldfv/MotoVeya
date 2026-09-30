@@ -2,33 +2,30 @@ package com.motoveya.app.nativebridge
 
 import android.app.Activity
 import android.webkit.JavascriptInterface
-import org.json.JSONObject
+import android.webkit.WebView
 
-/**
- * JavaScript bridge exposed as window.MotoVeyaNative.
- *
- * The Crowd Clips web page uses this bridge when running inside the native
- * Android wrapper. Permission ownership remains with Android; the web app
- * never attempts to bypass the OS permission dialog.
- */
 class MotoVeyaNativeBridge(
     private val activity: Activity,
+    private val webView: WebView,
     private val permissionClient: MotoVeyaWebChromeClient
 ) {
-
     @JavascriptInterface
-    fun requestCameraAndMicrophonePermissions(): String {
-        var result = JSONObject().put("granted", false)
-
+    fun requestCameraAndMicrophonePermissions(callbackName: String): Boolean {
         permissionClient.requestCameraAndMicrophonePermissions { granted ->
-            result = JSONObject().put("granted", granted)
+            val safe = callbackName.replace(Regex("[^A-Za-z0-9_\$]"), "")
             activity.runOnUiThread {
-                // The web layer also supports normal getUserMedia fallback.
-                // Native wrappers may alternatively expose a Promise bridge
-                // around this method if their WebView integration requires it.
+                val value = if (granted) "true" else "false"
+                webView.evaluateJavascript(
+                    "window." + safe + "(" + value + ");",
+                    null
+                )
             }
         }
+        return false
+    }
 
-        return result.toString()
+    @JavascriptInterface
+    fun isCameraAndMicrophoneGranted(): Boolean {
+        return permissionClient.areCameraAndMicrophoneGranted()
     }
 }
