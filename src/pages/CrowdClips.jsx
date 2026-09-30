@@ -458,7 +458,7 @@ export default function CrowdClips() {
             <Clapperboard size={21} />
             <h1 className="text-lg font-bold">Crowd Clips</h1>
           </div>
-          <Button size="icon" variant="ghost" className="rounded-full text-white hover:bg-white/15 hover:text-white" onClick={() => setComposerOpen(true)} aria-label="Create Crowd Clip">
+          <Button size="icon" variant="ghost" className="rounded-full text-white hover:bg-white/15 hover:text-white" onClick={openComposer} aria-label="Create Crowd Clip">
             <Plus size={22} />
           </Button>
         </div>
@@ -472,7 +472,7 @@ export default function CrowdClips() {
             <div className="mb-4 rounded-full bg-white/10 p-5"><Clapperboard size={42} /></div>
             <h2 className="text-xl font-bold">Be the first on Crowd Clips</h2>
             <p className="mt-2 max-w-sm text-sm text-white/60">Share your ride, your bike, a great road or a place other riders need to see.</p>
-            <Button className="mt-5" onClick={() => setComposerOpen(true)}><Camera size={18} className="mr-2" /> Create a Clip</Button>
+            <Button className="mt-5" onClick={openComposer}><Camera size={18} className="mr-2" /> Create a Clip</Button>
           </div>
         ) : (
           <div className="h-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -563,8 +563,18 @@ export default function CrowdClips() {
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader><DialogTitle>Create Crowd Clip</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => selectMedia(e.target.files?.[0], 'photo')} />
-            <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={(e) => selectMedia(e.target.files?.[0], 'video')} />
+            {mediaPermission !== 'granted' && mediaPermission !== 'unsupported' && (
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 text-sm">
+                <p className="font-semibold">Camera & microphone access</p>
+                <p className="mt-1 text-xs text-muted-foreground">MotoVeya needs camera and microphone access to record Crowd Clips directly in the app.</p>
+                <Button type="button" className="mt-3 w-full" onClick={requestMediaPermissions} disabled={requestingMediaPermission}>
+                  {requestingMediaPermission ? 'Requesting access…' : 'Allow Camera & Microphone'}
+                </Button>
+              </div>
+            )}
+            {mediaPermission === 'denied' && <p className="text-xs text-amber-600">Permission was denied. Enable Camera and Microphone for MotoVeya in Android/browser settings, then try again.</p>}
+            <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => selectMedia(e.target.files?.[0], 'photo')} />
+            <input ref={videoInputRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={(e) => selectMedia(e.target.files?.[0], 'video')} />
             <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => selectGalleryMedia(e.target.files)} />
 
             {mediaPreview ? (
@@ -595,7 +605,7 @@ export default function CrowdClips() {
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => photoInputRef.current?.click()}><Camera size={24} /> Take Photo</Button>
-                <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => videoInputRef.current?.click()}><Video size={24} /> Record Video</Button>
+                <Button variant="secondary" className="h-24 flex-col gap-2" onClick={async () => { if (mediaPermission !== 'granted' && !(await requestMediaPermissions())) return; videoInputRef.current?.click(); }}><Video size={24} /> Record Video</Button>
                 <Button variant="secondary" className="h-24 flex-col gap-2" onClick={() => galleryInputRef.current?.click()}><Upload size={24} /> Gallery</Button>
               </div>
             )}
