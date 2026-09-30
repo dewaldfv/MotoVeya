@@ -123,7 +123,7 @@ function LongPressHandler({ onLongPress, disabled }) {
         );
         const latLng = projection.fromContainerPixelToLatLng(pixel);
         if (latLng) {
-          onLongPress({ lat: latLng.lat(), lng: latLng.lng() });
+          if (onLongPressRef.current) onLongPressRef.current({ lat: latLng.lat(), lng: latLng.lng() });
         }
         clear();
       }, 650);
