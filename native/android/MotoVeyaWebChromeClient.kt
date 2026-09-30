@@ -28,6 +28,15 @@ class MotoVeyaWebChromeClient(
 
     private var pendingRequest: PermissionRequest? = null
 
+    fun areCameraAndMicrophoneGranted(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            activity, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(
+                activity, Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+
     fun requestCameraAndMicrophonePermissions(onResult: (Boolean) -> Unit) {
         val cameraGranted = ContextCompat.checkSelfPermission(
             activity, Manifest.permission.CAMERA
