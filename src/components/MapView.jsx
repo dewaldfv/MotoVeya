@@ -9,6 +9,7 @@ import FuelStationMarkers from './FuelStationMarkers';
 import LiveMarkers from './map/LiveMarkers';
 import NativeEventMarkers from './map/NativeEventMarkers';
 import NativePoiMarkers from './map/NativePoiMarkers';
+import SavedPlaceMarkers from './map/SavedPlaceMarkers';
 import MapPopupContent from './MapPopupContent';
 import { useMapCamera } from '@/hooks/useMapCamera';
 
@@ -293,6 +294,10 @@ export default function MapView({
   onFriendClick,
   onLongPress,
   savedPlaces = [],
+  groupSavedPlaces = [],
+  showSavedPlaces = true,
+  onSavedPlaceClick,
+  onGroupPlaceClick,
   groupRiders = [],
   userPos = null,
   className = '',
@@ -420,7 +425,7 @@ export default function MapView({
           <Polyline path={toLatLngPath(route)} options={{ strokeColor: '#FF6F00', strokeWeight: 5, strokeOpacity: 0.85 }} />
         )}
 
-        {savedPlaces.map((place) => isValid(place.lat, place.lng) && (
+        {showSavedPlaces && savedPlaces.map((place) => isValid(place.lat, place.lng) && (
           <Circle
             key={`saved-place-${place.id}`}
             center={{ lat: Number(place.lat), lng: Number(place.lng) }}
@@ -428,6 +433,21 @@ export default function MapView({
             options={{ strokeColor: '#FF6F00', strokeOpacity: 0.85, strokeWeight: 2, fillColor: '#FF6F00', fillOpacity: 0.10, clickable: false }}
           />
         ))}
+        {showSavedPlaces && groupSavedPlaces.map((place) => isValid(place.lat, place.lng) && (
+          <Circle
+            key={`group-saved-place-${place.id}`}
+            center={{ lat: Number(place.lat), lng: Number(place.lng) }}
+            radius={Number(place.radius_m || 1000)}
+            options={{ strokeColor: '#64748b', strokeOpacity: 0.4, strokeWeight: 1, fillColor: '#64748b', fillOpacity: 0.05, clickable: false }}
+          />
+        ))}
+
+        <SavedPlaceMarkers
+          ownPlaces={showSavedPlaces ? savedPlaces : []}
+          groupPlaces={showSavedPlaces ? groupSavedPlaces : []}
+          onOwnClick={onSavedPlaceClick}
+          onGroupClick={onGroupPlaceClick}
+        />
 
         {destination && (
           <CustomMapMarker position={[destination.lat, destination.lng]} anchor="bottom">

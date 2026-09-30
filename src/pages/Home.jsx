@@ -52,6 +52,8 @@ export default function Home() {
   const [layersOpen, setLayersOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
+  const [selectedGroupPlace, setSelectedGroupPlace] = useState(null);
+  const [editSavedPlace, setEditSavedPlace] = useState(null);
   const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('motogo_show_tutorial') === 'true' && localStorage.getItem('motogo_tutorial_done') !== 'true');
   const [layer, setLayer, rawLayer] = useMapLayer();
   const { overlays, toggle: toggleOverlay } = useMapOverlays();
@@ -132,11 +134,18 @@ export default function Home() {
     enabled: !!me?.id && deferMapData
   });
 
-  const { data: savedPlaces = [] } = useQuery({
-    queryKey: ['saved-places', me?.id],
-    queryFn: async () => (await base44.entities.SavedPlace.filter({ active: true }, '-created_date', 50)) || [],
-    enabled: !!me?.id && deferMapData
+  const { data: visiblePlaces } = useQuery({
+    queryKey: ['visible-saved-places', me?.id],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('get-visible-saved-places', {});
+      return { own: res.data?.own || [], group: res.data?.group || [] };
+    },
+    enabled: !!me?.id && deferMapData,
+    refetchInterval: 30000
   });
+  const savedLayerOn = overlays.saved !== false;
+  const ownSavedPlaces = visiblePlaces?.own || [];
+  const groupSavedPlaces = visiblePlaces?.group || [];
 
   const { data: friends = [] } = useQuery({
     queryKey: ['map-friends'],
@@ -181,12 +190,8 @@ export default function Home() {
     notifyFriends
   });
 
-  useEffect(() => {
-    if (!me?.id || !session.userPos || !savedPlaces.length) return;
-    const [lat,lng]=session.userPos;
-    base44.functions.invoke('saved-place-geofence',{action:'check',lat,lng})
-      .catch((e)=>console.error('saved place geofence check',e));
-  }, [me?.id, session.userPos?.[0], session.userPos?.[1], savedPlaces.length]);
+  // Geofence checks now run server-side inside update-my-location and
+  // update-rider-location-native, so every location ping triggers transitions.
 
   // Universal Rider Down feed: every signed-in rider receives active alerts
   // within 20 km of their current GPS position, regardless of subscription.
@@ -388,7 +393,7 @@ export default function Home() {
   };
 
   const handleSavedPlaceCreated = () => {
-    queryClient.invalidateQueries({ queryKey: ['saved-places', me?.id] });
+    queryClient.invalidateQueries({ queryKey: ['visible-saved-places', me?.id] });
   };
 
   const handleServiceNavigate = (service) => {
@@ -421,7 +426,11 @@ export default function Home() {
         showFriends={overlays.friends}
         onFriendClick={setSelectedFriend}
         onLongPress={handleMapLongPress}
-        savedPlaces={savedPlaces}
+        savedPlaces={ownSavedPlaces}
+        groupSavedPlaces={groupSavedPlaces}
+        showSavedPlaces={savedLayerOn}
+        onSavedPlaceClick={setEditSavedPlace}
+        onGroupPlaceClick={setSelectedGroupPlace}
         onMarkerClick={setSelected}
         onSavePin={handleSavePin}
         onNavigatePin={handleNavigatePin}
@@ -576,6 +585,23 @@ export default function Home() {
       }} />
 
       {savedPlacePosition && <SavedPlaceDialog position={savedPlacePosition} user={me} onClose={() => setSavedPlacePosition(null)} onSaved={handleSavedPlaceCreated} />}
+
+      {editSavedPlace && <SavedPlaceDialog editPlace={editSavedPlace} user={me} onClose={() => setEditSavedPlace(null)} onSaved={handleSavedPlaceCreated} />}
+
+      <BottomSheet open={!!selectedGroupPlace} onClose={() => setSelectedGroupPlace(null)} title={selectedGroupPlace?.name}>
+        {selectedGroupPlace && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">📍 Saved Place</Badge>
+              {selectedGroupPlace.owner_name && <Badge variant="outline">{selectedGroupPlace.owner_name}</Badge>}
+            </div>
+            <p className="text-sm text-white/75">{Number(selectedGroupPlace.radius_m || 1000) >= 1000 ? Number(selectedGroupPlace.radius_m) / 1000 + ' km' : selectedGroupPlace.radius_m + ' m'} geofence radius</p>
+            <Button size="lg" className="min-h-[56px] w-full" onClick={() => { const p = selectedGroupPlace; setSelectedGroupPlace(null); session.navigateTo({ lat: p.lat, lng: p.lng, name: p.name }); }}>
+              <Navigation size={18} className="mr-2" /> Navigate Here
+            </Button>
+          </div>
+        )}
+      </BottomSheet>
 
       <TutorialWalkthrough open={showTutorial} onClose={handleCloseTutorial} />
     </div>);

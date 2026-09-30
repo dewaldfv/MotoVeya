@@ -5,6 +5,7 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { haversineRounded as haversine } from '../../shared/geo.ts';
+import { runGeofenceCheck } from '../../shared/savedPlaceGeofence.ts';
 
 async function sha256(value) {
   const bytes = new TextEncoder().encode(value);
@@ -100,6 +101,12 @@ Deno.serve(async (req) => {
         ...update,
       });
     }
+
+    // Fire-and-forget geofence check — never block location updates on it.
+    try {
+      const u = await svc.entities.User.get(userId);
+      if (u) await runGeofenceCheck(svc, userId, u, lat, lng);
+    } catch (e) { console.error('geofence check error', e); }
 
     return Response.json({ participant });
   } catch (error) {

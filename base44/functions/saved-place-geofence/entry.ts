@@ -1,4 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { resolveEntitlement } from '../../shared/entitlement.ts';
+import { runGeofenceCheck } from '../../shared/savedPlaceGeofence.ts';
 
 const haversineMeters = (lat1:number, lon1:number, lat2:number, lon2:number) => {
   const R=6371000, toRad=(v:number)=>v*Math.PI/180;
@@ -15,7 +17,7 @@ Deno.serve(async (req) => {
     const body=await req.json().catch(()=>({}));
     const {action, place, place_id, lat, lng}=body||{};
     const svc=base44.asServiceRole;
-    const isPremium=me.subscription_tier==='premium' && (!me.subscription_expiry || new Date(me.subscription_expiry)>new Date());
+    const { is_premium: isPremium } = await resolveEntitlement(svc, me.id);
 
     if(action==='create'){
       if(!place?.name || place.lat==null || place.lng==null) return Response.json({error:'Missing place fields'},{status:400});
@@ -64,35 +66,7 @@ Deno.serve(async (req) => {
 
     if(action==='check'){
       if(lat==null || lng==null) return Response.json({error:'Missing location'},{status:400});
-      const places=await svc.entities.SavedPlace.filter({created_by_id:me.id,active:true});
-      const transitions=[];
-      for(const p of (places||[])){
-        const inside=haversineMeters(Number(lat),Number(lng),Number(p.lat),Number(p.lng))<=Number(p.radius_m||1000);
-        const wasInside=!!p.last_inside;
-        if(inside!==wasInside){
-          await svc.entities.SavedPlace.update(p.id,{last_inside:inside});
-          const event=inside?'enter':'exit';
-          transitions.push({place_id:p.id,event,name:p.name});
-          const groupIds=Array.isArray(p.group_ids)?p.group_ids:[];
-          if(groupIds.length && ((inside&&p.notify_enter!==false)||(!inside&&p.notify_exit!==false))){
-            const recipients=new Set<string>();
-            for(const gid of groupIds){
-              const members=await svc.entities.GroupMember.filter({group_id:gid,status:'active'});
-              for(const m of (members||[])) if(m.user_id!==me.id) recipients.add(m.user_id);
-            }
-            if(recipients.size){
-              const title=inside?'📍 Rider Arrival':'📍 Rider Departure';
-              const bodyText=inside
-                ? `${me.nickname||me.full_name||'A rider'} has entered ${p.name}.`
-                : `${me.nickname||me.full_name||'A rider'} has left ${p.name}.`;
-              await svc.entities.Notification.bulkCreate(Array.from(recipients).map((recipient_id)=>({
-                type:'group_update',title,body:bodyText,
-                recipient_id,data:JSON.stringify({type:'saved_place_geofence',place_id:p.id,event,lat:Number(lat),lng:Number(lng)})
-              })));
-            }
-          }
-        }
-      }
+      const transitions=await runGeofenceCheck(svc,me.id,me,Number(lat),Number(lng));
       return Response.json({transitions});
     }
 

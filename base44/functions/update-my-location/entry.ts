@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { runGeofenceCheck } from '../../shared/savedPlaceGeofence.ts';
 
 const DEFAULT_PRIVACY = {
   share_live_location: true,
@@ -78,6 +79,9 @@ Deno.serve(async (req) => {
         sessionId = created?.id || null;
       }
     } catch (e) { console.error('session upsert error', e); }
+
+    // Fire-and-forget geofence check — never block location updates on it.
+    try { await runGeofenceCheck(svc, me.id, me, lat, lng); } catch (e) { console.error('geofence check error', e); }
 
     return Response.json({ ok: true, sharing: true, session_id: sessionId });
   } catch (error) {
