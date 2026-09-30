@@ -71,6 +71,94 @@ function MapResizer() {
 
 // Tracks the map's live zoom level so static marker layers can be gated by zoom
 // (services are only shown once the user zooms in close enough to avoid clutter).
+function LongPressHandler({ onLongPress, disabled }) {
+  const map = useGoogleMap();
+  const timerRef = useRef(null);
+  const startRef = useRef(null);
+  const projectionRef = useRef(null);
+
+  useEffect(() => {
+    if (!map || disabled || !onLongPress) return;
+
+    // OverlayView gives us a reliable map projection so a finger long-press
+    // can be converted from screen coordinates to the exact map coordinate.
+    const overlay = new google.maps.OverlayView();
+    overlay.onAdd = () => {
+      projectionRef.current = overlay.getProjection();
+    };
+    overlay.draw = () => {
+      projectionRef.current = overlay.getProjection();
+    };
+    overlay.onRemove = () => {
+      projectionRef.current = null;
+    };
+    overlay.setMap(map);
+
+    const target = map.getDiv();
+    const clear = () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      startRef.current = null;
+    };
+
+    const start = (clientX, clientY) => {
+      clear();
+      startRef.current = { clientX, clientY };
+      timerRef.current = setTimeout(() => {
+        const startPoint = startRef.current;
+        const projection = projectionRef.current;
+        if (!startPoint || !projection) return;
+
+        const rect = target.getBoundingClientRect();
+        const pixel = new google.maps.Point(
+          startPoint.clientX - rect.left,
+          startPoint.clientY - rect.top
+        );
+        const latLng = projection.fromContainerPixelToLatLng(pixel);
+        if (latLng) {
+          onLongPress({ lat: latLng.lat(), lng: latLng.lng() });
+        }
+        clear();
+      }, 650);
+    };
+
+    const onTouchStart = (e) => {
+      if (e.touches.length !== 1) return clear();
+      const t = e.touches[0];
+      start(t.clientX, t.clientY);
+    };
+    const onTouchMove = (e) => {
+      const startPoint = startRef.current;
+      if (!startPoint || !e.touches[0]) return;
+      const t = e.touches[0];
+      const dx = t.clientX - startPoint.clientX;
+      const dy = t.clientY - startPoint.clientY;
+      if (Math.hypot(dx, dy) > 12) clear();
+    };
+    const onTouchEnd = clear;
+    const onTouchCancel = clear;
+
+    target.addEventListener('touchstart', onTouchStart, { passive: true });
+    target.addEventListener('touchmove', onTouchMove, { passive: true });
+    target.addEventListener('touchend', onTouchEnd, { passive: true });
+    target.addEventListener('touchcancel', onTouchCancel, { passive: true });
+
+    return () => {
+      clear();
+      target.removeEventListener('touchstart', onTouchStart);
+      target.removeEventListener('touchmove', onTouchMove);
+      target.removeEventListener('touchend', onTouchEnd);
+      target.removeEventListener('touchcancel', onTouchCancel);
+      overlay.setMap(null);
+      projectionRef.current = null;
+    };
+  }, [map, disabled, onLongPress]);
+
+  return null;
+}
+
 function ZoomTracker({ onZoom }) {
   const map = useGoogleMap();
   useEffect(() => {
@@ -291,6 +379,7 @@ export default function MapView({
         <LayerController layer={layer} />
         <MapResizer />
         <ZoomTracker onZoom={setZoomLevel} />
+        <LongPressHandler onLongPress={onLongPress} disabled={navActive} />
         <CompassReset signal={compassResetSignal} />
 
         {navActive ? (
