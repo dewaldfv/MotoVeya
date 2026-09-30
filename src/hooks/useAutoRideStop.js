@@ -3,7 +3,7 @@ import { haversine } from '@/lib/navigation';
 
 // Auto-stop is deliberately conservative enough to avoid stopping at normal traffic lights.
 const STOP_SPEED = 5; // km/h
-const STATIONARY_DURATION = 180000; // 3 minutes
+const STATIONARY_DURATION = 60000; // 1 minute
 const STATIONARY_RADIUS_KM = 0.04; // 40m GPS movement tolerance
 const MOVEMENT_CANCEL_SPEED = 10; // km/h
 
