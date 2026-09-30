@@ -27,6 +27,7 @@ export function useAutoRideStop({ enabled, isActive, speed, userPos, onPromptSto
     if (!enabled || !isActive) {
       stationaryStartRef.current = null;
       stationaryCenterRef.current = null;
+      lastPosRef.current = null;
       promptShownRef.current = false;
       return;
     }
