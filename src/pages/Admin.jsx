@@ -40,7 +40,7 @@ export default function Admin() {
       if (me.role !== 'admin') { setLoading(false); return; }
       const [pending, events, pendingSvc, crashData, distressData] = await Promise.all([
         base44.entities.Event.filter({ status: 'pending' }, '-created_date', 50),
-        base44.entities.Event.list('-created_date', 20),
+        base44.entities.Event.list('-created_date', 100),
         base44.entities.Service.filter({ status: 'pending' }, '-created_date', 50),
         base44.entities.CrashAlert.list('-created_date', 20),
         base44.entities.DistressAlert.list('-created_date', 20),
