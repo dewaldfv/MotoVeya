@@ -35,33 +35,42 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
   useEffect(() => { onCrashRef.current = onCrashDetected; }, [onCrashDetected]);
 
   const checkTrigger = useRef((gForce, decel) => {
-    const activeCount = Object.values(indicatorsRef.current).filter(Boolean).length;
     const now = Date.now();
-    if (now <= cooldownRef.current) return;
+    const currentSpeed = Number(speedRef.current) || 0;
+    if (now <= cooldownRef.current || currentSpeed < MIN_CRASH_SPEED) return;
 
-    if (gForce > G_FORCE_HIGH && activeCount >= 1) {
-      cooldownRef.current = now + 60000;
-      onCrashRef.current?.({
-        indicators: { ...indicatorsRef.current },
-        severity: 'high',
-        gForce,
-        decel,
-      });
-      indicatorsRef.current = { highGForce: false, highRotation: false, suddenDecel: false };
-      return;
-    }
+    // Only correlate indicators that occurred close together.
+    const activeIndicators = Object.entries(indicatorTimesRef.current)
+      .filter(([, time]) => time > 0 && now - time <= INDICATOR_WINDOW)
+      .map(([name]) => name);
 
-    if (activeCount >= 2) {
-      cooldownRef.current = now + 60000;
-      const severity = calculateSeverity(activeCount, gForce, decel, speedRef.current);
-      onCrashRef.current?.({
-        indicators: { ...indicatorsRef.current },
-        severity,
-        gForce,
-        decel,
-      });
-      indicatorsRef.current = { highGForce: false, highRotation: false, suddenDecel: false };
-    }
+    const activeCount = activeIndicators.length;
+    const hasImpact = activeIndicators.includes('highGForce');
+    const hasRotation = activeIndicators.includes('highRotation');
+    const hasDecel = activeIndicators.includes('suddenDecel');
+
+    // A crash requires an impact/deceleration event plus corroborating motion.
+    // Rotation alone can be caused by normal riding and is never sufficient.
+    const corroborated = (hasImpact && (hasDecel || hasRotation)) || (hasDecel && hasRotation);
+
+    if (!corroborated) return;
+
+    const strongestG = Math.max(gForce || 0, lastMotionRef.current.gForce || 0);
+    const strongestRotation = lastMotionRef.current.rotation || 0;
+    const severity = calculateSeverity(activeCount, strongestG, decel, currentSpeed);
+
+    cooldownRef.current = now + 60000;
+    onCrashRef.current?.({
+      indicators: { ...indicatorsRef.current },
+      severity,
+      gForce: strongestG,
+      decel,
+      speed: currentSpeed,
+      rotation: strongestRotation,
+    });
+
+    indicatorsRef.current = { highGForce: false, highRotation: false, suddenDecel: false };
+    indicatorTimesRef.current = { highGForce: 0, highRotation: 0, suddenDecel: 0 };
   }).current;
 
   useEffect(() => {
