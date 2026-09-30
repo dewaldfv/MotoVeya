@@ -1,0 +1,40 @@
+{
+  "description": "Automatically synchronize MotoVeya Event records to Web.MotoVeya on create.",
+  "name": "Sync Event To Web - Create",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "sync_event_to_web_create",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "sync_event": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sync-event-to-web",
+            "args": {
+              "event_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Sync event to Web.MotoVeya",
+            "description": "Upsert the event in Web.MotoVeya using its stable MotoVeya event ID."
+          }
+        }
+      }
+    ]
+  },
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Event"
+    }
+  }
+}
