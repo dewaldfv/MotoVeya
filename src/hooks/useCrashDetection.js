@@ -107,8 +107,15 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
         gForce = mag / 9.81;
         if (gForce > G_FORCE_MODERATE) {
           indicatorsRef.current.highGForce = true;
-          setTimeout(() => { indicatorsRef.current.highGForce = false; }, 2000);
+          indicatorTimesRef.current.highGForce = Date.now();
+          lastMotionRef.current = { ...lastMotionRef.current, gForce, time: Date.now() };
           checkTrigger(gForce, 0);
+          setTimeout(() => {
+            if (Date.now() - indicatorTimesRef.current.highGForce >= INDICATOR_WINDOW) {
+              indicatorsRef.current.highGForce = false;
+              indicatorTimesRef.current.highGForce = 0;
+            }
+          }, INDICATOR_WINDOW + 50);
         }
       }
 
@@ -117,8 +124,15 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
         const rotMag = Math.sqrt((rot.alpha || 0) ** 2 + (rot.beta || 0) ** 2 + (rot.gamma || 0) ** 2);
         if (rotMag > ROTATION_HIGH) {
           indicatorsRef.current.highRotation = true;
-          setTimeout(() => { indicatorsRef.current.highRotation = false; }, 2000);
+          indicatorTimesRef.current.highRotation = Date.now();
+          lastMotionRef.current = { ...lastMotionRef.current, rotation: rotMag, time: Date.now() };
           checkTrigger(gForce, 0);
+          setTimeout(() => {
+            if (Date.now() - indicatorTimesRef.current.highRotation >= INDICATOR_WINDOW) {
+              indicatorsRef.current.highRotation = false;
+              indicatorTimesRef.current.highRotation = 0;
+            }
+          }, INDICATOR_WINDOW + 50);
         }
       }
     };
