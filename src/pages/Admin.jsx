@@ -152,6 +152,7 @@ export default function Admin() {
           ))}
         </TabsContent>
 
+          <div className="mt-6 border-t pt-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-bold">All Existing Events</h2><p className="text-xs text-muted-foreground">View and directly update any existing event.</p></div><Badge variant="outline">{allEvents.length}</Badge></div><div className="space-y-2">{allEvents.map((ev) => <div key={ev.id} className="flex items-center gap-3 rounded-2xl bg-card p-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold truncate">{ev.title}</h3><Badge variant={ev.status === 'approved' ? 'default' : ev.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">{ev.status || 'pending'}</Badge></div><p className="text-sm text-muted-foreground">{ev.venue_name} · {new Date(ev.event_date).toLocaleDateString('en-ZA')}</p><p className="text-xs text-muted-foreground capitalize">{ev.category?.replace('_', ' ') || 'Event'}</p></div><Button size="sm" variant="secondary" onClick={() => setEditEvent(ev)}><Pencil size={16} className="mr-1" /> Edit</Button></div>)}</div></div>
         <TabsContent value="services" className="space-y-3">
           {pendingServices.length === 0 ? <p className="py-8 text-center text-muted-foreground">No pending services.</p> : pendingServices.map((svc) => (
             <div key={svc.id} className="rounded-2xl bg-card p-4">
