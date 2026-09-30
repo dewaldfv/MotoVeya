@@ -58,10 +58,17 @@ export default function Home() {
   const [headingUp, setHeadingUp] = useState(true);
   const [notifyFriends, setNotifyFriends] = useState(true);
   const [savedPlacePosition, setSavedPlacePosition] = useState(null);
+  const [deferMapData, setDeferMapData] = useState(false);
   const userPosRef = useRef(null);
   const { visible: mapUiVisible, toggle: toggleMapUi } = useIdleMapUi();
 
   useEffect(() => { revealMapUi(); }, []);
+
+  useEffect(() => {
+    // Give Google Maps and the first GPS render priority. Heavy map feeds load shortly after.
+    const timer = window.setTimeout(() => setDeferMapData(true), 900);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const handleScreenTap = (e) => {
     if (e.target.closest('button, a, [role="button"], [data-ui-control], .fixed, [data-sheet]')) {
@@ -99,12 +106,14 @@ export default function Home() {
 
   const { data: services = [] } = useQuery({
     queryKey: ['services'],
-    queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 200)) || []
+    queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 100)) || [],
+    enabled: deferMapData
   });
 
   const { data: poiMarkers = [] } = useQuery({
     queryKey: ['poi-markers'],
-    queryFn: async () => (await base44.entities.POIMarker.filter({ active: true }, '-created_date', 500)) || []
+    queryFn: async () => (await base44.entities.POIMarker.filter({ active: true }, '-created_date', 250)) || [],
+    enabled: deferMapData
   });
 
   const { data: eventData = null } = useQuery({
@@ -113,19 +122,20 @@ export default function Home() {
       // Render ALL events on the map regardless of approval status, sorted by date.
       const events = await base44.entities.Event.list('event_date', 100);
       return events || [];
-    }
+    },
+    enabled: deferMapData
   });
 
   const { data: eventFavoriteIds = [] } = useQuery({
     queryKey: ['event-favorites'],
     queryFn: async () => (await base44.entities.EventFavorite.filter({})).map((f) => f.event_id),
-    enabled: !!me?.id
+    enabled: !!me?.id && deferMapData
   });
 
   const { data: savedPlaces = [] } = useQuery({
     queryKey: ['saved-places', me?.id],
     queryFn: async () => (await base44.entities.SavedPlace.filter({ active: true }, '-created_date', 50)) || [],
-    enabled: !!me?.id
+    enabled: !!me?.id && deferMapData
   });
 
   const { data: friends = [] } = useQuery({
@@ -142,7 +152,7 @@ export default function Home() {
         avatar_url: f.avatar_url, is_favorite: f.is_favorite
       }));
     },
-    enabled: !!me?.id,
+    enabled: !!me?.id && deferMapData,
     refetchInterval: 10000
   });
 
@@ -152,7 +162,7 @@ export default function Home() {
       const res = await base44.functions.invoke('get-active-group-ride-secure', {});
       return res.data;
     },
-    enabled: !!me?.id,
+    enabled: !!me?.id && deferMapData,
     refetchInterval: 10000
   });
 
@@ -188,7 +198,7 @@ export default function Home() {
       const res = await base44.functions.invoke('get-nearby-rider-down', { lat: pos[0], lng: pos[1] });
       return res.data?.alerts || [];
     },
-    enabled: !!me?.id && !!session.userPos,
+    enabled: !!me?.id && !!session.userPos && deferMapData,
     refetchInterval: 10000,
     staleTime: 5000,
   });
@@ -216,7 +226,7 @@ export default function Home() {
       const res = await base44.functions.invoke('get-fuel-stations', { lat, lng, radius: 25000 });
       return res.data?.stations || [];
     },
-    enabled: Number.isFinite(Number(fuelCenter?.[0])) && Number.isFinite(Number(fuelCenter?.[1])),
+    enabled: deferMapData && overlays.fuel && Number.isFinite(Number(fuelCenter?.[0])) && Number.isFinite(Number(fuelCenter?.[1])),
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
