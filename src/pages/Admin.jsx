@@ -11,6 +11,7 @@ import LoginPrompt from '@/components/LoginPrompt';
 import EditUserDialog from '@/components/admin/EditUserDialog';
 import POISubmitDialog from '@/components/services/POISubmitDialog';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
+import ArchivedEventPhotos from '@/components/admin/ArchivedEventPhotos';
 import { toast } from 'sonner';
 
 export default function Admin() {
@@ -119,6 +120,7 @@ export default function Admin() {
           <TabsTrigger value="services" className="flex-1">Services ({pendingServices.length})</TabsTrigger>
           <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
           <TabsTrigger value="alerts" className="flex-1">Alerts</TabsTrigger>
+          <TabsTrigger value="photos" className="flex-1">Photos</TabsTrigger>
           <TabsTrigger value="poi" className="flex-1">POIs</TabsTrigger>
         </TabsList>
 
@@ -195,6 +197,10 @@ export default function Admin() {
               </div>
             </div>
           ))}
+        </TabsContent>
+
+        <TabsContent value="photos">
+          <ArchivedEventPhotos />
         </TabsContent>
 
         <TabsContent value="poi" className="space-y-4">

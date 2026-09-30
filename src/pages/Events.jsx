@@ -15,6 +15,7 @@ const CATS = ['all', 'rally', 'breakfast_run', 'pub_ride', 'birthday_bash', 'cam
 export default function Events() {
   const queryClient = useQueryClient();
   const [activeCat, setActiveCat] = useState('all');
+  const [tab, setTab] = useState('upcoming');
   const [submitOpen, setSubmitOpen] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
 
@@ -24,19 +25,23 @@ export default function Events() {
       const authed = await base44.auth.isAuthenticated();
       let me = null;
       if (authed) me = await base44.auth.me();
-      const events = await base44.entities.Event.filter({ status: 'approved' }, 'event_date', 50);
+      const events = await base44.entities.Event.filter({ status: 'approved' }, 'event_date', 100);
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
-      const upcoming = (events || []).filter((e) => new Date(e.event_date) >= startOfToday);
-      return { user: me, events: upcoming };
+      const all = events || [];
+      const upcoming = all.filter((e) => new Date(e.event_date) >= startOfToday);
+      const past = all
+        .filter((e) => new Date(e.event_date) < startOfToday)
+        .sort((a, b) => new Date(b.event_date) - new Date(a.event_date));
+      return { user: me, upcoming, past };
     },
   });
 
   const user = data?.user ?? null;
-  const events = data?.events ?? [];
+  const tabEvents = tab === 'upcoming' ? (data?.upcoming ?? []) : (data?.past ?? []);
   const canEdit = (ev) => user && (user.role === 'admin' || (user.role === 'organizer' && ev.created_by_id === user.id));
   const canSubmit = user && (user.role === 'organizer' || user.role === 'admin');
-  const filtered = activeCat === 'all' ? events : events.filter((e) => e.category === activeCat);
+  const filtered = activeCat === 'all' ? tabEvents : tabEvents.filter((e) => e.category === activeCat);
   const fmtDate = (ev) => formatEventDateRange(ev);
 
   const handleRefresh = async () => {
@@ -60,6 +65,21 @@ export default function Events() {
           </div>
         </div>
 
+        <div className="mb-3 flex rounded-2xl bg-card p-1">
+          <button
+            onClick={() => setTab('upcoming')}
+            className={`flex-1 rounded-xl py-2 text-sm font-bold transition-colors ${tab === 'upcoming' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+          >
+            Upcoming
+          </button>
+          <button
+            onClick={() => setTab('past')}
+            className={`flex-1 rounded-xl py-2 text-sm font-bold transition-colors ${tab === 'past' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+          >
+            Past
+          </button>
+        </div>
+
         <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto">
           {CATS.map((cat) => (
             <button
@@ -79,7 +99,7 @@ export default function Events() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-20 text-center">
             <Calendar size={48} className="text-muted-foreground" />
-            <p className="text-muted-foreground">No events in this category yet.</p>
+            <p className="text-muted-foreground">No {tab} events in this category yet.</p>
           </div>
         ) : (
           <div className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">

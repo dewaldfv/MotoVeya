@@ -1,0 +1,45 @@
+{
+  "name": "Archive Event Photos",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "archive_event_photos",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "archive_photos": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "archive-event-photos",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Archive expired event photos",
+            "description": "Marks photos archived when their event is past the 30-day window"
+          }
+        }
+      }
+    ]
+  },
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 3 * * *",
+      "one_time_date": null,
+      "timezone": "Africa/Johannesburg",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Daily job that archives event photos once an event is more than 30 days past, so they leave the public gallery and remain admin-only."
+}

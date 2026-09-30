@@ -10,6 +10,7 @@ import CalendarExportButton from '@/components/CalendarExportButton';
 import { formatEventDateRange } from '@/lib/eventDate';
 import { safeHttpUrl } from '@/lib/safeUrl';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
+import EventGallery from '@/components/events/EventGallery';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -129,6 +130,9 @@ export default function EventDetail() {
         <div className="mt-2">
           <CalendarExportButton event={event} className="w-full" />
         </div>
+
+        <EventGallery event={event} user={user} />
+
         <EventSubmitDialog open={editOpen} onOpenChange={setEditOpen} editEvent={event} onEditClose={() => setEditOpen(false)} onSubmitted={async () => { setEvent(await base44.entities.Event.get(id)); queryClient.invalidateQueries({ queryKey: ['events'] }); }} />
       </div>
     </div>
