@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, KeyRound, LogOut, Trash2, Shield, ShieldCheck, Eye, FileText, ScrollText, Check, Bike, MapPin, Mic, Bell } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Smartphone, RotateCw, KeyRound, LogOut, Trash2, Shield, ShieldCheck, Eye, FileText, ScrollText, Check, Bike, MapPin, Mic, Bell, Bookmark } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useTheme } from '@/hooks/useTheme';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -199,6 +199,13 @@ export default function Settings() {
           ) : (
             <Row icon={Bell} label="Notifications Not Supported" value="—" last />
           )}
+        </Section>
+
+        <Section title="📍 Saved Places">
+          <Row icon={Bookmark} label="Saved Places" value="Manage" onClick={() => navigate('/saved-places')} last />
+          <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+            Manage your saved locations, geofence radius, group arrival/departure alerts, and active status.
+          </p>
         </Section>
 
         <Section title="🏍️ Riding">
