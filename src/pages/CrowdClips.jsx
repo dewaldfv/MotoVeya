@@ -49,6 +49,32 @@ export default function CrowdClips() {
   const lastTapRef = useRef({ time: 0, clipId: null });
   const observerRef = useRef(null);
 
+  const requestMediaPermissions = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMediaPermission('unsupported');
+      toast.error('Camera and microphone access is not available in this browser.');
+      return false;
+    }
+    setRequestingMediaPermission(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setMediaPermission('granted');
+      return true;
+    } catch (error) {
+      setMediaPermission(error?.name === 'NotAllowedError' ? 'denied' : 'error');
+      toast.error('Camera and microphone permission is required to record a Crowd Clip.');
+      return false;
+    } finally {
+      setRequestingMediaPermission(false);
+    }
+  };
+
+  const openComposer = async () => {
+    setComposerOpen(true);
+    await requestMediaPermissions();
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ['crowd-clips'],
     queryFn: async () => {
