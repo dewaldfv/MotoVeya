@@ -102,6 +102,7 @@ export function useAutoRideStop({ enabled, isActive, speed, userPos, onPromptSto
       promptShownRef.current = false;
       stationaryStartRef.current = null;
       stationaryCenterRef.current = null;
+      lastPosRef.current = userPosRef.current;
     }
   }, [isCountingDown]);
 }
