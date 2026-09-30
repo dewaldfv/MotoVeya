@@ -10,6 +10,7 @@ const MOVEMENT_CANCEL_SPEED = 10; // km/h
 export function useAutoRideStop({ enabled, isActive, speed, userPos, onPromptStop, isCountingDown }) {
   const stationaryStartRef = useRef(null);
   const stationaryCenterRef = useRef(null);
+  const lastPosRef = useRef(null);
   const promptShownRef = useRef(false);
 
   const speedRef = useRef(speed);
