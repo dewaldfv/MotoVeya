@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
-const ADMIN_EMAIL = "Dewald.motoveya@gmail.com";
+const ADMIN_EMAIL = "Dewald.motoVeya@gmail.com";
 
 export default async function(req) {
   try {

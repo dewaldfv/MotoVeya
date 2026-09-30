@@ -20,11 +20,11 @@ export default function Contact() {
     }
     setSending(true);
     try {
-      const mailto = `mailto:hello@motogo.app?subject=${encodeURIComponent('MotoVeya Contact from ' + form.name)}&body=${encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`)}`;
+      const mailto = `mailto:Dewald.motoVeya@gmail.com?subject=${encodeURIComponent('MotoVeya Contact from ' + form.name)}&body=${encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`)}`;
       window.location.href = mailto;
       toast.success('Opening your email app…');
     } catch (err) {
-      toast.error('Could not open email — please email hello@motogo.app');
+      toast.error('Could not open email — please email Dewald.motoVeya@gmail.com');
     } finally {
       setSending(false);
     }
@@ -47,7 +47,7 @@ export default function Contact() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Email us anytime</p>
-              <a href="mailto:hello@motogo.app" className="font-bold text-primary">Dewald.MotoVeya@gmail.com</a>
+              <a href="mailto:Dewald.motoVeya@gmail.com" className="font-bold text-primary">Dewald.motoVeya@gmail.com</a>
             </div>
           </div>
         </div>

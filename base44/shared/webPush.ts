@@ -14,7 +14,7 @@ function ensureVapid() {
   if (!publicKey || !privateKey) {
     throw new Error('VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY not set');
   }
-  webpush.setVapidDetails('mailto:support@motogo.app', publicKey, privateKey);
+  webpush.setVapidDetails('mailto:Dewald.motoVeya@gmail.com', publicKey, privateKey);
   vapidConfigured = true;
 }
 

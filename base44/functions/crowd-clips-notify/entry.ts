@@ -8,7 +8,7 @@ function ensureVapid() {
   const publicKey = secrets.get('VAPID_PUBLIC_KEY');
   const privateKey = secrets.get('VAPID_PRIVATE_KEY');
   if (!publicKey || !privateKey) throw new Error('VAPID keys are not configured');
-  webpush.setVapidDetails('mailto:support@motogo.app', publicKey, privateKey);
+  webpush.setVapidDetails('mailto:Dewald.motoVeya@gmail.com', publicKey, privateKey);
   vapidConfigured = true;
 }
 
