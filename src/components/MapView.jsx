@@ -159,7 +159,7 @@ function LongPressHandler({ onLongPress, disabled }) {
       overlay.setMap(null);
       projectionRef.current = null;
     };
-  }, [map, disabled, onLongPress]);
+  }, [map, disabled]);
 
   return null;
 }
