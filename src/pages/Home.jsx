@@ -411,6 +411,7 @@ export default function Home() {
         showFriends={overlays.friends}
         onFriendClick={setSelectedFriend}
         onLongPress={handleMapLongPress}
+        savedPlaces={savedPlaces}
         onMarkerClick={setSelected}
         onSavePin={handleSavePin}
         onNavigatePin={handleNavigatePin}
