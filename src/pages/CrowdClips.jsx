@@ -50,14 +50,34 @@ export default function CrowdClips() {
   const observerRef = useRef(null);
 
   const requestMediaPermissions = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setMediaPermission('unsupported');
-      toast.error('Camera and microphone access is not available in this browser.');
-      return false;
-    }
     setRequestingMediaPermission(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+      // Native Android wrappers can expose this bridge after handling
+      // CAMERA + RECORD_AUDIO at the Android permission layer. The web app
+      // waits for a boolean result and falls back to browser/WebView
+      // getUserMedia when the bridge is not present.
+      const nativeBridge = window.MotoVeyaNative || window.AndroidMotoVeya;
+      if (typeof nativeBridge?.requestCameraAndMicrophonePermissions === 'function') {
+        const granted = await Promise.resolve(nativeBridge.requestCameraAndMicrophonePermissions());
+        if (granted === true || granted?.granted === true) {
+          setMediaPermission('granted');
+          return true;
+        }
+        setMediaPermission('denied');
+        toast.error('Camera and microphone permission is required to record a Crowd Clip.');
+        return false;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setMediaPermission('unsupported');
+        toast.error('Camera and microphone access is not available in this browser.');
+        return false;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: true
+      });
       stream.getTracks().forEach((track) => track.stop());
       setMediaPermission('granted');
       return true;
