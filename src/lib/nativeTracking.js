@@ -94,7 +94,30 @@ export function isNativeLocationTrackingAvailable() {
   try { return !!bridge?.isNativeLocationTrackingAvailable?.(); } catch { return false; }
 }
 
+export function requestNativeLocationPermission() {
+  const bridge = getNativeBridge();
+  if (!bridge?.requestLocationPermissions) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const callbackName = '__motoveyaLocationPermissionResult';
+    window[callbackName] = (granted) => {
+      try { delete window[callbackName]; } catch {}
+      resolve(!!granted);
+    };
+    try {
+      const alreadyGranted = bridge.requestLocationPermissions(callbackName);
+      if (alreadyGranted === true) {
+        // Native bridge will also invoke the callback; do not resolve twice.
+      }
+    } catch {
+      try { delete window[callbackName]; } catch {}
+      resolve(false);
+    }
+  });
+}
+
 export async function startNativeLocationTracking() {
+  const permissionGranted = await requestNativeLocationPermission();
+  if (!permissionGranted) return { started: false, native: true, permissionDenied: true };
   let token = getStoredDeviceToken();
   if (!token) {
     const registered = await registerNativeDevice({ platform: detectPlatform() });
