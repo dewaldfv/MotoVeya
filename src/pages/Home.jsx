@@ -436,7 +436,7 @@ export default function Home() {
         onNavigatePin={handleNavigatePin}
         groupRiders={groupRiders}
         userPos={session.userPos}
-        riders={session.userPos ? [{ id: 'me', lat: session.userPos[0], lng: session.userPos[1], heading: session.heading, accuracy: session.accuracy }] : []}
+        riders={session.userPos ? [{ id: 'me', lat: session.userPos[0], lng: session.userPos[1], heading: session.heading, accuracy: session.accuracy, isCrashRecovery: !!session.crashRecovery?.active }] : []}
         navActive={isActive}
         heading={session.heading}
         headingUp={headingUp}
