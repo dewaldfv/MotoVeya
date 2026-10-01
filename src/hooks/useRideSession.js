@@ -56,6 +56,9 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const [nearbyRidersNotified, setNearbyRidersNotified] = useState(false);
   const [crashIndicators, setCrashIndicators] = useState(null);
   const [severity, setSeverity] = useState('medium');
+  // Post-crash recovery state: the SOS location stays fixed while the rider
+  // remains red until 1 km of validated safe movement has been completed.
+  const [crashRecovery, setCrashRecovery] = useState(null);
   const [autoStopCountdown, setAutoStopCountdown] = useState(null);
   const [ending, setEnding] = useState(false);
   const [nearbyService, setNearbyService] = useState(null);
@@ -69,6 +72,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
 
   const lastPosRef = useRef(null);
   const positionsRef = useRef([]);
+  const crashRecoveryRef = useRef(null);
   const startTimeRef = useRef(Date.now());
   const watchIdRef = useRef(null);
   const timerRef = useRef(null);
@@ -160,6 +164,22 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         if (lastPosRef.current) {
           const d = haversine(lastPosRef.current[0], lastPosRef.current[1], newPos[0], newPos[1]);
           if (d > 0.005) setDistance((prev) => prev + d);
+
+          // After a confirmed crash, only count validated movement at >=10 km/h
+          // toward the 1 km recovery threshold. This prevents GPS jitter or a
+          // stationary rider from clearing the Rider Down state.
+          const recovery = crashRecoveryRef.current;
+          const gpsAccuracy = pos.coords.accuracy ?? 999;
+          if (recovery && recovery.active && spd >= 10 && gpsAccuracy <= 50 && d > 0.005 && d < 0.5) {
+            const nextSafeDistance = recovery.safeDistanceKm + d;
+            crashRecoveryRef.current = { ...recovery, safeDistanceKm: nextSafeDistance };
+            setCrashRecovery((prev) => prev ? { ...prev, safeDistanceKm: nextSafeDistance } : prev);
+            if (nextSafeDistance >= 1) {
+              // Resolve asynchronously after the current GPS update so the
+              // current position is retained and the SOS alert can be closed.
+              handleResolveEmergency({ autoRecovered: true });
+            }
+          }
         }
         lastPosRef.current = newPos;
       },
@@ -566,8 +586,12 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     const sev = overrideSeverity || severity;
     setCrashCountdown(null);
     setCrashPhase('active');
+    const crashPos = userPos || SA_CENTER;
+    const recoveryState = { active: true, crashLat: crashPos[0], crashLng: crashPos[1], safeDistanceKm: 0 };
+    crashRecoveryRef.current = recoveryState;
+    setCrashRecovery(recoveryState);
     beacon.start();
-    const pos = userPos || SA_CENTER;
+    const pos = crashPos;
     const emergencyData = {
       lat: pos[0], lng: pos[1],
       rider_name: user?.nickname || user?.full_name || 'Rider',
@@ -604,7 +628,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     setDistressActive(true);
   };
 
-  const handleResolveEmergency = async () => {
+  const handleResolveEmergency = async ({ autoRecovered = false } = {}) => {
     beacon.stop();
     if (crashAlertId) {
       try { await base44.entities.CrashAlert.update(crashAlertId, { status: 'resolved' }); } catch (e) { console.error(e); }
@@ -620,6 +644,9 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     setNearbyRidersNotified(false);
     setCrashIndicators(null);
     setSeverity('medium');
+    crashRecoveryRef.current = null;
+    setCrashRecovery(null);
+    if (autoRecovered) toast.success('1 km of safe movement completed — Rider Down alert cleared');
   };
 
   const { voiceSupported, voiceListening } = useEmergencyCancellation({
@@ -660,6 +687,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     await requestMotionPermission();
     setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
     setHeading(null); setAccuracy(null); setDistressActive(false);
+    crashRecoveryRef.current = null; setCrashRecovery(null);
     positionsRef.current = []; lastPosRef.current = null;
     startTimeRef.current = Date.now();
     setRideStatus('active');
@@ -726,6 +754,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       setDestInput('');
       setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
       setHeading(null); setAccuracy(null); setDistressActive(false);
+      crashRecoveryRef.current = null; setCrashRecovery(null);
       setCrashPhase(null); setCrashAlertId(null); setDistressAlertId(null);
       setEmergencyContactsNotified(false); setNearbyRidersNotified(false); setCrashIndicators(null);
       setSeverity('medium');
@@ -756,7 +785,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     rideStatus, userPos, heading, accuracy, speed, maxSpeed, distance, duration,
     batteryLevel, fuelRemaining, fuelRange, lowFuel,
     destination, destInput, routeData, routeLoading, navProgress,
-    crashPhase, crashCountdown, severity, distressActive,
+    crashPhase, crashCountdown, severity, distressActive, crashRecovery,
     autoStopCountdown, gpsWeak, ending, speedLimit, beacon,
     emergencyContactsNotified, nearbyRidersNotified, crashIndicators,
     nearbyService, voiceSupported, voiceListening,
