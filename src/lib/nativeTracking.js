@@ -96,7 +96,7 @@ export function isNativeLocationTrackingAvailable() {
 
 export function requestNativeLocationPermission() {
   const bridge = getNativeBridge();
-  if (!bridge?.requestLocationPermissions) return Promise.resolve(false);
+  if (!bridge?.requestLocationPermissions) return Promise.resolve(null);
   return new Promise((resolve) => {
     const callbackName = '__motoveyaLocationPermissionResult';
     window[callbackName] = (granted) => {
@@ -117,6 +117,7 @@ export function requestNativeLocationPermission() {
 
 export async function startNativeLocationTracking() {
   const permissionGranted = await requestNativeLocationPermission();
+  if (permissionGranted === null) return { started: false, native: false };
   if (!permissionGranted) return { started: false, native: true, permissionDenied: true };
   let token = getStoredDeviceToken();
   if (!token) {
