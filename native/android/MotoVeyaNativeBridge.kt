@@ -28,4 +28,20 @@ class MotoVeyaNativeBridge(
     fun isCameraAndMicrophoneGranted(): Boolean {
         return permissionClient.areCameraAndMicrophoneGranted()
     }
+
+    @JavascriptInterface
+    fun startNativeLocationTracking(deviceToken: String): Boolean {
+        if (deviceToken.length < 32) return false
+        MotoVeyaLocationForegroundService.start(activity, deviceToken)
+        return true
+    }
+
+    @JavascriptInterface
+    fun stopNativeLocationTracking(): Boolean {
+        MotoVeyaLocationForegroundService.stop(activity)
+        return true
+    }
+
+    @JavascriptInterface
+    fun isNativeLocationTrackingAvailable(): Boolean = true
 }
