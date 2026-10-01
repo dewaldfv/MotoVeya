@@ -73,6 +73,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const lastPosRef = useRef(null);
   const positionsRef = useRef([]);
   const crashRecoveryRef = useRef(null);
+  const resolveEmergencyRef = useRef(null);
   const startTimeRef = useRef(Date.now());
   const watchIdRef = useRef(null);
   const timerRef = useRef(null);
@@ -177,7 +178,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
             if (nextSafeDistance >= 1) {
               // Resolve asynchronously after the current GPS update so the
               // current position is retained and the SOS alert can be closed.
-              handleResolveEmergency({ autoRecovered: true });
+              resolveEmergencyRef.current?.({ autoRecovered: true });
             }
           }
         }
@@ -648,6 +649,10 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     setCrashRecovery(null);
     if (autoRecovered) toast.success('1 km of safe movement completed — Rider Down alert cleared');
   };
+
+  useEffect(() => {
+    resolveEmergencyRef.current = handleResolveEmergency;
+  }, [handleResolveEmergency]);
 
   const { voiceSupported, voiceListening } = useEmergencyCancellation({
     enabled: crashPhase === 'countdown' || crashPhase === 'active',
