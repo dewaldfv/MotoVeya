@@ -83,3 +83,36 @@ export const NATIVE_TRACKING_ENDPOINTS = {
   revoke: 'revoke-native-tracking',
   riderLocation: 'update-rider-location-native',
 };
+
+export function getNativeBridge() {
+  if (typeof window === 'undefined') return null;
+  return window.MotoVeyaNative || window.AndroidMotoVeya || null;
+}
+
+export function isNativeLocationTrackingAvailable() {
+  const bridge = getNativeBridge();
+  try { return !!bridge?.isNativeLocationTrackingAvailable?.(); } catch { return false; }
+}
+
+export async function startNativeLocationTracking() {
+  let token = getStoredDeviceToken();
+  if (!token) {
+    const registered = await registerNativeDevice({ platform: detectPlatform() });
+    token = registered?.token || getStoredDeviceToken();
+  }
+  if (!token) return { started: false, native: false };
+  const bridge = getNativeBridge();
+  if (!bridge?.startNativeLocationTracking) return { started: false, native: false };
+  try {
+    const started = !!bridge.startNativeLocationTracking(token);
+    return { started, native: true };
+  } catch {
+    return { started: false, native: true };
+  }
+}
+
+export function stopNativeLocationTracking() {
+  const bridge = getNativeBridge();
+  if (!bridge?.stopNativeLocationTracking) return false;
+  try { return !!bridge.stopNativeLocationTracking(); } catch { return false; }
+}
