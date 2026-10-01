@@ -1,35 +1,42 @@
 # MotoVeya Native Android Wrapper
 
-## Required AndroidManifest permissions
+## Native foreground location service
 
-Add the permissions from AndroidManifest.permissions.xml to the wrapper application's AndroidManifest.xml.
+MotoVeya now includes MotoVeyaLocationForegroundService.kt.
 
-## WebView integration
+This service is the Android safety/tracking layer for an active ride. It runs as a real Android foreground service, uses Fused Location Provider at high accuracy, requests GPS fixes about every 3 seconds, continues when the WebView is backgrounded or the screen is locked, posts authenticated fixes to the existing Base44 native-location endpoint, shows a persistent ride notification, and keeps collecting GPS while the network is temporarily unavailable.
 
-Use MotoVeyaWebViewActivity.kt as the reference Activity. The important pieces are:
+The React app starts the service at ride start and stops it at ride end. Web geolocation remains enabled for the live map/UI.
 
-1. Enable JavaScript and DOM storage.
-2. Attach MotoVeyaWebChromeClient as the WebView WebChromeClient.
-3. Add MotoVeyaNativeBridge as the JavaScript interface named `MotoVeyaNative`.
-4. Forward Activity.onRequestPermissionsResult() to MotoVeyaWebChromeClient.
-5. Load the MotoVeya production URL.
+## AndroidManifest
 
-## Crowd Clips
+Add the permissions from AndroidManifest.permissions.xml.
 
-Crowd Clips calls:
+Inside <application> add:
 
-`window.MotoVeyaNative.requestCameraAndMicrophonePermissions(callbackName)`
+<service android:name=".nativebridge.MotoVeyaLocationForegroundService" android:exported="false" android:foregroundServiceType="location" />
 
-The Android bridge opens the normal OS permission dialog. Once permission is resolved, it invokes the callback supplied by the web app.
+## Required Gradle dependencies
 
-The bridge also exposes:
+The native wrapper must include AndroidX Core and Google Play Services Location. Use the versions already supported by the wrapper project:
 
-`window.MotoVeyaNative.isCameraAndMicrophoneGranted()`
+implementation "androidx.core:core-ktx:<current-version>"
+implementation "com.google.android.gms:play-services-location:<current-version>"
+
+## Runtime permissions
+
+Before starting a ride, the Android wrapper must have location permission and notification permission where required. Android versions that require it for the intended background behavior also need ACCESS_BACKGROUND_LOCATION. The service is started from the visible MotoVeya activity when Ride Mode starts.
+
+## WebView bridge
+
+MotoVeyaNativeBridge now exposes startNativeLocationTracking(deviceToken), stopNativeLocationTracking(), and isNativeLocationTrackingAvailable(), in addition to the existing camera/microphone methods.
+
+The JavaScript layer starts the native service from useRideSession.startRide() and stops it from handleEndRide().
 
 ## Security
 
-Do not expose broad Android APIs through the JavaScript interface. Keep only the explicitly required methods. Keep the wrapper HTTPS-only and do not enable cleartext traffic.
+The service does not expose arbitrary Android APIs to JavaScript. It receives only the opaque device token and uses the existing token-authenticated Base44 native-location endpoint. Do not log or display the raw token outside the protected native/WebView boundary.
 
-## Important
+## Deployment note
 
-The native Kotlin files in this folder are integration-ready reference files. They become part of the compiled Android application only after being copied into the actual Android Studio wrapper project.
+These Kotlin files are native-wrapper source. Base44's web build cannot itself compile Kotlin into an APK. The Android Studio/native wrapper build must include these files, the manifest declaration, and the required Gradle dependencies. Until that wrapper is rebuilt and installed, the Base44 web app continues using browser geolocation as its fallback.
