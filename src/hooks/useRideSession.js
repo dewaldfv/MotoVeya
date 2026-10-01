@@ -12,6 +12,7 @@ import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
 import { toast } from 'sonner';
 import { notifyFriendsOfRide } from '@/lib/rideInvite';
+import { startNativeLocationTracking, stopNativeLocationTracking } from '@/lib/nativeTracking';
 
 const SA_CENTER = [-26.2041, 28.0473];
 
@@ -696,6 +697,11 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     positionsRef.current = []; lastPosRef.current = null;
     startTimeRef.current = Date.now();
     setRideStatus('active');
+    // Start the native Android foreground location service immediately when a ride begins.
+    // Web geolocation remains active for the UI; native tracking continues with the screen locked.
+    startNativeLocationTracking().then((result) => {
+      if (!result.started && result.native) console.warn('MotoVeya native foreground tracking could not start');
+    }).catch((e) => console.warn('Native foreground tracking unavailable:', e));
     const dest = destOverride || destination;
     if (dest) {
       if (destOverride) { setDestination(destOverride); setDestInput(destOverride.name); }
@@ -717,6 +723,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
 
   const handleEndRide = async () => {
     setEnding(true);
+    stopNativeLocationTracking();
     beacon.stop();
     if (crashAlertId) {
       try { await base44.entities.CrashAlert.update(crashAlertId, { status: 'resolved' }); } catch (e) { console.error(e); }
