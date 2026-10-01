@@ -29,7 +29,7 @@ function makeIcon(g, type, heading, color) {
   if (type === 'rider') {
     return {
       path: g.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-      fillColor: '#FF6F00',
+      fillColor: g.__motoveyaCrashRecovery ? '#ef4444' : '#FF6F00',
       fillOpacity: 1,
       strokeColor: '#ffffff',
       strokeWeight: 2,
@@ -73,6 +73,7 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       const id = 'rider-self';
       seen.add(id);
       const latLng = new g.maps.LatLng(rider.lat, rider.lng);
+      g.__motoveyaCrashRecovery = !!rider.isCrashRecovery;
       const icon = makeIcon(g, 'rider', rider.heading);
       let m = markers.get(id);
       if (!m) {
