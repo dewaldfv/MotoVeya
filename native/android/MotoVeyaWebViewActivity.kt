@@ -15,6 +15,7 @@ class MotoVeyaWebViewActivity : Activity() {
 
     private lateinit var webView: WebView
     private lateinit var permissionClient: MotoVeyaWebChromeClient
+    private lateinit var nativeBridge: MotoVeyaNativeBridge
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,10 +35,8 @@ class MotoVeyaWebViewActivity : Activity() {
         permissionClient = MotoVeyaWebChromeClient(this)
         webView.webChromeClient = permissionClient
 
-        webView.addJavascriptInterface(
-            MotoVeyaNativeBridge(this, webView, permissionClient),
-            "MotoVeyaNative"
-        )
+        nativeBridge = MotoVeyaNativeBridge(this, webView, permissionClient)
+        webView.addJavascriptInterface(nativeBridge, "MotoVeyaNative")
 
         // Use the deployed MotoVeya URL in the production wrapper.
         webView.loadUrl("https://motoveya.base44.app")
@@ -50,6 +49,7 @@ class MotoVeyaWebViewActivity : Activity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         permissionClient.onRequestPermissionsResult(requestCode, grantResults)
+        nativeBridge.onRequestPermissionsResult(requestCode, grantResults)
     }
 
     override fun onDestroy() {
