@@ -247,7 +247,9 @@ export default function Home() {
     queryFn: async () => {
       const [lat, lng] = fuelCenter;
       const res = await base44.functions.invoke('get-fuel-stations', { lat, lng, radius: 25000 });
-      return res.data?.stations || [];
+      const data = res.data?.stations || [];
+      saveMapDataCache('fuel-stations:' + fuelCenterKey, data, 10 * 60 * 1000);
+      return data;
     },
     enabled: deferMapData && overlays.fuel && Number.isFinite(Number(fuelCenter?.[0])) && Number.isFinite(Number(fuelCenter?.[1])),
     staleTime: 10 * 60 * 1000,
