@@ -316,17 +316,10 @@ export default function Home() {
   // Live group state is refreshed by the authorization-checked active-ride query.
   // Do not subscribe directly to private RideParticipant records.
 
+  // Legacy POI records are not rendered by MapView, so avoid fetching them during
+  // Home initialization. This removes an unnecessary database request.
   useEffect(() => {
-    (async () => {
-      try {
-        const poiData = await base44.entities.POI.list('-created_date', 100);
-        setPois(poiData || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    setLoading(false);
   }, []);
 
   useEffect(() => {
