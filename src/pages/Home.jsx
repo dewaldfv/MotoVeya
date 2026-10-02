@@ -179,13 +179,18 @@ export default function Home() {
   });
 
   const { data: activeGroupRide } = useQuery({
-    queryKey: ['active-group-ride'],
+    queryKey: ['active-group-ride', me?.id],
     queryFn: async () => {
       const res = await base44.functions.invoke('get-active-group-ride-secure', {});
-      return res.data;
+      const data = res.data;
+      if (me?.id) saveMapDataCache('active-group-ride:' + me.id, data, 30 * 1000);
+      return data;
     },
+    initialData: () => me?.id ? (getMapDataCache('active-group-ride:' + me.id) || undefined) : undefined,
+    staleTime: 10 * 1000,
+    gcTime: 2 * 60 * 1000,
     enabled: !!me?.id && deferMapData,
-    refetchInterval: 10000
+    refetchInterval: 10000,
   });
 
   const groupRiders = useMemo(() => {
