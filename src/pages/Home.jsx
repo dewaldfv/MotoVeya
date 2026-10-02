@@ -252,7 +252,9 @@ export default function Home() {
       return data;
     },
     enabled: deferMapData && overlays.fuel && Number.isFinite(Number(fuelCenter?.[0])) && Number.isFinite(Number(fuelCenter?.[1])),
+    initialData: () => getMapDataCache('fuel-stations:' + fuelCenterKey) || undefined,
     staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
