@@ -17,6 +17,7 @@ export default function FuelTracker() {
   const [loading, setLoading] = useState(true);
   const [selectedBikeId, setSelectedBikeId] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editingRefill, setEditingRefill] = useState(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
@@ -169,8 +170,12 @@ export default function FuelTracker() {
               </div>
             ) : (
               <div className="space-y-2">
-                {refills.map((refill) => (
-                  <RefillItem key={refill.id} refill={refill} />
+                {refills.map((refill, idx) => (
+                  <RefillItem
+                    key={refill.id}
+                    refill={refill}
+                    onEdit={idx === 0 ? () => setEditingRefill(refill) : undefined}
+                  />
                 ))}
               </div>
             )}
@@ -185,8 +190,9 @@ export default function FuelTracker() {
       )}
 
       <AddRefillDialog
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
+        open={addOpen || !!editingRefill}
+        editRefill={editingRefill}
+        onClose={() => { setAddOpen(false); setEditingRefill(null); }}
         bike={selectedBike}
         onSaved={() => {
           queryClient.invalidateQueries({ queryKey: ['fuel-refills', selectedBikeId] });

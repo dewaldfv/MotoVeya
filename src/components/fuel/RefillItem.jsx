@@ -1,7 +1,7 @@
-import { Fuel, MapPin } from 'lucide-react';
+import { Fuel, MapPin, Pencil } from 'lucide-react';
 import moment from 'moment';
 
-export default function RefillItem({ refill }) {
+export default function RefillItem({ refill, onEdit }) {
   const date = moment(refill.refill_date).format('DD MMM YYYY');
   const consumption = refill.consumption_l_per_100km;
 
@@ -27,6 +27,15 @@ export default function RefillItem({ refill }) {
           </div>
         )}
       </div>
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          className="glove-target flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground active:scale-95"
+          aria-label="Edit refill"
+        >
+          <Pencil size={16} />
+        </button>
+      )}
     </div>
   );
 }

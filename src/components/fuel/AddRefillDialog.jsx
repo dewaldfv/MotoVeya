@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
-export default function AddRefillDialog({ open, onClose, bike, onSaved }) {
+export default function AddRefillDialog({ open, onClose, bike, onSaved, editRefill }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     litres: '', odometer_km: '', fuel_price_per_litre: '',
@@ -16,12 +16,24 @@ export default function AddRefillDialog({ open, onClose, bike, onSaved }) {
 
   useEffect(() => {
     if (open) {
-      setForm({
-        litres: '', odometer_km: '', fuel_price_per_litre: '',
-        refill_date: new Date().toISOString().slice(0, 10), location_name: '', is_full_tank: true,
-      });
+      if (editRefill) {
+        const d = new Date(editRefill.refill_date);
+        setForm({
+          litres: editRefill.litres != null ? String(editRefill.litres) : '',
+          odometer_km: editRefill.odometer_km != null ? String(editRefill.odometer_km) : '',
+          fuel_price_per_litre: editRefill.fuel_price_per_litre != null ? String(editRefill.fuel_price_per_litre) : '',
+          refill_date: isNaN(d.getTime()) ? new Date().toISOString().slice(0, 10) : d.toISOString().slice(0, 10),
+          location_name: editRefill.location_name || '',
+          is_full_tank: editRefill.is_full_tank !== false,
+        });
+      } else {
+        setForm({
+          litres: '', odometer_km: '', fuel_price_per_litre: '',
+          refill_date: new Date().toISOString().slice(0, 10), location_name: '', is_full_tank: true,
+        });
+      }
     }
-  }, [open]);
+  }, [open, editRefill]);
 
   const totalCost = (Number(form.litres) || 0) * (Number(form.fuel_price_per_litre) || 0);
 
@@ -39,14 +51,18 @@ export default function AddRefillDialog({ open, onClose, bike, onSaved }) {
       is_full_tank: form.is_full_tank,
     };
     try {
-      await base44.entities.FuelRefill.create(refillData);
+      if (editRefill) {
+        await base44.entities.FuelRefill.update(editRefill.id, refillData);
+      } else {
+        await base44.entities.FuelRefill.create(refillData);
+      }
       try { await base44.functions.invoke('recalculate-fuel-profile', { bike_id: bike.id }); } catch (e) { console.error('Profile recalc failed:', e); }
-      toast.success('Refill logged');
+      toast.success(editRefill ? 'Refill updated' : 'Refill logged');
       onSaved?.();
       onClose();
     } catch (e) {
       console.error(e);
-      if (!navigator.onLine) {
+      if (!navigator.onLine && !editRefill) {
         const queue = JSON.parse(localStorage.getItem('motogo_fuel_queue') || '[]');
         queue.push({ ...refillData, queued_at: Date.now() });
         localStorage.setItem('motogo_fuel_queue', JSON.stringify(queue));
@@ -54,7 +70,7 @@ export default function AddRefillDialog({ open, onClose, bike, onSaved }) {
         onSaved?.();
         onClose();
       } else {
-        toast.error('Failed to log refill');
+        toast.error(editRefill ? 'Failed to update refill' : 'Failed to log refill');
       }
     } finally {
       setSaving(false);
@@ -64,7 +80,7 @@ export default function AddRefillDialog({ open, onClose, bike, onSaved }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Log Fuel Refill</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{editRefill ? 'Edit Refill' : 'Log Fuel Refill'}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="rounded-xl bg-secondary p-3 text-center text-sm">
             <Fuel size={18} className="mx-auto mb-1 text-primary" />
@@ -108,7 +124,7 @@ export default function AddRefillDialog({ open, onClose, bike, onSaved }) {
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving || !form.litres}>
             {saving && <Loader2 size={16} className="animate-spin" />}
-            {saving ? 'Saving...' : 'Log Refill'}
+            {saving ? 'Saving...' : editRefill ? 'Save Changes' : 'Log Refill'}
           </Button>
         </DialogFooter>
       </DialogContent>
