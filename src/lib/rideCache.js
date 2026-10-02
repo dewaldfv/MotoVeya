@@ -2,6 +2,33 @@ const ACTIVE_RIDE_KEY = 'motogo_active_ride';
 const PENDING_RIDES_KEY = 'motogo_pending_rides';
 const BG_TRACKING_KEY = 'motogo_background_tracking';
 const BG_EXPLAINER_KEY = 'motogo_bg_explainer_shown';
+const MAP_CACHE_PREFIX = 'motoveya_map_cache_v1:';
+const MAP_CACHE_TTL_MS = 10 * 60 * 1000;
+
+export function saveMapDataCache(key, data, ttl = MAP_CACHE_TTL_MS) {
+  try {
+    localStorage.setItem(MAP_CACHE_PREFIX + key, JSON.stringify({
+      savedAt: Date.now(),
+      expiresAt: Date.now() + ttl,
+      data,
+    }));
+  } catch (e) {}
+}
+
+export function getMapDataCache(key) {
+  try {
+    const raw = localStorage.getItem(MAP_CACHE_PREFIX + key);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    if (!cached || cached.expiresAt <= Date.now()) {
+      localStorage.removeItem(MAP_CACHE_PREFIX + key);
+      return null;
+    }
+    return cached.data ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export function saveRideState(state) {
   try {
