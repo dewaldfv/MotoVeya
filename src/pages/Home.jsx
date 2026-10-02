@@ -354,10 +354,7 @@ export default function Home() {
 
   // Memoize the marker datasets so they keep a stable reference across the frequent
   // session/location re-renders — this stops static map pins from re-rendering on every tick.
-  const poisWithMarkers = useMemo(() => {
-    const markerMap = new Map(poiMarkers.map((m) => [m.id, m]));
-    return pois.map((p) => ({ ...p, _marker: p.marker_id ? markerMap.get(p.marker_id) || null : null }));
-  }, [pois, poiMarkers]);
+  const poisWithMarkers = useMemo(() => pois, [pois]);
   const poisToShow = useMemo(() =>
     activeCat === 'all'
       ? poisWithMarkers.filter((p) => p.is_active !== false).filter((p) => { const k = POI_OVERLAY_MAP[p.category]; return !k || overlays[k]; })
