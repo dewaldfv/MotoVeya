@@ -18,7 +18,12 @@ import NavigationOverlay from '@/components/NavigationOverlay';
 import TutorialWalkthrough from '@/components/TutorialWalkthrough';
 import SavedPlaceDialog from '@/components/SavedPlaceDialog';
 import { setRideActive } from '@/lib/rideStatus';
-import { getPendingNavigation, clearPendingNavigation } from '@/lib/rideCache';
+import {
+  getPendingNavigation,
+  clearPendingNavigation,
+  getMapDataCache,
+  saveMapDataCache,
+} from '@/lib/rideCache';
 import { toast } from 'sonner';
 
 const SA_CENTER = [-26.2041, 28.0473];
