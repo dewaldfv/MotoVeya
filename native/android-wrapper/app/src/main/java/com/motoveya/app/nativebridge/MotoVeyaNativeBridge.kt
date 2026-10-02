@@ -29,16 +29,31 @@ class MotoVeyaNativeBridge(
     fun requestLocationPermissions(callbackName: String): Boolean {
         val fine = ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarse = ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (fine || coarse) { invokeCallback(callbackName, true); return true }
         pendingLocationCallback = sanitize(callbackName)
-        val permissions = mutableListOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+
+        if (fine || coarse) {
+            if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    LOCATION_PERMISSION_REQUEST
+                )
+                return false
+            }
+            invokeLocationCallback(callbackName, true)
+            pendingLocationCallback = null
+            return true
         }
-        ActivityCompat.requestPermissions(activity, permissions.toTypedArray(), LOCATION_PERMISSION_REQUEST)
+
+        ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ),
+            LOCATION_PERMISSION_REQUEST
+        )
         return false
     }
 
