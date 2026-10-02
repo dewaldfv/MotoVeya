@@ -59,7 +59,10 @@ class MotoVeyaNativeBridge(
 
     fun onRequestPermissionsResult(requestCode: Int, grantResults: IntArray) {
         if (requestCode != LOCATION_PERMISSION_REQUEST) return
-        pendingLocationCallback?.let { invokeCallback(it, grantResults.any { r -> r == PackageManager.PERMISSION_GRANTED }) }
+        val locationGranted =
+            ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        pendingLocationCallback?.let { invokeCallback(it, locationGranted) }
         pendingLocationCallback = null
     }
 
