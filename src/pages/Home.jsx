@@ -296,7 +296,7 @@ export default function Home() {
     if (!me?.id) return;
     const unsubUser = base44.entities.User.subscribe((event) => {
       if (event.type !== 'update' || !event.data?.id || !friendIdsRef.current.has(event.data.id)) return;
-      queryClient.setQueryData(['map-friends'], (old = []) => old.map((f) => {
+      queryClient.setQueryData(['map-friends', me.id], (old = []) => old.map((f) => {
         if (f.user_id !== event.data.id) return f;
         const d = event.data;
         return {
