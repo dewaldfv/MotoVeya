@@ -27,19 +27,36 @@ export function TabHistoryProvider({ children }) {
   const tabPathsRef = useRef({ ...TAB_ROOTS });
 
   const currentTab = getTabFromPath(location.pathname);
-  // Track the latest path for the active tab (ref mutation in render is safe — doesn't affect output)
-  tabPathsRef.current[currentTab] = location.pathname;
+
+  // Only remember nested routes for non-Map tabs.
+  // Home/Map must always resolve directly to '/'.
+  if (currentTab !== 'map') {
+    tabPathsRef.current[currentTab] = location.pathname;
+  }
 
   const switchToTab = useCallback((tabName) => {
-    const root = TAB_ROOTS[tabName] || '/';
-    // Tapping the already-active tab navigates to its root (pop-to-root behaviour)
-    if (currentTab === tabName) {
-      navigate(root);
+    // Home/Map is always a direct navigation to the Home route.
+    // It must never restore a previous page or depend on browser history.
+    if (tabName === 'map') {
+      if (location.pathname !== '/') {
+        navigate('/', { replace: true });
+      }
       return;
     }
-    // Switching to a different tab restores its last known route (independent stack)
+
+    const root = TAB_ROOTS[tabName] || '/';
+
+    // Tapping the already-active tab navigates to its root (pop-to-root behaviour).
+    if (currentTab === tabName) {
+      if (location.pathname !== root) {
+        navigate(root);
+      }
+      return;
+    }
+
+    // Other tabs retain their independent last-known route.
     navigate(tabPathsRef.current[tabName] || root);
-  }, [currentTab, navigate]);
+  }, [currentTab, location.pathname, navigate]);
 
   const value = useMemo(() => ({ currentTab, switchToTab }), [currentTab, switchToTab]);
 
