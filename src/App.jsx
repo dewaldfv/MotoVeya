@@ -130,6 +130,11 @@ const AuthenticatedApp = () => {
         <Route path="/location-sharing" element={<LocationSharing />} />
         <Route path="/background-tracking" element={<BackgroundTracking />} />
         <Route path="/legal/:doc" element={<Legal />} />
+        <Route path="/privacy-policy" element={<Legal />} />
+        <Route path="/terms-of-service" element={<Legal />} />
+        <Route path="/refund-policy" element={<Legal />} />
+        <Route path="/cookie-policy" element={<Legal />} />
+        <Route path="/legal" element={<Legal />} />
         <Route path="/fuel-tracker" element={<FuelTracker />} />
         <Route path="/ride-planner" element={<RidePlanner />} />
         <Route path="/rides/saved" element={<SavedRoutes />} />
