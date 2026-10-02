@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Navigation, Phone, MapPin, ExternalLink, Menu, LocateFixed, Layers, X, Compass } from 'lucide-react';
+import { Navigation, Phone, MapPin, ExternalLink, LocateFixed, Layers, X, Compass } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MapView from '@/components/MapView';
 import BottomSheet from '@/components/BottomSheet';
-import CategoryMenu, { MAP_CATEGORIES } from '@/components/CategoryMenu';
-import LayersSheet from '@/components/LayersSheet';
+import { MAP_CATEGORIES } from '@/components/CategoryMenu';
+import MapControlSheet from '@/components/MapControlSheet';
 import { useMapLayer } from '@/lib/mapLayers';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ServiceDetailSheet from '@/components/services/ServiceDetailSheet';
@@ -48,8 +48,7 @@ export default function Home() {
   const [compassResetSignal, setCompassResetSignal] = useState(0);
   const [locationLocked, setLocationLocked] = useState(false);
   const [fitRouteSignal, setFitRouteSignal] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [layersOpen, setLayersOpen] = useState(false);
+  const [controlOpen, setControlOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [selectedGroupPlace, setSelectedGroupPlace] = useState(null);
@@ -452,11 +451,11 @@ export default function Home() {
       {showIdleControls && mapUiVisible &&
       <>
           <button
-          onClick={() => setMenuOpen(true)}
+          onClick={() => setControlOpen(true)}
           className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))]"
-          aria-label="Categories">
-          
-            <Menu size={22} className="text-[hsl(var(--primary))]" />
+          aria-label="Map controls">
+
+            <Layers size={22} className="text-[hsl(var(--primary))]" />
           </button>
 
           <button
@@ -475,15 +474,6 @@ export default function Home() {
           aria-label="Reset map to north"
           title="Reset map to north">
           <Compass size={22} className="text-[hsl(var(--primary))]" />
-          </button>
-
-          <button
-          onClick={() => setLayersOpen(true)}
-          className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))]"
-          style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}
-          aria-label="Map Layers">
-          
-            <Layers size={22} className="text-[hsl(var(--primary))]" />
           </button>
 
           {activeCat !== 'all' &&
@@ -522,14 +512,15 @@ export default function Home() {
         setNotifyFriends={setNotifyFriends} />
       
 
-      <CategoryMenu
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+      <MapControlSheet
+        open={controlOpen}
+        onClose={() => setControlOpen(false)}
         activeCat={activeCat}
-        onSelect={handleSelectCategory} />
-      
-
-      <LayersSheet open={layersOpen} onClose={() => setLayersOpen(false)} layer={rawLayer} onSelect={setLayer} overlays={overlays} onToggleOverlay={toggleOverlay} />
+        onSelectCategory={handleSelectCategory}
+        layer={rawLayer}
+        onSelectLayer={setLayer}
+        overlays={overlays}
+        onToggleOverlay={toggleOverlay} />
 
       <BottomSheet
         open={!!selected}
