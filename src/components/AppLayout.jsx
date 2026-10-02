@@ -15,6 +15,7 @@ import { subscribeRideActive } from '@/lib/rideStatus';
 import { useScreenOrientation } from '@/hooks/useScreenOrientation';
 import { useIdleMapUi } from '@/hooks/useIdleMapUi';
 import { usePresence } from '@/hooks/usePresence';
+import { useOverlayBackHandler } from '@/hooks/useOverlayBackHandler';
 
 const pageVariants = {
   initial: { opacity: 0, x: '100%' },
@@ -45,6 +46,7 @@ export default function AppLayout() {
   useLocationBroadcast();
   useMessageNotifications();
   usePushNotifications();
+  useOverlayBackHandler();
   const navigate = useNavigate();
   const { user, isLoadingAuth } = useAuth();
   usePresence(!!user && !isLoadingAuth);

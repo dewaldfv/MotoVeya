@@ -52,6 +52,21 @@ class MotoVeyaWebViewActivity : Activity() {
         nativeBridge.onRequestPermissionsResult(requestCode, grantResults)
     }
 
+    /**
+     * Handle the hardware Back button: step through the WebView's history
+     * before falling back to closing the activity. Without this the back
+     * press would immediately exit the app even though the SPA can go back.
+     */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (this::webView.isInitialized && webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            @Suppress("DEPRECATION")
+            super.onBackPressed()
+        }
+    }
+
     override fun onDestroy() {
         webView.removeJavascriptInterface("MotoVeyaNative")
         webView.destroy()

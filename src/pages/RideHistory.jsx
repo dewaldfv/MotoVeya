@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, Search, Filter, X } from 'lucide-react';
+import { ChevronLeft, Search, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import RideHistoryCard from '@/components/rides/RideHistoryCard';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import SelectSheet from '@/components/SelectSheet';
 
 export default function RideHistory() {
   const navigate = useNavigate();
@@ -82,31 +82,43 @@ export default function RideHistory() {
         </div>
 
         <div className="mt-3 grid grid-cols-3 gap-2">
-          <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger className="bg-card"><Filter size={13} className="mr-1" /><SelectValue placeholder="Date" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All dates</SelectItem>
-              <SelectItem value="week">Last week</SelectItem>
-              <SelectItem value="month">Last month</SelectItem>
-              <SelectItem value="year">Last year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={bikeFilter} onValueChange={setBikeFilter}>
-            <SelectTrigger className="bg-card"><SelectValue placeholder="Bike" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All bikes</SelectItem>
-              {bikes.map((b) => <SelectItem key={b.id} value={b.id}>{b.make} {b.model}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={distFilter} onValueChange={setDistFilter}>
-            <SelectTrigger className="bg-card"><SelectValue placeholder="Distance" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any</SelectItem>
-              <SelectItem value="short">&lt; 50 km</SelectItem>
-              <SelectItem value="medium">50–200 km</SelectItem>
-              <SelectItem value="long">200+ km</SelectItem>
-            </SelectContent>
-          </Select>
+          <SelectSheet
+            value={dateFilter}
+            onChange={setDateFilter}
+            placeholder="Date"
+            label="Filter by date"
+            triggerClassName="bg-card"
+            options={[
+              { value: 'all', label: 'All dates' },
+              { value: 'week', label: 'Last week' },
+              { value: 'month', label: 'Last month' },
+              { value: 'year', label: 'Last year' },
+            ]}
+          />
+          <SelectSheet
+            value={bikeFilter}
+            onChange={setBikeFilter}
+            placeholder="Bike"
+            label="Filter by bike"
+            triggerClassName="bg-card"
+            options={[
+              { value: 'all', label: 'All bikes' },
+              ...bikes.map((b) => ({ value: b.id, label: `${b.make} ${b.model}` })),
+            ]}
+          />
+          <SelectSheet
+            value={distFilter}
+            onChange={setDistFilter}
+            placeholder="Distance"
+            label="Filter by distance"
+            triggerClassName="bg-card"
+            options={[
+              { value: 'all', label: 'Any' },
+              { value: 'short', label: '< 50 km' },
+              { value: 'medium', label: '50–200 km' },
+              { value: 'long', label: '200+ km' },
+            ]}
+          />
         </div>
 
         {isLoading ? (

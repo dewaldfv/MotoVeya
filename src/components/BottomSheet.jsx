@@ -1,6 +1,18 @@
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { nextOverlayId, registerOverlay, unregisterOverlay } from '@/lib/overlayManager';
 
 export default function BottomSheet({ open, onClose, title, children, backgroundImage, immersive = false }) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (!open) return;
+    const id = nextOverlayId();
+    registerOverlay(id, () => onCloseRef.current?.());
+    return () => unregisterOverlay(id);
+  }, [open]);
+
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end landscape:items-center" onClick={onClose}>
