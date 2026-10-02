@@ -1,5 +1,7 @@
-// Canonical MotoVeya legal documents. This file is mirrored with Web.MotoVeya.\nexport const LEGAL_DOCUMENTS = {\n  PRIVACY_POLICY: { title: "Privacy Policy", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Privacy Policy
-Last updated: \${LAST_UPDATED}
+// Canonical MotoVeya legal documents. This file is mirrored with Web.MotoVeya.
+export const LEGAL_DOCUMENTS = {
+  PRIVACY_POLICY: { title: "Privacy Policy", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Privacy Policy
+Last updated: 2 October 2026
 
 1. WHO IS RESPONSIBLE FOR YOUR PERSONAL INFORMATION
 MotoVeya is responsible for the processing of personal information described in this Privacy Policy, subject to applicable law. Before commercial launch, MotoVeya's legal entity name, registration details and physical address should be inserted in the supplier/legal-information section of the app and website.
@@ -140,8 +142,9 @@ Dewald.motoVeya@gmail.com
 You may also lodge a complaint with the Information Regulator of South Africa where you believe your rights under POPIA have been infringed.
 
 23. IMPORTANT LIMITATION
-This Privacy Policy explains how information is intended to be processed. It is not a promise that a security incident, unauthorised access, service outage or third-party failure can never occur. MotoVeya will comply with applicable legal obligations if such an incident occurs.` },\n  TERMS_OF_SERVICE: { title: "Terms & Conditions", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Terms & Conditions
-Last updated: \${LAST_UPDATED}
+This Privacy Policy explains how information is intended to be processed. It is not a promise that a security incident, unauthorised access, service outage or third-party failure can never occur. MotoVeya will comply with applicable legal obligations if such an incident occurs.` },
+  TERMS_OF_SERVICE: { title: "Terms & Conditions", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Terms & Conditions
+Last updated: 2 October 2026
 
 1. ACCEPTANCE
 By accessing or using MotoVeya, you agree to these Terms & Conditions, the End User License Agreement and Privacy Policy.
@@ -194,8 +197,9 @@ The Privacy Policy governs personal-information processing.
 South African law applies, subject to mandatory consumer protections and rights.
 
 16. CONTACT
-Support: Dewald.motoVeya@gmail.com` },\n  EULA: { title: "End User License Agreement", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya End User License Agreement
-Last updated: \${LAST_UPDATED}
+Support: Dewald.motoVeya@gmail.com` },
+  EULA: { title: "End User License Agreement", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya End User License Agreement
+Last updated: 2 October 2026
 
 IMPORTANT SAFETY NOTICE
 MotoVeya is a technology service and is NOT an emergency service, medical service, insurer, security service, traffic authority, navigation authority, rescue organisation or substitute for professional emergency assistance. MotoVeya safety features are supplementary tools only. Motorcycle riding is inherently dangerous and may result in serious injury, death or property damage.
@@ -333,7 +337,8 @@ These terms, the Privacy Policy and any expressly incorporated subscription or s
 21. CONTACT
 Support: Dewald.motoVeya@gmail.com
 
-IMPORTANT: This document is a consumer-facing legal framework, not a guarantee that MotoVeya can never be sued or held liable. South African law may override contractual exclusions.` },\n  REFUND_POLICY: { title: "Refund Policy", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Refund Policy
+IMPORTANT: This document is a consumer-facing legal framework, not a guarantee that MotoVeya can never be sued or held liable. South African law may override contractual exclusions.` },
+  REFUND_POLICY: { title: "Refund Policy", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Refund Policy
 Last updated: 2 October 2026
 
 1. SCOPE
@@ -355,7 +360,8 @@ If MotoVeya is unable to supply a paid digital service as agreed, MotoVeya will 
 If you believe a charge is incorrect, contact support first with the account email, transaction reference and relevant details. This does not restrict your right to use any statutory complaint, dispute or chargeback process available to you.
 
 7. CONTACT
-Support: Dewald.motoVeya@gmail.com` },\n  COOKIE_POLICY: { title: "Cookie Policy", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Cookie Policy
+Support: Dewald.motoVeya@gmail.com` },
+  COOKIE_POLICY: { title: "Cookie Policy", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Cookie Policy
 Last updated: 2 October 2026
 
 1. WHAT COOKIES ARE
@@ -377,7 +383,8 @@ Mapping, authentication, payments, analytics, advertising, video, hosting and ot
 We may update this policy when our use of cookies or similar technologies changes. The Last Updated date will be revised when material changes are made.
 
 7. CONTACT
-Privacy contact: Dewald.motoVeya@gmail.com` },\n  LEGAL_NOTICE: { title: "Legal Notice", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Legal Notice
+Privacy contact: Dewald.motoVeya@gmail.com` },
+  LEGAL_NOTICE: { title: "Legal Notice", lastUpdated: "2 October 2026", version: "3.0", body: `MotoVeya Legal Notice
 Last updated: 2 October 2026
 
 1. SERVICE
@@ -399,4 +406,5 @@ Users remain responsible for content they submit and must have the rights and pe
 MotoVeya services are intended primarily for users in South Africa and are governed by South African law, subject to mandatory rights applicable to consumers in other jurisdictions.
 
 7. CONTACT
-Support: Dewald.motoVeya@gmail.com` },\n};\n
+Support: Dewald.motoVeya@gmail.com` },
+};
