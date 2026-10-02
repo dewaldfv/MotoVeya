@@ -156,21 +156,26 @@ export default function Home() {
   const groupSavedPlaces = visiblePlaces?.group || [];
 
   const { data: friends = [] } = useQuery({
-    queryKey: ['map-friends'],
+    queryKey: ['map-friends', me?.id],
     queryFn: async () => {
       const res = await base44.functions.invoke('get-friends-secure', {});
-      return (res.data?.friends || []).
-      filter((f) => f.lat != null && f.lng != null).
-      map((f) => ({
-        id: f.friend_id, user_id: f.user_id, name: f.name,
-        lat: f.lat, lng: f.lng,
-        speed_kmh: f.speed_kmh, heading: f.heading, battery_level: f.battery_level,
-        last_updated: f.last_updated, is_distress: f.distress, phone: f.phone,
-        avatar_url: f.avatar_url, is_favorite: f.is_favorite
-      }));
+      const data = (res.data?.friends || [])
+        .filter((f) => f.lat != null && f.lng != null)
+        .map((f) => ({
+          id: f.friend_id, user_id: f.user_id, name: f.name,
+          lat: f.lat, lng: f.lng,
+          speed_kmh: f.speed_kmh, heading: f.heading, battery_level: f.battery_level,
+          last_updated: f.last_updated, is_distress: f.distress, phone: f.phone,
+          avatar_url: f.avatar_url, is_favorite: f.is_favorite
+        }));
+      saveMapDataCache('friends:' + me?.id, data, 60 * 1000);
+      return data;
     },
+    initialData: () => me?.id ? (getMapDataCache('friends:' + me.id) || undefined) : undefined,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
     enabled: !!me?.id && deferMapData,
-    refetchInterval: 10000
+    refetchInterval: 10000,
   });
 
   const { data: activeGroupRide } = useQuery({
