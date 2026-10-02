@@ -248,8 +248,12 @@ export default function Settings() {
         </Section>
 
         <Section title="📄 Legal">
+          <Row icon={FileText} label="Privacy Policy" onClick={() => goLegal('privacy')} />
           <Row icon={FileText} label="End User License Agreement" onClick={() => goLegal('eula')} />
-          <Row icon={ScrollText} label="Terms & Conditions" onClick={() => goLegal('terms')} last />
+          <Row icon={ScrollText} label="Terms & Conditions" onClick={() => goLegal('terms')} />
+          <Row icon={FileText} label="Refund Policy" onClick={() => goLegal('refund')} />
+          <Row icon={FileText} label="Cookie Policy" onClick={() => goLegal('cookies')} />
+          <Row icon={FileText} label="Legal Notice" onClick={() => goLegal('legal')} last />
         </Section>
 
         <Section title="ℹ️ About">
