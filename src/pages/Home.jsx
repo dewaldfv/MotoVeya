@@ -112,24 +112,28 @@ export default function Home() {
 
   const { data: services = [] } = useQuery({
     queryKey: ['services'],
-    queryFn: async () => (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 100)) || [],
-    enabled: deferMapData
-  });
-
-  const { data: poiMarkers = [] } = useQuery({
-    queryKey: ['poi-markers'],
-    queryFn: async () => (await base44.entities.POIMarker.filter({ active: true }, '-created_date', 250)) || [],
-    enabled: deferMapData
+    queryFn: async () => {
+      const data = (await base44.entities.Service.filter({ status: 'approved' }, '-created_date', 100)) || [];
+      saveMapDataCache('services', data);
+      return data;
+    },
+    initialData: () => getMapDataCache('services') || undefined,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    enabled: deferMapData,
   });
 
   const { data: eventData = null } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
-      // Render ALL events on the map regardless of approval status, sorted by date.
-      const events = await base44.entities.Event.list('event_date', 100);
-      return events || [];
+      const data = (await base44.entities.Event.list('event_date', 100)) || [];
+      saveMapDataCache('events', data);
+      return data;
     },
-    enabled: deferMapData
+    initialData: () => getMapDataCache('events') || undefined,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    enabled: deferMapData,
   });
 
   const { data: eventFavoriteIds = [] } = useQuery({
