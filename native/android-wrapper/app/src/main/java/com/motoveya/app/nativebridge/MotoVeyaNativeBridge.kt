@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.content.pm.ActivityInfo
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -64,6 +65,18 @@ class MotoVeyaNativeBridge(
             ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         pendingLocationCallback?.let { invokeCallback(it, locationGranted) }
         pendingLocationCallback = null
+    }
+
+    @JavascriptInterface
+    fun setScreenOrientation(preference: String): Boolean {
+        activity.runOnUiThread {
+            activity.requestedOrientation = when (preference) {
+                "portrait" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                else -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+            }
+        }
+        return true
     }
 
     @JavascriptInterface
