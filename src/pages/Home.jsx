@@ -379,6 +379,52 @@ export default function Home() {
   const completedRoute = isActive ? session.navProgress?.completedRoute || [] : null;
   const remainingRoute = isActive ? session.navProgress?.remainingRoute || session.routeData?.coordinates || [] : null;
 
+  // Fuel stops ahead of the rider. Stations are matched to the active route
+  // corridor instead of simply showing the nearest station in a circle.
+  const routeFuelStops = useMemo(() => {
+    if (!isActive || !session.userPos || !remainingRoute?.length || !fuelStations.length) return [];
+    const route = remainingRoute;
+    const candidates = [];
+    const maxCorridorKm = 2.0;
+    const maxAheadKm = 120;
+
+    // Build cumulative distance along the remaining route.
+    const cumulative = [0];
+    for (let i = 1; i < route.length; i++) {
+      cumulative[i] = cumulative[i - 1] + haversine(route[i - 1][0], route[i - 1][1], route[i][0], route[i][1]);
+    }
+
+    for (const station of fuelStations) {
+      const slat = Number(station.lat), slng = Number(station.lng);
+      if (!Number.isFinite(slat) || !Number.isFinite(slng)) continue;
+
+      let best = { distance: Infinity, index: 0 };
+      for (let i = 0; i < route.length; i += 3) {
+        const d = haversine(slat, slng, route[i][0], route[i][1]);
+        if (d < best.distance) best = { distance: d, index: i };
+      }
+      const aheadKm = cumulative[best.index] ?? Infinity;
+      if (best.distance > maxCorridorKm || aheadKm < 0.2 || aheadKm > maxAheadKm) continue;
+
+      // This is deliberately labelled as an estimate: it represents the
+      // approximate extra travel caused by leaving and rejoining the route.
+      const detourKm = Math.max(0.1, best.distance * 2);
+      const riderDistanceKm = haversine(slat, slng, session.userPos[0], session.userPos[1]);
+
+      candidates.push({
+        ...station,
+        distance_ahead_km: Math.round(aheadKm * 10) / 10,
+        distance_from_rider_km: Math.round(riderDistanceKm * 10) / 10,
+        estimated_detour_km: Math.round(detourKm * 10) / 10,
+        route_offset_km: Math.round(best.distance * 10) / 10,
+      });
+    }
+
+    return candidates
+      .sort((a, b) => (a.distance_ahead_km + a.estimated_detour_km * 2) - (b.distance_ahead_km + b.estimated_detour_km * 2))
+      .slice(0, 5);
+  }, [isActive, session.userPos, remainingRoute, fuelStations]);
+
   const handleMyLocation = () => {
     // The location button is a pure "Return to Current Location" action.
     // It never locks the Home map or changes the user's ability to pan/zoom.
@@ -522,7 +568,8 @@ export default function Home() {
         user={me}
         bike={bikeData}
         notifyFriends={notifyFriends}
-        setNotifyFriends={setNotifyFriends} />
+        setNotifyFriends={setNotifyFriends}
+        routeFuelStops={routeFuelStops} />
       
 
       <MapControlSheet
