@@ -184,18 +184,15 @@ export default function BackgroundTracking() {
         {token && primaryDevice && (
           <div className="rounded-2xl border border-dashed border-border bg-secondary/30 p-4">
             <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              <AlertTriangle size={13} /> Native service contract
+              <AlertTriangle size={13} /> Background service
             </p>
             <p className="text-xs text-muted-foreground">
-              The native background service authenticates with this device token (never share it):
+              This device is registered with MotoVeya's native tracking service. The authentication token is stored locally and is intentionally never displayed.
             </p>
-            <code className="mt-2 block break-all rounded-lg bg-background p-2 text-[10px] text-foreground">{token}</code>
-            <p className="mt-3 text-xs text-muted-foreground">Endpoints (POST JSON with <code className="text-foreground">device_token</code>):</p>
-            <ul className="mt-1 space-y-1 text-[11px] text-muted-foreground">
-              <li><code className="text-foreground">{PUBLISHED_HOST}/functions/{NATIVE_TRACKING_ENDPOINTS.location}</code> — live position</li>
-              <li><code className="text-foreground">{PUBLISHED_HOST}/functions/{NATIVE_TRACKING_ENDPOINTS.riderLocation}</code> — group-ride progress</li>
-              <li><code className="text-foreground">{PUBLISHED_HOST}/functions/{NATIVE_TRACKING_ENDPOINTS.emergency}</code> — crash / rider-down</li>
-              <li><code className="text-foreground">{PUBLISHED_HOST}/functions/{NATIVE_TRACKING_ENDPOINTS.revoke}</code> — permission revoked</li>
+            <ul className="mt-3 space-y-1 text-[11px] text-muted-foreground">
+              <li>Live GPS updates continue while the screen is locked.</li>
+              <li>Temporary network failures retain the latest fix for retry.</li>
+              <li>Native crash detection remains active while the foreground service is running.</li>
             </ul>
           </div>
         )}
