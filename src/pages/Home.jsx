@@ -632,7 +632,7 @@ export default function Home() {
         notifyFriends={notifyFriends}
         setNotifyFriends={setNotifyFriends}
         routeFuelStops={displayRouteFuelStops}
-        fuelRouteWarning={fuelRouteWarning} />
+         />
       
 
       <MapControlSheet
