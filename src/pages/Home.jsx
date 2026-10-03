@@ -25,6 +25,7 @@ import {
   saveMapDataCache,
 } from '@/lib/rideCache';
 import { toast } from 'sonner';
+import { haversine } from '@/lib/navigation';
 
 const SA_CENTER = [-26.2041, 28.0473];
 const REMOTE_CATS = {
