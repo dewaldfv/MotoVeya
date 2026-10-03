@@ -52,16 +52,25 @@ export default function FuelStationMarkers({ stations = [], onMarkerClick }) {
       const position = { lat: Number(station.lat), lng: Number(station.lng) };
       let marker = markers.get(id);
 
+      const logoUrl = station.logo_url || station.marker_logo_url;
+      const markerIcon = logoUrl
+        ? {
+            url: logoUrl,
+            scaledSize: new g.maps.Size(32, 32),
+            anchor: new g.maps.Point(16, 16),
+          }
+        : {
+            url: ICON_URL,
+            scaledSize: new g.maps.Size(30, 30),
+            anchor: new g.maps.Point(15, 15),
+          };
+
       if (!marker) {
         marker = new g.maps.Marker({
           map,
           position,
-          icon: {
-            url: ICON_URL,
-            scaledSize: new g.maps.Size(30, 30),
-            anchor: new g.maps.Point(15, 15),
-          },
-          title: station.name || 'Fuel Station',
+          icon: markerIcon,
+          title: station.brand ? `${station.brand} — ${station.name || 'Fuel Station'}` : (station.name || 'Fuel Station'),
           zIndex: 300,
           optimized: true,
         });
