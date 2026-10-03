@@ -184,7 +184,7 @@ export default function Settings() {
         </Section>
 
         <Section title="📱 Screen Orientation">
-          {[['auto', 'Portrait - Locked', 'Follows your device'], ['landscape', 'Auto Rotate', 'Lock landscape']].map(([value, label, description], i) => (
+          {[['auto', 'Portrait - Locked'], ['landscape', 'Auto Rotate']].map(([value, label], i) => (
             <button
               key={value}
               type="button"
@@ -192,10 +192,7 @@ export default function Settings() {
               className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-secondary ${i < 1 ? 'border-b border-border' : ''}`}
             >
               <RotateCw size={20} className="text-primary" />
-              <div className="flex-1">
-                <span className="text-sm font-medium">{label}</span>
-                <p className="text-[11px] text-muted-foreground">{description}</p>
-              </div>
+              <span className="flex-1 text-sm font-medium">{label}</span>
               {screenOrientation === value && <Check size={20} className="text-primary" />}
             </button>
           ))}
