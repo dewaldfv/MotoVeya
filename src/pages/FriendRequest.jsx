@@ -5,14 +5,6 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import AuthLayout from '@/components/AuthLayout';
 
-const WEB_FALLBACK = 'https://web-motoveya.base44.app';
-
-function isInstalledApp() {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia?.('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true;
-}
-
 export default function FriendRequest() {
   const { code } = useParams();
   const navigate = useNavigate();
@@ -22,13 +14,6 @@ export default function FriendRequest() {
   useEffect(() => {
     if (!cleanCode) {
       setState({ status: 'error', name: '', message: 'This friend link is invalid.' });
-      return;
-    }
-
-    // Smart-link behaviour: a normal browser is the web fallback; an
-    // installed MotoVeya PWA stays inside the app and processes the invite.
-    if (!isInstalledApp()) {
-      window.location.replace(`${WEB_FALLBACK}/friend/${encodeURIComponent(cleanCode)}`);
       return;
     }
 
