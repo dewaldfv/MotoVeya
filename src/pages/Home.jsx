@@ -631,8 +631,7 @@ export default function Home() {
         bike={bikeData}
         notifyFriends={notifyFriends}
         setNotifyFriends={setNotifyFriends}
-        routeFuelStops={displayRouteFuelStops}
-         />
+        routeFuelStops={displayRouteFuelStops} />
       
 
       <MapControlSheet
