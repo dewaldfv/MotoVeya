@@ -1,0 +1,9 @@
+{
+  "name": "MotoVeya",
+  "short_name": "MotoVeya",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0A0A0A",
+  "background_color": "#FFFFFF"
+}
