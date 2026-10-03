@@ -18,6 +18,7 @@ export default function NavigationOverlay({
   bike,
   notifyFriends,
   setNotifyFriends,
+  routeFuelStops = [],
 }) {
   const {
     isActive, rideMode, speed, speedLimit, navProgress, destination,
@@ -101,6 +102,25 @@ export default function NavigationOverlay({
           maneuver={navProgress.nextStep.maneuver}
           distanceToManeuver={navProgress.distanceToManeuver}
         />
+      )}
+
+      {routeFuelStops.length > 0 && (
+        <div className="absolute left-3 right-3 z-[16] landscape:max-w-sm landscape:mx-auto" style={{ bottom: nearbyService ? 'calc(10.5rem + env(safe-area-inset-bottom))' : 'calc(7rem + env(safe-area-inset-bottom))' }}>
+          <div className="mx-auto flex max-w-sm items-center gap-2 rounded-2xl bg-card/95 p-2.5 shadow-xl backdrop-blur-lg">
+            {routeFuelStops[0].logo_url ? (
+              <img src={routeFuelStops[0].logo_url} alt="" className="h-9 w-9 shrink-0 rounded-lg object-contain bg-white p-1" />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-lg">⛽</span>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold">{routeFuelStops[0].brand || 'Fuel Station'} · {routeFuelStops[0].name}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {routeFuelStops[0].distance_ahead_km} km ahead · ~{routeFuelStops[0].estimated_detour_km} km detour
+              </p>
+            </div>
+            <button onClick={() => handleAddStop(routeFuelStops[0])} className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground">Add Stop</button>
+          </div>
+        </div>
       )}
 
       {nearbyService && (
