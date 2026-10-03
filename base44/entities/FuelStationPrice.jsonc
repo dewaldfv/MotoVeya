@@ -1,0 +1,68 @@
+{
+  "name": "FuelStationPrice",
+  "type": "object",
+  "properties": {
+    "station_id": {
+      "type": "string"
+    },
+    "fuel_type": {
+      "type": "string",
+      "enum": [
+        "93",
+        "95",
+        "diesel_50ppm",
+        "diesel_500ppm",
+        "lpg",
+        "other"
+      ]
+    },
+    "price_per_litre": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string",
+      "default": "ZAR"
+    },
+    "source": {
+      "type": "string"
+    },
+    "source_url": {
+      "type": "string"
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "station_id",
+    "fuel_type",
+    "price_per_litre"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

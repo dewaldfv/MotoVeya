@@ -1,0 +1,52 @@
+{
+  "name": "FuelBrand",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "normalized_name": {
+      "type": "string"
+    },
+    "logo_url": {
+      "type": "string"
+    },
+    "marker_logo_url": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "primary_colour": {
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "source": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
