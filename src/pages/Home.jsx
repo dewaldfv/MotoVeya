@@ -428,6 +428,65 @@ export default function Home() {
       .slice(0, 5);
   }, [isActive, session.userPos, remainingRoute, fuelStations]);
 
+  // Calculate actual road detours for the best three fuel candidates. This replaces
+  // the rough straight-line estimate with an OSRM comparison while keeping requests bounded.
+  useEffect(() => {
+    if (!isActive || !session.userPos || !session.destination || routeFuelStops.length === 0) {
+      setExactFuelDetours({});
+      return;
+    }
+    const origin = [Number(session.userPos[0]), Number(session.userPos[1])];
+    const destination = [Number(session.destination.lng), Number(session.destination.lat)];
+    if (![...origin, ...destination].every(Number.isFinite)) return;
+    const candidates = routeFuelStops.slice(0, 3).filter((s) => Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng)));
+    const cacheKey = `${origin[0].toFixed(2)},${origin[1].toFixed(2)}|${destination[0].toFixed(3)},${destination[1].toFixed(3)}|${candidates.map((s) => s.id || `${s.lat},${s.lng}`).join(',')}`;
+    const cached = fuelDetourCacheRef.current.get(cacheKey);
+    if (cached && Date.now() - cached.at < 30000) {
+      setExactFuelDetours(cached.data);
+      return;
+    }
+    let cancelled = false;
+    const getRoute = async (points) => {
+      const coords = points.map(([lng, lat]) => `${lng},${lat}`).join(';');
+      const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`);
+      if (!response.ok) throw new Error(`OSRM ${response.status}`);
+      const json = await response.json();
+      const route = json.routes?.[0];
+      if (!route) throw new Error('No route returned');
+      return { km: Number(route.distance) / 1000, minutes: Number(route.duration) / 60000 };
+    };
+    (async () => {
+      try {
+        const direct = await getRoute([origin, destination]);
+        const results = {};
+        await Promise.all(candidates.map(async (station) => {
+          try {
+            const via = await getRoute([origin, [Number(station.lng), Number(station.lat)], destination]);
+            results[station.id || `${station.lat},${station.lng}`] = {
+              exact_detour_km: Math.max(0, Math.round((via.km - direct.km) * 10) / 10),
+              exact_detour_minutes: Math.max(0, Math.round((via.minutes - direct.minutes) * 10) / 10),
+              road_distance_km: Math.round(via.km * 10) / 10,
+            };
+          } catch (error) {
+            console.warn('Fuel stop detour routing failed:', error);
+          }
+        }));
+        if (cancelled) return;
+        fuelDetourCacheRef.current.set(cacheKey, { at: Date.now(), data: results });
+        setExactFuelDetours(results);
+      } catch (error) {
+        if (!cancelled) console.warn('Fuel route baseline failed:', error);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isActive, session.userPos?.[0], session.userPos?.[1], session.destination?.lat, session.destination?.lng, routeFuelStops]);
+
+  const displayRouteFuelStops = useMemo(() => routeFuelStops.map((station) => {
+    const key = station.id || `${station.lat},${station.lng}`;
+    const exact = exactFuelDetours[key];
+    return exact ? { ...station, ...exact, detour_is_exact: true } : station;
+  }), [routeFuelStops, exactFuelDetours]);
+
   const handleMyLocation = () => {
     // The location button is a pure "Return to Current Location" action.
     // It never locks the Home map or changes the user's ability to pan/zoom.
