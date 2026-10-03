@@ -267,8 +267,7 @@ export default function Settings() {
 
         <Section title="🔒 Privacy & Security">
           <Row icon={MapPin} label="Location Sharing" onClick={() => navigate('/location-sharing')} />
-          <Row icon={Eye} label="Privacy Settings" onClick={() => navigate('/privacy')} />
-          <Row icon={Shield} label="Privacy Policy" onClick={() => goLegal('privacy')} last />
+          <Row icon={Eye} label="Privacy Settings" onClick={() => navigate('/privacy')} last />
         </Section>
 
         <Section title="📄 Legal">
