@@ -19,6 +19,28 @@ export async function runEmergencyResponse(base44, user, body) {
   const riderName = body.rider_name || user.full_name || 'Rider';
   const severity = body.severity || 'low';
   const timestamp = new Date().toISOString();
+
+  // Prevent the WebView detector and native locked-screen detector from
+  // generating duplicate Rider Down incidents for the same event.
+  try {
+    const recent = await svc.entities.CrashAlert.filter({ rider_id: user.id, status: 'active' }, '-timestamp', 5);
+    const cutoff = Date.now() - 2 * 60 * 1000;
+    const duplicate = (recent || []).find((a) => a.timestamp && new Date(a.timestamp).getTime() >= cutoff);
+    if (duplicate) {
+      return {
+        status: 200,
+        body: {
+          alert: duplicate,
+          rider_down: true,
+          duplicate: true,
+          contact_notified: !!duplicate.notified_emergency_contact,
+          nearby_notified: !!duplicate.notified_nearby_riders,
+        },
+      };
+    }
+  } catch (e) {
+    console.error('Rider Down duplicate check failed:', e);
+  }
   const trackingLink = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`;
   const localTime = new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' });
 
