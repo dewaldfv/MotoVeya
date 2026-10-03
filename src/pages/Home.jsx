@@ -461,10 +461,16 @@ export default function Home() {
         const results = {};
         await Promise.all(candidates.map(async (station) => {
           try {
-            const via = await getRoute([origin, [Number(station.lng), Number(station.lat)], destination]);
+            const stationPoint = [Number(station.lng), Number(station.lat)];
+            const [toStation, via] = await Promise.all([
+              getRoute([origin, stationPoint]),
+              getRoute([origin, stationPoint, destination]),
+            ]);
             results[station.id || `${station.lat},${station.lng}`] = {
               exact_detour_km: Math.max(0, Math.round((via.km - direct.km) * 10) / 10),
               exact_detour_minutes: Math.max(0, Math.round((via.minutes - direct.minutes) * 10) / 10),
+              road_distance_to_station_km: Math.round(toStation.km * 10) / 10,
+              road_minutes_to_station: Math.round(toStation.minutes * 10) / 10,
               road_distance_km: Math.round(via.km * 10) / 10,
             };
           } catch (error) {
@@ -488,8 +494,11 @@ export default function Home() {
     const exact = exactFuelDetours[key];
     const enriched = exact ? { ...station, ...exact, detour_is_exact: true } : { ...station };
     const usableRange = Number(session.fuelRange);
-    const roadDistance = Number(enriched.distance_ahead_km) + Number(enriched.exact_detour_km || enriched.estimated_detour_km || 0);
+    const roadDistance = Number.isFinite(Number(enriched.road_distance_to_station_km))
+      ? Number(enriched.road_distance_to_station_km)
+      : Number(enriched.distance_ahead_km) + Number(enriched.exact_detour_km || enriched.estimated_detour_km || 0);
     if (Number.isFinite(usableRange) && Number.isFinite(roadDistance)) {
+      enriched.fuel_reach_distance_km = Math.round(roadDistance * 10) / 10;
       enriched.fuel_reach_status = roadDistance <= usableRange * 0.8 ? 'safe' : roadDistance <= usableRange ? 'reserve' : 'beyond_range';
     } else {
       enriched.fuel_reach_status = 'unknown';
