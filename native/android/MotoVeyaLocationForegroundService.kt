@@ -53,6 +53,7 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
     private lateinit var networkExecutor: java.util.concurrent.ExecutorService
     @Volatile private var deviceToken: String? = null
     @Volatile private var latestUnsentLocation: Location? = null
+    @Volatile private var lastKnownLocation: Location? = null
     @Volatile private var postInFlight = false
     private var locationCallback: LocationCallback? = null
     private lateinit var sensorManager: SensorManager
@@ -136,6 +137,7 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
             override fun onLocationResult(result: LocationResult) {
                 result.locations.forEach { location ->
                     latestUnsentLocation = location
+                    lastKnownLocation = Location(location)
                     updateCrashSpeed(location)
                     persistPendingLocation(location)
                     postLocationIfPossible()
@@ -290,7 +292,7 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
         if (!corroborated) return
 
         crashCooldownUntil = now + 60000L
-        val location = latestUnsentLocation ?: return
+        val location = lastKnownLocation ?: latestUnsentLocation ?: return
         val token = deviceToken ?: return
         val g = strongestG
         val rot = strongestRotation
@@ -361,6 +363,7 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
         stopCrashDetection()
         deviceToken = null
         latestUnsentLocation = null
+        lastKnownLocation = null
         clearPendingLocation()
         if (::networkExecutor.isInitialized) networkExecutor.shutdownNow()
         stopForeground(STOP_FOREGROUND_REMOVE)
