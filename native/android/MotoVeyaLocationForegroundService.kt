@@ -24,8 +24,12 @@ class MotoVeyaLocationForegroundService : Service() {
         private const val NOTIFICATION_ID = 4401
         private const val LOCATION_INTERVAL_MS = 3000L
         private const val FASTEST_INTERVAL_MS = 1500L
+        private const val PREFS = "motoveya_tracking"
+        private const val TOKEN_KEY = "device_token"
 
         fun start(context: android.content.Context, token: String) {
+            context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit()
+                .putString(TOKEN_KEY, token).apply()
             val intent = Intent(context, MotoVeyaLocationForegroundService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_DEVICE_TOKEN, token)
@@ -41,13 +45,19 @@ class MotoVeyaLocationForegroundService : Service() {
     }
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private var deviceToken: String? = null
+    private lateinit var networkExecutor: java.util.concurrent.ExecutorService
+    @Volatile private var deviceToken: String? = null
+    @Volatile private var latestUnsentLocation: Location? = null
+    @Volatile private var postInFlight = false
     private var locationCallback: LocationCallback? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        networkExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        deviceToken = getSharedPreferences(PREFS, MODE_PRIVATE).getString(TOKEN_KEY, null)
+        restorePendingLocation()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -58,13 +68,26 @@ class MotoVeyaLocationForegroundService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_START -> {
-                deviceToken = intent.getStringExtra(EXTRA_DEVICE_TOKEN)
+                intent.getStringExtra(EXTRA_DEVICE_TOKEN)?.takeIf { it.length >= 32 }?.let {
+                    deviceToken = it
+                    getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(TOKEN_KEY, it).apply()
+                }
                 if (deviceToken.isNullOrBlank()) {
                     stopSelf()
                     return START_NOT_STICKY
                 }
                 startForeground(NOTIFICATION_ID, buildNotification("Ride tracking active"))
                 startTracking()
+            }
+            null -> {
+                // Android can recreate a START_STICKY service with a null Intent.
+                if (deviceToken.isNullOrBlank()) {
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+                startForeground(NOTIFICATION_ID, buildNotification("Ride tracking resumed"))
+                startTracking()
+                postLocationIfPossible()
             }
         }
         return START_STICKY
@@ -90,7 +113,9 @@ class MotoVeyaLocationForegroundService : Service() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 result.locations.forEach { location ->
-                    postLocation(location)
+                    latestUnsentLocation = location
+                    persistPendingLocation(location)
+                    postLocationIfPossible()
                     updateNotification(location)
                 }
             }
@@ -103,39 +128,72 @@ class MotoVeyaLocationForegroundService : Service() {
         )
     }
 
-    private fun postLocation(location: Location) {
-        val token = deviceToken ?: return
-        Thread {
+    private fun postLocationIfPossible() {
+        if (postInFlight || latestUnsentLocation == null || deviceToken.isNullOrBlank()) return
+        postInFlight = true
+        val location = latestUnsentLocation ?: run { postInFlight = false; return }
+        val token = deviceToken ?: run { postInFlight = false; return }
+
+        networkExecutor.execute {
+            var success = false
             try {
-                val url = java.net.URL("https://motoveya.base44.app/functions/native-location")
-                val connection = (url.openConnection() as java.net.HttpURLConnection).apply {
+                val payload = org.json.JSONObject().apply {
+                    put("device_token", token)
+                    put("lat", location.latitude)
+                    put("lng", location.longitude)
+                    if (location.hasSpeed()) put("speed_kmh", location.speed * 3.6)
+                    if (location.hasBearing()) put("heading", location.bearing.toDouble())
+                    put("accuracy", location.accuracy)
+                }.toString()
+                val connection = (java.net.URL("https://motoveya.base44.app/functions/native-location").openConnection() as java.net.HttpURLConnection).apply {
                     requestMethod = "POST"
                     connectTimeout = 10000
                     readTimeout = 10000
                     doOutput = true
                     setRequestProperty("Content-Type", "application/json")
                 }
-
-                val speedKmh = if (location.hasSpeed()) location.speed * 3.6 else null
-                val heading = if (location.hasBearing()) location.bearing.toDouble() else null
-                val escapedToken = token.replace("\\", "\\\\").replace("\"", "\\\"")
-                val payload = buildString {
-                    append("{")
-                    append("\"device_token\":\"").append(escapedToken).append("\",")
-                    append("\"lat\":").append(location.latitude).append(",")
-                    append("\"lng\":").append(location.longitude).append(",")
-                    if (speedKmh != null) append("\"speed_kmh\":").append(speedKmh).append(",")
-                    if (heading != null) append("\"heading\":").append(heading).append(",")
-                    append("\"accuracy\":").append(location.accuracy)
-                    append("}")
-                }
                 connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
-                try { connection.inputStream.use { it.readBytes() } } catch (_: Exception) {}
+                val code = connection.responseCode
+                success = code in 200..299
+                try { (if (success) connection.inputStream else connection.errorStream)?.use { it.readBytes() } } catch (_: Exception) {}
                 connection.disconnect()
             } catch (_: Exception) {
-                // Keep collecting GPS while offline; the next fix will retry.
+                success = false
+            } finally {
+                if (success && latestUnsentLocation === location) {
+                    latestUnsentLocation = null
+                    clearPendingLocation()
+                }
+                postInFlight = false
             }
-        }.start()
+            if (!success) {
+                android.os.Handler(mainLooper).postDelayed({ postLocationIfPossible() }, 3000L)
+            }
+        }
+    }
+
+    private fun persistPendingLocation(location: Location) {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+            .putString("pending_lat", location.latitude.toString())
+            .putString("pending_lng", location.longitude.toString())
+            .putFloat("pending_accuracy", location.accuracy)
+            .apply()
+    }
+
+    private fun restorePendingLocation() {
+        val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+        val lat = prefs.getString("pending_lat", null)?.toDoubleOrNull() ?: return
+        val lng = prefs.getString("pending_lng", null)?.toDoubleOrNull() ?: return
+        latestUnsentLocation = Location("motoveya_pending").apply {
+            latitude = lat
+            longitude = lng
+            prefs.getFloat("pending_accuracy", -1f).takeIf { it >= 0f }?.let { accuracy = it }
+        }
+    }
+
+    private fun clearPendingLocation() {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+            .remove("pending_lat").remove("pending_lng").remove("pending_accuracy").apply()
     }
 
     private fun buildNotification(status: String): Notification =
@@ -160,6 +218,9 @@ class MotoVeyaLocationForegroundService : Service() {
         locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
         locationCallback = null
         deviceToken = null
+        latestUnsentLocation = null
+        clearPendingLocation()
+        if (::networkExecutor.isInitialized) networkExecutor.shutdownNow()
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
