@@ -10,7 +10,6 @@ import { usePremium } from '@/hooks/usePremium';
 import SubscriptionCard from '@/components/SubscriptionCard';
 import { enableNotifications, notificationsSupported, notificationPermission } from '@/lib/enableNotifications';
 import { toast } from 'sonner';
-import { applyScreenOrientation } from '@/lib/screenOrientation';
 
 const APP_VERSION = '1.0.0';
 
