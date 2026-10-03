@@ -10,6 +10,7 @@ import { usePremium } from '@/hooks/usePremium';
 import SubscriptionCard from '@/components/SubscriptionCard';
 import { enableNotifications, notificationsSupported, notificationPermission } from '@/lib/enableNotifications';
 import { toast } from 'sonner';
+import { getScreenOrientationPreference, setScreenOrientationPreference, applyScreenOrientation } from '@/lib/screenOrientation';
 
 const APP_VERSION = '1.0.0';
 
@@ -46,6 +47,7 @@ export default function Settings() {
   const [autoJoinVoice, setAutoJoinVoice] = useState(false);
   const [notifPerm, setNotifPerm] = useState(() => notificationPermission());
   const [enablingNotif, setEnablingNotif] = useState(false);
+  const [screenOrientation, setScreenOrientation] = useState(() => getScreenOrientationPreference());
   const { isPremium, refresh: refreshPremium } = usePremium();
 
   useEffect(() => {
@@ -84,6 +86,17 @@ export default function Settings() {
 
 
   const goLegal = (doc) => navigate(`/legal/${doc}`);
+
+  const handleScreenOrientationChange = async (value) => {
+    setScreenOrientation(value);
+    setScreenOrientationPreference(value);
+    const applied = await applyScreenOrientation(value);
+    if (value !== 'auto' && !applied) {
+      toast.info('Your browser/device controls screen rotation for this mode.');
+    } else {
+      toast.success(`Screen orientation: ${value === 'auto' ? 'Auto' : value === 'portrait' ? 'Portrait' : 'Landscape'}`);
+    }
+  };
 
   const toggleAutoJoinVoice = async (checked) => {
     setAutoJoinVoice(checked);
@@ -171,9 +184,23 @@ export default function Settings() {
         </Section>
 
         <Section title="📱 Screen Orientation">
-          <Row icon={RotateCw} label="Auto-Rotate" value="Follows device" />
+          {[['auto', 'Auto-Rotate', 'Follows your device'], ['portrait', 'Portrait', 'Lock portrait'], ['landscape', 'Landscape', 'Lock landscape']].map(([value, label, description], i) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => handleScreenOrientationChange(value)}
+              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-secondary ${i < 2 ? 'border-b border-border' : ''}`}
+            >
+              <RotateCw size={20} className="text-primary" />
+              <div className="flex-1">
+                <span className="text-sm font-medium">{label}</span>
+                <p className="text-[11px] text-muted-foreground">{description}</p>
+              </div>
+              {screenOrientation === value && <Check size={20} className="text-primary" />}
+            </button>
+          ))}
           <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-            The app rotates automatically with your device. If Rotation Lock is enabled on your phone, the app respects that and stays in the current orientation.
+            Auto allows MotoVeya to follow your device. Portrait or Landscape locks the app where supported. Your phone's system Rotation Lock can still override Auto.
           </p>
         </Section>
 
