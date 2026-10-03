@@ -68,6 +68,9 @@ const AuthenticatedApp = () => {
     setIntroDone(true);
     if (authError) return; // let the auth error handler below deal with it
     const isGuest = localStorage.getItem('motogo_guest_mode') === 'true';
+    const currentPath = window.location.pathname;
+    const isPublicAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password', '/welcome', '/oauth/consent', '/web-auth-bridge'].includes(currentPath) || currentPath.startsWith('/friend/');
+    if (isPublicAuthRoute) return; // let auth/public pages render for unauthenticated visitors
     if (isFirstLaunch && !isAuthenticated && !isGuest) {
       navigate('/welcome', { replace: true });
     } else if (!isAuthenticated && !isGuest) {
@@ -90,9 +93,13 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
+      const currentPath = window.location.pathname;
+      const isPublicAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password', '/welcome', '/oauth/consent', '/web-auth-bridge'].includes(currentPath) || currentPath.startsWith('/friend/');
+      if (!isPublicAuthRoute) {
+        // Redirect to login automatically
+        navigateToLogin();
+        return null;
+      }
     }
   }
 
