@@ -481,33 +481,11 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [isActive, session.userPos?.[0], session.userPos?.[1], session.destination?.lat, session.destination?.lng, routeFuelStops]);
 
-  // Treat 80% of the calculated range as the planning range. This is deliberately
-  // conservative because real consumption changes with speed, wind, hills, load and riding style.
-  const fuelPlanningRangeKm = Number.isFinite(Number(fuelRange)) ? Number(fuelRange) * 0.8 : null;
   const displayRouteFuelStops = useMemo(() => routeFuelStops.map((station) => {
     const key = station.id || `${station.lat},${station.lng}`;
     const exact = exactFuelDetours[key];
-    const enriched = exact ? { ...station, ...exact, detour_is_exact: true } : { ...station };
-    const ahead = Number(enriched.distance_ahead_km);
-    if (!Number.isFinite(fuelPlanningRangeKm) || !Number.isFinite(ahead)) {
-      return { ...enriched, fuel_reach_status: 'unknown' };
-    }
-    if (ahead <= fuelPlanningRangeKm) return { ...enriched, fuel_reach_status: 'safe', fuel_margin_km: Math.round((fuelPlanningRangeKm - ahead) * 10) / 10 };
-    if (ahead <= Number(fuelRange)) return { ...enriched, fuel_reach_status: 'reserve', fuel_margin_km: Math.round((Number(fuelRange) - ahead) * 10) / 10 };
-    return { ...enriched, fuel_reach_status: 'unreachable', fuel_margin_km: Math.round((ahead - Number(fuelRange)) * 10) / 10 };
-  }).sort((a, b) => {
-    const rank = { safe: 0, reserve: 1, unknown: 2, unreachable: 3 };
-    return (rank[a.fuel_reach_status] - rank[b.fuel_reach_status]) || (a.distance_ahead_km - b.distance_ahead_km);
-  }), [routeFuelStops, exactFuelDetours, fuelPlanningRangeKm, fuelRange]);
-
-  const fuelRouteWarning = useMemo(() => {
-    if (!isActive || !fuelStations.length || fuelPlanningRangeKm == null) return null;
-    const safe = displayRouteFuelStops.find((s) => s.fuel_reach_status === 'safe');
-    if (safe) return null;
-    const reserve = displayRouteFuelStops.find((s) => s.fuel_reach_status === 'reserve');
-    if (reserve) return { level: 'reserve', station: reserve };
-    return { level: 'critical', station: displayRouteFuelStops[0] || null };
-  }, [isActive, fuelStations.length, fuelPlanningRangeKm, displayRouteFuelStops]);
+    return exact ? { ...station, ...exact, detour_is_exact: true } : station;
+  }), [routeFuelStops, exactFuelDetours]);
 
   const handleMyLocation = () => {
     // The location button is a pure "Return to Current Location" action.
