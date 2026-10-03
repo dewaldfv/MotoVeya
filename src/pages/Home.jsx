@@ -481,11 +481,21 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [isActive, session.userPos?.[0], session.userPos?.[1], session.destination?.lat, session.destination?.lng, routeFuelStops]);
 
+  // Fuel reachability is advisory only: it never changes map state or navigation.
+  // Keep it inside the existing fuel-stop dataset so the map remains untouched.
   const displayRouteFuelStops = useMemo(() => routeFuelStops.map((station) => {
-    const key = station.id || `${station.lat},${station.lng}`;
+    const key = station.id || String(station.lat) + ',' + String(station.lng);
     const exact = exactFuelDetours[key];
-    return exact ? { ...station, ...exact, detour_is_exact: true } : station;
-  }), [routeFuelStops, exactFuelDetours]);
+    const enriched = exact ? { ...station, ...exact, detour_is_exact: true } : { ...station };
+    const usableRange = Number(session.fuelRange);
+    const roadDistance = Number(enriched.distance_ahead_km) + Number(enriched.exact_detour_km || enriched.estimated_detour_km || 0);
+    if (Number.isFinite(usableRange) && Number.isFinite(roadDistance)) {
+      enriched.fuel_reach_status = roadDistance <= usableRange * 0.8 ? 'safe' : roadDistance <= usableRange ? 'reserve' : 'beyond_range';
+    } else {
+      enriched.fuel_reach_status = 'unknown';
+    }
+    return enriched;
+  }), [routeFuelStops, exactFuelDetours, session.fuelRange]);
 
   const handleMyLocation = () => {
     // The location button is a pure "Return to Current Location" action.
