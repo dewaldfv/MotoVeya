@@ -14,7 +14,6 @@ export function getScreenOrientationPreference() {
 export function setScreenOrientationPreference(value) {
   const next = ORIENTATION_OPTIONS.includes(value) ? value : 'auto';
   try { localStorage.setItem(STORAGE_KEY, next); } catch (_) {}
-  applyScreenOrientation(next);
   return next;
 }
 
@@ -26,26 +25,48 @@ export async function applyScreenOrientation(preference = getScreenOrientationPr
     }
   } catch (_) {}
 
-  // Web/PWA: Screen Orientation API is supported only in some contexts.
+  // Web/PWA: Android browsers generally require fullscreen/installed-app
+  // context before they will honor Screen Orientation API locks.
   try {
     const orientation = window.screen && window.screen.orientation;
-    if (!orientation || typeof orientation.lock !== 'function') return false;
+    if (!orientation) return false;
+
     if (preference === 'auto') {
-      if (typeof orientation.unlock === 'function') orientation.unlock();
+      if (document.fullscreenElement && document.exitFullscreen) {
+        try { await document.exitFullscreen(); } catch (_) {}
+      }
+      if (typeof orientation.unlock === 'function') {
+        try { orientation.unlock(); } catch (_) {}
+      }
       return true;
     }
+
     const lockType = preference === 'landscape' ? 'landscape' : 'portrait';
+
+    // A user tapping the Settings option is a user gesture. Use that gesture
+    // to enter fullscreen when required, then lock the physical screen.
+    if (!document.fullscreenElement && document.documentElement?.requestFullscreen) {
+      try {
+        await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      } catch (_) {
+        // Installed PWAs may already be allowed to lock without fullscreen.
+      }
+    }
+
+    if (typeof orientation.lock !== 'function') return !!document.fullscreenElement;
     await orientation.lock(lockType);
     return true;
   } catch (_) {
-    // Browsers may reject lock() outside fullscreen/installed-app contexts.
     return false;
   }
 }
 
 export function initScreenOrientation() {
   const preference = getScreenOrientationPreference();
-  // Native wrapper can apply immediately; web browsers may reject until user gesture.
-  applyScreenOrientation(preference);
+  // Do not request fullscreen during startup. Native wrappers can apply the
+  // saved preference immediately; browsers can apply a lock after user gesture.
+  if (window.MotoVeyaNative && typeof window.MotoVeyaNative.setScreenOrientation === 'function') {
+    applyScreenOrientation(preference);
+  }
   return preference;
 }
