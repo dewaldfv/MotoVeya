@@ -115,7 +115,7 @@ export default function NavigationOverlay({
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-bold">{routeFuelStops[0].brand || 'Fuel Station'} · {routeFuelStops[0].name}</p>
               <p className="text-[11px] text-muted-foreground">
-                {routeFuelStops[0].distance_ahead_km} km ahead · ~{routeFuelStops[0].estimated_detour_km} km detour
+                {routeFuelStops[0].distance_ahead_km} km ahead · {routeFuelStops[0].detour_is_exact ? (routeFuelStops[0].exact_detour_km + ' km detour · +' + routeFuelStops[0].exact_detour_minutes + ' min') : ('~' + routeFuelStops[0].estimated_detour_km + ' km estimated detour')}
               </p>
             </div>
             <button onClick={() => handleAddStop(routeFuelStops[0])} className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground">Add Stop</button>
