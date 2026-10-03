@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Navigation, X, Loader2 } from 'lucide-react';
-import NavigationCard from '@/components/NavigationCard';
 import { useVoiceNavigation } from '@/hooks/useVoiceNavigation';
 import NavActionButtons from '@/components/NavActionButtons';
 import EmergencyOverlay from '@/components/EmergencyOverlay';
