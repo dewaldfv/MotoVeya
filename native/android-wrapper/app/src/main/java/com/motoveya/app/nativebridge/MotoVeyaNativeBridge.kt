@@ -71,8 +71,8 @@ class MotoVeyaNativeBridge(
     fun setScreenOrientation(preference: String): Boolean {
         activity.runOnUiThread {
             activity.requestedOrientation = when (preference) {
-                "portrait" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-                "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                "portrait" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                "landscape" -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 else -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
             }
         }
