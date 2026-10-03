@@ -184,7 +184,7 @@ export default function Settings() {
         </Section>
 
         <Section title="📱 Screen Orientation">
-          {[['auto', 'Auto-Rotate', 'Follows your device'], ['landscape', 'Landscape', 'Lock landscape']].map(([value, label, description], i) => (
+          {[['auto', 'Portrait - Locked', 'Follows your device'], ['landscape', 'Auto Rotate', 'Lock landscape']].map(([value, label, description], i) => (
             <button
               key={value}
               type="button"
