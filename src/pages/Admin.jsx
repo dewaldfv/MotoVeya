@@ -12,6 +12,7 @@ import EditUserDialog from '@/components/admin/EditUserDialog';
 import POISubmitDialog from '@/components/services/POISubmitDialog';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
 import ArchivedEventPhotos from '@/components/admin/ArchivedEventPhotos';
+import BroadcastCard from '@/components/admin/BroadcastCard';
 import { toast } from 'sonner';
 
 export default function Admin() {
@@ -112,6 +113,10 @@ export default function Admin() {
         <div className="rounded-2xl bg-card p-3 text-center"><Users size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{users.length}</div><div className="text-[10px] text-muted-foreground">Users</div></div>
         <div className="rounded-2xl bg-card p-3 text-center"><Calendar size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{allEvents.length}</div><div className="text-[10px] text-muted-foreground">Events</div></div>
         <div className="rounded-2xl bg-card p-3 text-center"><Wrench size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{pendingServices.length}</div><div className="text-[10px] text-muted-foreground">Services</div></div>
+      </div>
+
+      <div className="mb-4">
+        <BroadcastCard />
       </div>
 
       <Tabs defaultValue="events">
