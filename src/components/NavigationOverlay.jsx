@@ -19,6 +19,7 @@ export default function NavigationOverlay({
   notifyFriends,
   setNotifyFriends,
   routeFuelStops = [],
+  fuelRouteWarning = null,
 }) {
   const {
     isActive, rideMode, speed, speedLimit, navProgress, destination,
@@ -102,6 +103,18 @@ export default function NavigationOverlay({
           maneuver={navProgress.nextStep.maneuver}
           distanceToManeuver={navProgress.distanceToManeuver}
         />
+      )}
+
+      {fuelRouteWarning && (
+        <div className="absolute left-3 right-3 z-[17] landscape:max-w-sm landscape:mx-auto" style={{ top: 'calc(4.25rem + env(safe-area-inset-top))' }}>
+          <div className={`mx-auto flex max-w-sm items-center gap-2 rounded-2xl p-2.5 shadow-xl backdrop-blur-lg ${fuelRouteWarning.level === 'critical' ? 'bg-destructive/95 text-destructive-foreground' : 'bg-amber-500/95 text-white'}`}>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-lg">⛽</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black">{fuelRouteWarning.level === 'critical' ? 'FUEL RANGE WARNING' : 'FUEL RESERVE WARNING'}</p>
+              <p className="truncate text-[11px] opacity-90">{fuelRouteWarning.station ? `${fuelRouteWarning.station.name || 'Fuel station'} is ${fuelRouteWarning.station.distance_ahead_km} km ahead.` : 'No suitable fuel station found within the current planning range.'}</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {routeFuelStops.length > 0 && (
