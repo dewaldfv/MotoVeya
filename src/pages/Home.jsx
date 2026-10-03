@@ -66,6 +66,8 @@ export default function Home() {
   const [notifyFriends, setNotifyFriends] = useState(true);
   const [savedPlacePosition, setSavedPlacePosition] = useState(null);
   const [deferMapData, setDeferMapData] = useState(false);
+  const [exactFuelDetours, setExactFuelDetours] = useState({});
+  const fuelDetourCacheRef = useRef(new Map());
   const userPosRef = useRef(null);
   const { visible: mapUiVisible, toggle: toggleMapUi } = useIdleMapUi();
 
