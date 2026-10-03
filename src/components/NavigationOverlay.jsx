@@ -117,6 +117,19 @@ export default function NavigationOverlay({
               <p className="text-[11px] text-muted-foreground">
                 {routeFuelStops[0].distance_ahead_km} km ahead · {routeFuelStops[0].detour_is_exact ? (routeFuelStops[0].exact_detour_km + ' km detour · +' + routeFuelStops[0].exact_detour_minutes + ' min') : ('~' + routeFuelStops[0].estimated_detour_km + ' km estimated detour')}
               </p>
+              {routeFuelStops[0].fuel_reach_status !== 'unknown' && (
+                <p className="mt-0.5 text-[10px] font-semibold">
+                  {routeFuelStops[0].fuel_reach_status === 'safe' && (
+                    <span className="text-green-600">✓ Within comfortable fuel range</span>
+                  )}
+                  {routeFuelStops[0].fuel_reach_status === 'reserve' && (
+                    <span className="text-amber-600">⚠ Within range, but approaching reserve</span>
+                  )}
+                  {routeFuelStops[0].fuel_reach_status === 'beyond_range' && (
+                    <span className="text-red-600">✕ Beyond current fuel range</span>
+                  )}
+                </p>
+              )}
             </div>
             <button onClick={() => handleAddStop(routeFuelStops[0])} className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground">Add Stop</button>
           </div>
