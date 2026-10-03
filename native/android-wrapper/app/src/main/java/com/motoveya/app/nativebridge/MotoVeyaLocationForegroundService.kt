@@ -8,15 +8,20 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
-import org.json.JSONObject
+import kotlin.math.sqrt
 
-class MotoVeyaLocationForegroundService : Service() {
+class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
     companion object {
         const val ACTION_START = "com.motoveya.app.START_NATIVE_TRACKING"
         const val ACTION_STOP = "com.motoveya.app.STOP_NATIVE_TRACKING"
@@ -50,6 +55,18 @@ class MotoVeyaLocationForegroundService : Service() {
     @Volatile private var latestUnsentLocation: Location? = null
     @Volatile private var postInFlight = false
     private var locationCallback: LocationCallback? = null
+    private lateinit var sensorManager: SensorManager
+    private var accelerometer: Sensor? = null
+    private var rotationSensor: Sensor? = null
+    private var highGAt = 0L
+    private var highRotationAt = 0L
+    private var suddenDecelAt = 0L
+    private var strongestG = 0.0
+    private var strongestRotation = 0.0
+    private var lastSpeedKmh = 0.0
+    private var lastSpeedAt = 0L
+    private var crashCooldownUntil = 0L
+    private val indicatorWindowMs = 1500L
 
     override fun onCreate() {
         super.onCreate()
@@ -58,6 +75,9 @@ class MotoVeyaLocationForegroundService : Service() {
         networkExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
         deviceToken = getSharedPreferences(PREFS, MODE_PRIVATE).getString(TOKEN_KEY, null)
         restorePendingLocation()
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -71,6 +91,7 @@ class MotoVeyaLocationForegroundService : Service() {
                 if (deviceToken.isNullOrBlank()) { stopSelf(); return START_NOT_STICKY }
                 startForeground(NOTIFICATION_ID, buildNotification("Ride tracking active"))
                 startTracking()
+                startCrashDetection()
             }
             null -> {
                 // Android can recreate a START_STICKY service with a null Intent.
@@ -80,6 +101,7 @@ class MotoVeyaLocationForegroundService : Service() {
                 }
                 startForeground(NOTIFICATION_ID, buildNotification("Ride tracking resumed"))
                 startTracking()
+                startCrashDetection()
                 postLocationIfPossible()
             }
         }
@@ -104,6 +126,7 @@ class MotoVeyaLocationForegroundService : Service() {
             override fun onLocationResult(result: LocationResult) {
                 result.locations.forEach { location ->
                     latestUnsentLocation = location
+                    updateCrashSpeed(location)
                     persistPendingLocation(location)
                     postLocationIfPossible()
                     updateNotification(location)
@@ -181,6 +204,124 @@ class MotoVeyaLocationForegroundService : Service() {
             .remove("pending_lat").remove("pending_lng").remove("pending_accuracy").apply()
     }
 
+    private fun startCrashDetection() {
+        accelerometer?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        rotationSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+    }
+
+    private fun stopCrashDetection() {
+        if (::sensorManager.isInitialized) sensorManager.unregisterListener(this)
+        highGAt = 0L
+        highRotationAt = 0L
+        suddenDecelAt = 0L
+        strongestG = 0.0
+        strongestRotation = 0.0
+        lastSpeedKmh = 0.0
+        lastSpeedAt = 0L
+    }
+
+    private fun updateCrashSpeed(location: Location) {
+        if (!location.hasSpeed()) return
+        val speedKmh = location.speed * 3.6
+        val now = System.currentTimeMillis()
+        if (lastSpeedAt > 0L && now - lastSpeedAt <= 3500L) {
+            val drop = lastSpeedKmh - speedKmh
+            if (lastSpeedKmh >= 25.0 && drop > 35.0) {
+                suddenDecelAt = now
+                maybeTriggerNativeCrash(now, speedKmh)
+            }
+        }
+        lastSpeedKmh = speedKmh
+        lastSpeedAt = now
+    }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        val now = System.currentTimeMillis()
+        if (now < crashCooldownUntil) return
+        if (lastSpeedKmh < 25.0) return
+
+        when (event.sensor.type) {
+            Sensor.TYPE_ACCELEROMETER -> {
+                val x = event.values.getOrNull(0)?.toDouble() ?: 0.0
+                val y = event.values.getOrNull(1)?.toDouble() ?: 0.0
+                val z = event.values.getOrNull(2)?.toDouble() ?: 0.0
+                val g = sqrt(x * x + y * y + z * z) / 9.81
+                if (g > 4.0) {
+                    highGAt = now
+                    if (g > strongestG) strongestG = g
+                    maybeTriggerNativeCrash(now, lastSpeedKmh)
+                }
+            }
+            Sensor.TYPE_GYROSCOPE -> {
+                val x = Math.toDegrees(event.values.getOrNull(0)?.toDouble() ?: 0.0)
+                val y = Math.toDegrees(event.values.getOrNull(1)?.toDouble() ?: 0.0)
+                val z = Math.toDegrees(event.values.getOrNull(2)?.toDouble() ?: 0.0)
+                val rotation = sqrt(x * x + y * y + z * z)
+                if (rotation > 360.0) {
+                    highRotationAt = now
+                    if (rotation > strongestRotation) strongestRotation = rotation
+                    maybeTriggerNativeCrash(now, lastSpeedKmh)
+                }
+            }
+        }
+    }
+
+    private fun maybeTriggerNativeCrash(now: Long, speedKmh: Double) {
+        if (now < crashCooldownUntil) return
+        val impact = highGAt > 0 && now - highGAt <= indicatorWindowMs
+        val rotation = highRotationAt > 0 && now - highRotationAt <= indicatorWindowMs
+        val decel = suddenDecelAt > 0 && now - suddenDecelAt <= indicatorWindowMs
+        val corroborated = (impact && (rotation || decel)) || (decel && rotation)
+        if (!corroborated) return
+
+        crashCooldownUntil = now + 60000L
+        val location = latestUnsentLocation ?: return
+        val token = deviceToken ?: return
+        val g = strongestG
+        val rot = strongestRotation
+        val severity = when {
+            g > 8.0 || decel && lastSpeedKmh > 50.0 || (rotation && impact && g > 5.5) -> "high"
+            g > 5.5 || decel -> "medium"
+            else -> "low"
+        }
+        highGAt = 0L
+        highRotationAt = 0L
+        suddenDecelAt = 0L
+
+        networkExecutor.execute {
+            try {
+                val battery = (getSystemService(BATTERY_SERVICE) as BatteryManager)
+                    .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                val payload = org.json.JSONObject().apply {
+                    put("device_token", token)
+                    put("lat", location.latitude)
+                    put("lng", location.longitude)
+                    put("severity", severity)
+                    put("speed_at_impact", speedKmh)
+                    if (location.hasBearing()) put("heading_at_impact", location.bearing.toDouble())
+                    put("battery_level", battery)
+                    put("indicators", org.json.JSONObject().apply {
+                        put("highGForce", g > 4.0)
+                        put("highRotation", rot > 360.0)
+                        put("suddenDecel", decel)
+                    })
+                }.toString()
+                val connection = (java.net.URL("https://motoveya.base44.app/functions/trigger-emergency-native").openConnection() as java.net.HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                }
+                connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                try { connection.inputStream.use { it.readBytes() } } catch (_: Exception) {}
+                connection.disconnect()
+            } catch (_: Exception) {}
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
     private fun buildNotification(status: String): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("MotoVeya Ride")
@@ -199,6 +340,7 @@ class MotoVeyaLocationForegroundService : Service() {
     private fun stopTracking() {
         locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
         locationCallback = null
+        stopCrashDetection()
         deviceToken = null
         latestUnsentLocation = null
         clearPendingLocation()
