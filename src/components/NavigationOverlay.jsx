@@ -19,7 +19,7 @@ export default function NavigationOverlay({
   notifyFriends,
   setNotifyFriends,
   routeFuelStops = [],
-  fuelRouteWarning = null,
+
 }) {
   const {
     isActive, rideMode, speed, speedLimit, navProgress, destination,
@@ -105,7 +105,7 @@ export default function NavigationOverlay({
         />
       )}
 
-      {fuelRouteWarning && (
+      {false && (
         <div className="absolute left-3 right-3 z-[17] landscape:max-w-sm landscape:mx-auto" style={{ top: 'calc(4.25rem + env(safe-area-inset-top))' }}>
           <div className={`mx-auto flex max-w-sm items-center gap-2 rounded-2xl p-2.5 shadow-xl backdrop-blur-lg ${fuelRouteWarning.level === 'critical' ? 'bg-destructive/95 text-destructive-foreground' : 'bg-amber-500/95 text-white'}`}>
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-lg">⛽</span>
@@ -130,10 +130,7 @@ export default function NavigationOverlay({
               <p className="text-[11px] text-muted-foreground">
                 {routeFuelStops[0].distance_ahead_km} km ahead · {routeFuelStops[0].detour_is_exact ? (routeFuelStops[0].exact_detour_km + ' km detour · +' + routeFuelStops[0].exact_detour_minutes + ' min') : ('~' + routeFuelStops[0].estimated_detour_km + ' km estimated detour')}
               </p>
-              {routeFuelStops[0].fuel_reach_status === 'safe' && <p className="text-[10px] font-semibold text-emerald-600">Within planning range · {routeFuelStops[0].fuel_margin_km} km reserve</p>}
-              {routeFuelStops[0].fuel_reach_status === 'reserve' && <p className="text-[10px] font-semibold text-amber-600">Reachable only in reserve range</p>}
-              {routeFuelStops[0].fuel_reach_status === 'unreachable' && <p className="text-[10px] font-semibold text-destructive">Beyond calculated range</p>}
-            </div>
+                          </div>
             <button onClick={() => handleAddStop(routeFuelStops[0])} className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground">Add Stop</button>
           </div>
         </div>
