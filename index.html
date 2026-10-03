@@ -13,8 +13,8 @@
     <title>MotoVeya — Motorcycle Navigation & Safety</title>
     <script>
       (function(){try{var t=localStorage.getItem('motogo-theme')||'auto';var d=t==='dark'||(t==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();
-      // Allow the screen to follow the device orientation (clears any prior lock).
-      (function(){try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();}catch(e){}})();
+      // Screen orientation is managed by src/lib/screenOrientation.js so the saved
+      // MotoVeya preference is respected instead of unconditionally unlocking it.
     </script>
   </head>
   <body>
