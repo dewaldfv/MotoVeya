@@ -9,11 +9,8 @@ import {
   revokeNativeTracking,
   getStoredDeviceToken,
   detectPlatform,
-  NATIVE_TRACKING_ENDPOINTS,
 } from '@/lib/nativeTracking';
 import { toast } from 'sonner';
-
-const PUBLISHED_HOST = 'https://motoveya.base44.app';
 
 const PERMISSION_STEPS = [
   { icon: MapPin, label: 'Location — Always', desc: 'Allow location access "Always" so tracking survives a locked screen.' },
