@@ -184,12 +184,12 @@ export default function Settings() {
         </Section>
 
         <Section title="📱 Screen Orientation">
-          {[['auto', 'Auto-Rotate', 'Follows your device'], ['portrait', 'Portrait', 'Lock portrait'], ['landscape', 'Landscape', 'Lock landscape']].map(([value, label, description], i) => (
+          {[['auto', 'Auto-Rotate', 'Follows your device'], ['landscape', 'Landscape', 'Lock landscape']].map(([value, label, description], i) => (
             <button
               key={value}
               type="button"
               onClick={() => handleScreenOrientationChange(value)}
-              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-secondary ${i < 2 ? 'border-b border-border' : ''}`}
+              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-secondary ${i < 1 ? 'border-b border-border' : ''}`}
             >
               <RotateCw size={20} className="text-primary" />
               <div className="flex-1">
@@ -200,7 +200,7 @@ export default function Settings() {
             </button>
           ))}
           <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-            Auto allows MotoVeya to follow your device. Portrait or Landscape locks the app where supported. Your phone's system Rotation Lock can still override Auto.
+            Auto allows MotoVeya to follow your device. Landscape locks the app where supported. Your phone's system Rotation Lock can still override Auto.
           </p>
         </Section>
 
