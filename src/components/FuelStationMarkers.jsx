@@ -79,7 +79,8 @@ export default function FuelStationMarkers({ stations = [], onMarkerClick }) {
       } else {
         marker.setMap(map);
         marker.setPosition(position);
-        marker.setTitle(station.name || 'Fuel Station');
+        marker.setIcon(markerIcon);
+        marker.setTitle(station.brand ? `${station.brand} — ${station.name || 'Fuel Station'}` : (station.name || 'Fuel Station'));
       }
     });
 
