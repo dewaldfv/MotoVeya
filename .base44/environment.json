@@ -1,0 +1,19 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "VITE_BASE44_APP_ID",
+      "description": "Base44 app ID for the MotoVeya app — found in the Base44 dashboard under your app's settings",
+      "requiredAtBoot": false,
+      "generatedForDevelopment": false
+    },
+    {
+      "name": "VITE_BASE44_APP_BASE_URL",
+      "description": "Base URL of the hosted Base44 backend (e.g. https://motoveya.base44.app)",
+      "requiredAtBoot": false,
+      "generatedForDevelopment": false
+    }
+  ]
+}
