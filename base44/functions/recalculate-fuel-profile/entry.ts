@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
         priceCount++;
       }
 
-      if (r.is_full_tank === true && r.odometer_km != null) {
+      if (r.is_full_tank !== false && r.odometer_km != null) {
         const currentOdo = Number(r.odometer_km);
 
         if (prevFullOdo != null) {
