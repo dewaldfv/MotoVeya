@@ -69,7 +69,7 @@ export default function AddRefillDialog({ open, onClose, bike, onSaved, editRefi
       }));
 
       const confidence = extracted.confidence_score != null ? Math.round(extracted.confidence_score * 100) : null;
-      toast.success(confidence != null ? \`Receipt scanned — \${confidence}% confidence. Please review before saving.\` : 'Receipt scanned. Please review before saving.');
+      toast.success(confidence != null ? 'Receipt scanned — ' + confidence + '% confidence. Please review before saving.' : 'Receipt scanned. Please review before saving.');
     } catch (err) {
       console.error(err);
       toast.error(err?.message || 'Could not read the fuel receipt');

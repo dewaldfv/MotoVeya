@@ -170,11 +170,11 @@ export default function FuelTracker() {
               </div>
             ) : (
               <div className="space-y-2">
-                {refills.map((refill, idx) => (
+                {refills.map((refill) => (
                   <RefillItem
                     key={refill.id}
                     refill={refill}
-                    onEdit={idx === 0 ? () => setEditingRefill(refill) : undefined}
+                    onEdit={() => setEditingRefill(refill)}
                   />
                 ))}
               </div>
@@ -184,7 +184,7 @@ export default function FuelTracker() {
       )}
 
       {bikes.length > 0 && (
-        <button onClick={() => setAddOpen(true)} className="fab flex items-center justify-center" aria-label="Add Refill">
+        <button onClick={() => { setEditingRefill(null); setAddOpen(true); }} className="fab flex items-center justify-center" aria-label="Add Refill">
           <Plus size={28} />
         </button>
       )}
