@@ -50,6 +50,12 @@ export default function BikeGarage() {
     enabled: !!user?.id,
   });
 
+  const { data: fuelProfiles = [] } = useQuery({
+    queryKey: ['garage-fuel-profiles', user?.id],
+    queryFn: () => base44.entities.FuelProfile.filter({}, '-last_calculated', 200),
+    enabled: !!user?.id,
+  });
+
   const saveMutation = useMutation({
     mutationFn: ({ editing, data }) => editing ? base44.entities.Bike.update(editing.id, data) : base44.entities.Bike.create(data),
     onSettled: () => { queryClient.invalidateQueries({ queryKey: ['bikes'] }); queryClient.invalidateQueries({ queryKey: ['profile-rides'] }); },
@@ -112,8 +118,11 @@ export default function BikeGarage() {
   const setPrimary = (bike) => primaryMutation.mutate({ id: bike.id, make: true });
 
   const totalLitres = refills.reduce((s, r) => s + (r.litres || 0), 0);
-  const totalDist = refills.reduce((s, r) => s + (r.trip_distance_km || 0), 0);
-  const avgConsumption = totalDist > 0 ? (totalLitres / totalDist * 100).toFixed(1) : null;
+  const primaryBike = bikes.find((bike) => bike.is_primary) || bikes[0];
+  const primaryProfile = primaryBike ? fuelProfiles.find((profile) => profile.bike_id === primaryBike.id) : null;
+  const avgConsumption = primaryProfile?.adaptive_l_per_100km
+    || primaryBike?.fuel_consumption_l_per_100km
+    || null;
 
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!user) return <LoginPrompt />;
@@ -131,7 +140,7 @@ export default function BikeGarage() {
         <div className="grid grid-cols-3 gap-2">
           <Stat label="Bikes" value={bikes.length} />
           <Stat label="Total Fuel" value={`${Math.round(totalLitres)}L`} />
-          <Stat label="Avg L/100km" value={avgConsumption || '—'} />
+          <Stat label="Avg L/100km" value={avgConsumption ? `${Number(avgConsumption).toFixed(1)}` : '—'} />
         </div>
 
         <Button onClick={openAdd} className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl text-base font-bold">
@@ -173,7 +182,7 @@ export default function BikeGarage() {
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl bg-secondary p-2"><Fuel size={12} className="mr-1 inline text-primary" />{bike.tank_capacity_l || '?'}L tank</div>
-                    <div className="rounded-xl bg-secondary p-2"><Fuel size={12} className="mr-1 inline text-primary" />{bike.fuel_consumption_l_per_100km || avgConsumption || '?'}L/100km</div>
+                    <div className="rounded-xl bg-secondary p-2"><Fuel size={12} className="mr-1 inline text-primary" />{fuelProfiles.find((profile) => profile.bike_id === bike.id)?.adaptive_l_per_100km?.toFixed?.(1) || bike.fuel_consumption_l_per_100km || '?'}L/100km</div>
                   </div>
                   {bike.nickname && <p className="mt-2 text-xs font-medium text-primary">"{bike.nickname}"</p>}
                   {!bike.is_primary && (
