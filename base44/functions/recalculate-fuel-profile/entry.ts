@@ -16,7 +16,8 @@ Deno.serve(async (req) => {
 
     const refills = await base44.entities.FuelRefill.filter({ bike_id: bikeId }, 'refill_date', 500);
 
-    const baseline = bike.fuel_consumption_l_per_100km || 5.0;
+    const existingProfiles = await base44.entities.FuelProfile.filter({ bike_id: bikeId }, '-created_date', 1);
+    const baseline = existingProfiles[0]?.baseline_l_per_100km || bike.fuel_consumption_l_per_100km || 5.0;
     const tankCapacity = bike.tank_capacity_l || 15;
 
     refills.sort((a, b) => new Date(a.refill_date) - new Date(b.refill_date));
@@ -85,15 +86,27 @@ Deno.serve(async (req) => {
       last_calculated: new Date().toISOString(),
     };
 
-    const existing = await base44.entities.FuelProfile.filter({ bike_id: bikeId }, '-created_date', 1);
     let profile;
-    if (existing.length > 0) {
-      profile = await base44.entities.FuelProfile.update(existing[0].id, profileData);
+    if (existingProfiles.length > 0) {
+      profile = await base44.entities.FuelProfile.update(existingProfiles[0].id, profileData);
     } else {
       profile = await base44.entities.FuelProfile.create(profileData);
     }
 
-    return Response.json({ profile, refills_processed: refills.length, actual_data_points: actualConsumptions.length });
+    // Keep the Bike Garage in sync with the calculated real-world average.
+    // The original baseline is preserved in FuelProfile so future recalculations
+    // do not compound the adaptive weighting on top of previous results.
+    const calculatedConsumption = Math.round(adaptive * 100) / 100;
+    await base44.entities.Bike.update(bikeId, {
+      fuel_consumption_l_per_100km: calculatedConsumption,
+    });
+
+    return Response.json({
+      profile,
+      refills_processed: refills.length,
+      actual_data_points: actualConsumptions.length,
+      calculated_consumption_l_per_100km: calculatedConsumption,
+    });
   } catch (error) {
     console.error('Fuel profile recalculation error:', error);
     return Response.json({ error: error.message }, { status: 500 });
