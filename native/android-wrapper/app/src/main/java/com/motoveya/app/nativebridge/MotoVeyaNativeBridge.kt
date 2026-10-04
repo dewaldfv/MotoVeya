@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.content.Context
 import android.content.pm.ActivityInfo
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -14,7 +15,11 @@ class MotoVeyaNativeBridge(
     private val webView: WebView,
     private val permissionClient: MotoVeyaWebChromeClient
 ) {
-    companion object { const val LOCATION_PERMISSION_REQUEST = 7402 }
+    companion object {
+        const val LOCATION_PERMISSION_REQUEST = 7402
+        const val PREFS_NAME = "motoveya_prefs"
+        const val PREF_ORIENTATION = "screen_orientation"
+    }
     private var pendingLocationCallback: String? = null
 
     @JavascriptInterface
@@ -76,6 +81,12 @@ class MotoVeyaNativeBridge(
                 else -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
             }
         }
+        // Persist so the Activity can restore the orientation on the next cold
+        // start before the web bundle has loaded (avoids an orientation flash).
+        activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(PREF_ORIENTATION, preference)
+            .apply()
         return true
     }
 

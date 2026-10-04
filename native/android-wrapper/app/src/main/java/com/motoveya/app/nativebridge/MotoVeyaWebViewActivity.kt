@@ -2,6 +2,8 @@ package com.motoveya.app.nativebridge
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.webkit.WebView
 import androidx.core.view.WindowCompat
@@ -23,6 +25,10 @@ class MotoVeyaWebViewActivity : Activity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         hideSystemBars()
 
+        // Restore the saved orientation before the web app loads so the
+        // screen is already correct on cold start (no orientation flash).
+        restoreOrientation()
+
         webView = WebView(this)
         setContentView(webView)
 
@@ -41,6 +47,16 @@ class MotoVeyaWebViewActivity : Activity() {
         nativeBridge = MotoVeyaNativeBridge(this, webView, permissionClient)
         webView.addJavascriptInterface(nativeBridge, "MotoVeyaNative")
         webView.loadUrl("https://motoveya.base44.app")
+    }
+
+    private fun restoreOrientation() {
+        val prefs = getSharedPreferences(MotoVeyaNativeBridge.PREFS_NAME, Context.MODE_PRIVATE)
+        val pref = prefs.getString(MotoVeyaNativeBridge.PREF_ORIENTATION, "auto")
+        requestedOrientation = when (pref) {
+            "portrait" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            "landscape" -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            else -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

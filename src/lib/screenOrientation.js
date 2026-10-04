@@ -71,10 +71,30 @@ export async function applyScreenOrientation(preference = getScreenOrientationPr
 
 export function initScreenOrientation() {
   const preference = getScreenOrientationPreference();
-  // Do not request fullscreen during startup. Native wrappers can apply the
-  // saved preference immediately; browsers can apply a lock after user gesture.
+
+  // Native Android wrapper: apply the saved preference immediately via the bridge.
   if (window.MotoVeyaNative && typeof window.MotoVeyaNative.setScreenOrientation === 'function') {
     applyScreenOrientation(preference);
+    return preference;
   }
+
+  // Web/PWA: a portrait/landscape lock requires a fullscreen + user-gesture
+  // context, which we cannot create during startup. Defer applying the saved
+  // lock until the first user interaction so it persists across restarts.
+  if (preference !== 'auto' && typeof window !== 'undefined') {
+    let applied = false;
+    const applyOnce = () => {
+      if (applied) return;
+      applied = true;
+      applyScreenOrientation(preference);
+      ['touchstart', 'click', 'keydown'].forEach((evt) =>
+        window.removeEventListener(evt, applyOnce)
+      );
+    };
+    ['touchstart', 'click', 'keydown'].forEach((evt) =>
+      window.addEventListener(evt, applyOnce, { once: true, passive: true })
+    );
+  }
+
   return preference;
 }
