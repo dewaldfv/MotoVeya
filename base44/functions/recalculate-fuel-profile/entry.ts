@@ -55,12 +55,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    let adaptive = baseline;
-    if (actualConsumptions.length > 0) {
-      const avgActual = actualConsumptions.reduce((a, b) => a + b, 0) / actualConsumptions.length;
-      const weightActual = Math.min(0.75, actualConsumptions.length * 0.15);
-      adaptive = baseline * (1 - weightActual) + avgActual * weightActual;
-    }
+    // Use a rolling two-refill calculation for the rider-facing average.
+    // Refill #1 -> #2 establishes the first measured consumption. From then on,
+    // each new refill replaces the previous interval: #2 -> #3, #3 -> #4, etc.
+    // This keeps the Garage average representative of the rider's most recent riding.
+    const latestConsumption = actualConsumptions.length > 0
+      ? actualConsumptions[actualConsumptions.length - 1]
+      : baseline;
+    const adaptive = latestConsumption;
 
     const confidence = Math.min(100, Math.round(actualConsumptions.length * 20 + refills.length * 2));
     const kmPerLitre = adaptive > 0 ? 100 / adaptive : 0;
