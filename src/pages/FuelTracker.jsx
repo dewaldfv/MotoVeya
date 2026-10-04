@@ -79,7 +79,7 @@ export default function FuelTracker() {
   const displayProfile = (() => {
     const ordered = [...refills]
       .filter((r) => r.odometer_km != null && Number(r.litres) > 0)
-      .sort((a, b) => new Date(a.refill_date) - new Date(b.refill_date));
+      .sort((a, b) => Number(a.odometer_km) - Number(b.odometer_km));
 
     const hasEnoughData = ordered.length >= 2;
 

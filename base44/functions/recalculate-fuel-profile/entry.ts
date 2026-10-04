@@ -45,9 +45,9 @@ Deno.serve(async (req) => {
     // refills that both carry an odometer reading. Each new refill therefore
     // reflects only the latest leg (stop N-1 -> stop N), not a cumulative
     // average across all refills.
-    const odometerRefills = refills.filter(
-      (r) => r.odometer_km != null && Number(r.odometer_km) >= 0
-    );
+    const odometerRefills = refills
+      .filter((r) => r.odometer_km != null && Number(r.odometer_km) >= 0)
+      .sort((a, b) => Number(a.odometer_km) - Number(b.odometer_km));
     const hasEnoughData = odometerRefills.length >= 2;
 
     let adaptive = 0;
