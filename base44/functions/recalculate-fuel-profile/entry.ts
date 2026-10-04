@@ -27,57 +27,47 @@ Deno.serve(async (req) => {
     let totalDistance = 0;
     let priceSum = 0;
     let priceCount = 0;
-    let actualConsumptions = [];
-
-    // Odometer-only consumption calculation.
-    // GPS distance is deliberately not used.
-    // Each refill is compared with the immediately previous refill that has
-    // a submitted odometer reading:
-    // consumption = current refill litres / odometer difference * 100.
-    let previousOdometer = null;
-
+    // Cumulative totals across every logged refill (always shown).
     for (const r of refills) {
-      const litres = Number(r.litres) || 0;
-      totalLitres += litres;
+      totalLitres += Number(r.litres) || 0;
       totalCost += Number(r.total_cost) || 0;
 
       if (r.fuel_price_per_litre != null) {
         priceSum += Number(r.fuel_price_per_litre) || 0;
         priceCount++;
       }
-
-      if (r.odometer_km != null) {
-        const currentOdometer = Number(r.odometer_km);
-
-        if (previousOdometer != null) {
-          const distance = currentOdometer - previousOdometer;
-
-          if (distance > 0 && litres > 0) {
-            const consumption = (litres / distance) * 100;
-
-            if (consumption > 0 && consumption < 30) {
-              actualConsumptions.push(consumption);
-              totalDistance += distance;
-            }
-          }
-        }
-
-        previousOdometer = currentOdometer;
-      }
     }
 
-    // The rider-facing value is always the latest valid refill-to-refill
-    // calculation based exclusively on submitted odometer readings.
-    const latestConsumption = actualConsumptions.length > 0
-      ? actualConsumptions[actualConsumptions.length - 1]
-      : baseline;
-    const adaptive = latestConsumption;
-
-    const confidence = Math.min(100, Math.round(actualConsumptions.length * 20 + refills.length * 2));
-    const kmPerLitre = adaptive > 0 ? 100 / adaptive : 0;
     const avgPrice = priceCount > 0 ? priceSum / priceCount : 0;
-    const costPerKm = kmPerLitre > 0 && avgPrice > 0 ? avgPrice / kmPerLitre : 0;
-    const estimatedRange = Math.round(tankCapacity * kmPerLitre);
+
+    // L/100km is only calculated once at least two refills with odometer
+    // readings exist. It uses the total litres logged divided by the
+    // odometer difference between the first and last odometer reading.
+    const odometerReadings = refills
+      .filter((r) => r.odometer_km != null)
+      .map((r) => Number(r.odometer_km));
+    const hasEnoughData = odometerReadings.length >= 2;
+    const firstOdometer = hasEnoughData ? odometerReadings[0] : null;
+    const lastOdometer = hasEnoughData ? odometerReadings[odometerReadings.length - 1] : null;
+    const odometerDiff = hasEnoughData && firstOdometer != null && lastOdometer != null
+      ? lastOdometer - firstOdometer
+      : 0;
+
+    let adaptive = 0;
+    let kmPerLitre = 0;
+    let costPerKm = 0;
+    let estimatedRange = 0;
+
+    if (hasEnoughData && odometerDiff > 0 && totalLitres > 0) {
+      totalDistance = odometerDiff;
+      adaptive = (totalLitres / odometerDiff) * 100;
+      kmPerLitre = adaptive > 0 ? 100 / adaptive : 0;
+      costPerKm = kmPerLitre > 0 && avgPrice > 0 ? avgPrice / kmPerLitre : 0;
+      estimatedRange = Math.round(tankCapacity * kmPerLitre);
+    }
+
+    const dataPoints = hasEnoughData ? odometerReadings.length - 1 : 0;
+    const confidence = Math.min(100, Math.round(dataPoints * 20 + refills.length * 2));
 
     const profileData = {
       bike_id: bikeId,
@@ -105,18 +95,20 @@ Deno.serve(async (req) => {
     }
 
     // Keep the Bike Garage in sync with the calculated real-world average.
-    // The original baseline is preserved in FuelProfile so future recalculations
-    // do not compound the adaptive weighting on top of previous results.
-    const calculatedConsumption = Math.round(adaptive * 100) / 100;
-    await base44.entities.Bike.update(bikeId, {
-      fuel_consumption_l_per_100km: calculatedConsumption,
-    });
+    // Only sync once a real consumption has been calculated (needs >= 2
+    // refills with odometer readings); otherwise leave the bike's value alone.
+    if (adaptive > 0) {
+      const calculatedConsumption = Math.round(adaptive * 100) / 100;
+      await base44.entities.Bike.update(bikeId, {
+        fuel_consumption_l_per_100km: calculatedConsumption,
+      });
+    }
 
     return Response.json({
       profile,
       refills_processed: refills.length,
-      actual_data_points: actualConsumptions.length,
-      calculated_consumption_l_per_100km: calculatedConsumption,
+      actual_data_points: dataPoints,
+      calculated_consumption_l_per_100km: adaptive > 0 ? Math.round(adaptive * 100) / 100 : null,
     });
   } catch (error) {
     console.error('Fuel profile recalculation error:', error);

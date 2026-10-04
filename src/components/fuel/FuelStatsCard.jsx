@@ -15,9 +15,9 @@ export default function FuelStatsCard({ profile, bike }) {
   const confidenceLabel = confidence >= 70 ? 'Confident' : confidence >= 30 ? 'Improving' : 'Learning';
 
   const stats = [
-    { icon: Fuel, label: 'Adaptive', value: profile.adaptive_l_per_100km?.toFixed(1) || '—', unit: 'L/100km' },
-    { icon: Gauge, label: 'Efficiency', value: profile.km_per_litre?.toFixed(1) || '—', unit: 'km/L' },
-    { icon: Coins, label: 'Cost/km', value: `R${(profile.cost_per_km || 0).toFixed(2)}`, unit: '' },
+    { icon: Fuel, label: 'Adaptive', value: profile.adaptive_l_per_100km ? profile.adaptive_l_per_100km.toFixed(1) : '—', unit: 'L/100km' },
+    { icon: Gauge, label: 'Efficiency', value: profile.km_per_litre ? profile.km_per_litre.toFixed(1) : '—', unit: 'km/L' },
+    { icon: Coins, label: 'Cost/km', value: profile.cost_per_km ? `R${profile.cost_per_km.toFixed(2)}` : '—', unit: '' },
     { icon: Route, label: 'Range', value: profile.estimated_range_km || '—', unit: 'km' },
   ];
 
