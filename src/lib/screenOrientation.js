@@ -43,19 +43,27 @@ export async function applyScreenOrientation(preference = getScreenOrientationPr
 
     const lockType = preference === 'landscape' ? 'landscape' : 'portrait';
 
-    // A user tapping the Settings option is a user gesture. Use that gesture
-    // to enter fullscreen when required, then lock the physical screen.
+    // The Screen Orientation API requires a fullscreen/installed-app context
+    // on many mobile browsers. Settings is a user gesture, so this is the
+    // correct point to request fullscreen before applying the hard lock.
     if (!document.fullscreenElement && document.documentElement?.requestFullscreen) {
       try {
         await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
       } catch (_) {
-        // Installed PWAs may already be allowed to lock without fullscreen.
+        // Installed PWAs/native wrappers may already have fullscreen context.
       }
     }
 
-    if (typeof orientation.lock !== 'function') return !!document.fullscreenElement;
-    await orientation.lock(lockType);
-    return true;
+    if (typeof orientation.lock !== 'function') return false;
+
+    try {
+      await orientation.lock(lockType);
+      return true;
+    } catch (_) {
+      // Some browsers expose the API but reject a lock outside their
+      // supported fullscreen/mobile context.
+      return false;
+    }
   } catch (_) {
     return false;
   }
