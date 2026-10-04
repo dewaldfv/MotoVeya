@@ -93,8 +93,6 @@ export default function AddRefillDialog({ open, onClose, bike, onSaved, editRefi
       refill_date: new Date(form.refill_date).toISOString(),
       location_name: form.location_name || undefined,
       is_full_tank: form.is_full_tank,
-      ...(receiptUrl ? { receipt_url: receiptUrl } : {}),
-      ...(scanConfidence != null ? { scan_confidence: Number(scanConfidence) } : {}),
     };
 
     try {
