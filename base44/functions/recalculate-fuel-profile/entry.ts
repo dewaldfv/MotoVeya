@@ -40,33 +40,46 @@ Deno.serve(async (req) => {
 
     const avgPrice = priceCount > 0 ? priceSum / priceCount : 0;
 
-    // L/100km is only calculated once at least two refills with odometer
-    // readings exist. It uses the total litres logged divided by the
-    // odometer difference between the first and last odometer reading.
-    const odometerReadings = refills
-      .filter((r) => r.odometer_km != null)
-      .map((r) => Number(r.odometer_km));
-    const hasEnoughData = odometerReadings.length >= 2;
-    const firstOdometer = hasEnoughData ? odometerReadings[0] : null;
-    const lastOdometer = hasEnoughData ? odometerReadings[odometerReadings.length - 1] : null;
-    const odometerDiff = hasEnoughData && firstOdometer != null && lastOdometer != null
-      ? lastOdometer - firstOdometer
-      : 0;
+    // The four live metrics (adaptive L/100km, km/L, cost/km, range) are
+    // calculated from the MOST RECENT segment: the last two consecutive
+    // refills that both carry an odometer reading. Each new refill therefore
+    // reflects only the latest leg (stop N-1 -> stop N), not a cumulative
+    // average across all refills.
+    const odometerRefills = refills.filter(
+      (r) => r.odometer_km != null && Number(r.odometer_km) >= 0
+    );
+    const hasEnoughData = odometerRefills.length >= 2;
 
     let adaptive = 0;
     let kmPerLitre = 0;
     let costPerKm = 0;
     let estimatedRange = 0;
 
-    if (hasEnoughData && odometerDiff > 0 && totalLitres > 0) {
-      totalDistance = odometerDiff;
-      adaptive = (totalLitres / odometerDiff) * 100;
-      kmPerLitre = adaptive > 0 ? 100 / adaptive : 0;
-      costPerKm = kmPerLitre > 0 && avgPrice > 0 ? avgPrice / kmPerLitre : 0;
-      estimatedRange = Math.round(tankCapacity * kmPerLitre);
+    if (hasEnoughData) {
+      const prev = odometerRefills[odometerRefills.length - 2];
+      const curr = odometerRefills[odometerRefills.length - 1];
+      const distance = Number(curr.odometer_km) - Number(prev.odometer_km);
+      const fuelUsed = Number(curr.litres) || 0;
+      if (distance > 0 && fuelUsed > 0) {
+        adaptive = (fuelUsed / distance) * 100;
+        kmPerLitre = distance / fuelUsed;
+        const segmentPrice = curr.fuel_price_per_litre != null
+          ? Number(curr.fuel_price_per_litre)
+          : avgPrice;
+        costPerKm = kmPerLitre > 0 && segmentPrice > 0 ? segmentPrice / kmPerLitre : 0;
+        estimatedRange = Math.round(tankCapacity * kmPerLitre);
+      }
     }
 
-    const dataPoints = hasEnoughData ? odometerReadings.length - 1 : 0;
+    // Cumulative totals remain overall stats (first-to-last odometer span).
+    const allOdo = refills
+      .filter((r) => r.odometer_km != null)
+      .map((r) => Number(r.odometer_km));
+    if (allOdo.length >= 2) {
+      totalDistance = allOdo[allOdo.length - 1] - allOdo[0];
+    }
+
+    const dataPoints = hasEnoughData ? odometerRefills.length - 1 : 0;
     const confidence = Math.min(100, Math.round(dataPoints * 20 + refills.length * 2));
 
     const profileData = {
