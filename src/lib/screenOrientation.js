@@ -78,15 +78,32 @@ export function initScreenOrientation() {
     return preference;
   }
 
-  // Web/PWA: a portrait/landscape lock requires a fullscreen + user-gesture
-  // context, which we cannot create during startup. Defer applying the saved
-  // lock until the first user interaction so it persists across restarts.
-  if (preference !== 'auto' && typeof window !== 'undefined') {
+  // Web/PWA: browsers block fullscreen and orientation locks until the user
+  // interacts with the page. Register a one-time first-gesture listener that
+  // enters fullscreen immediately and applies the saved orientation lock —
+  // regardless of whether auto, portrait, or landscape is saved — so opening
+  // the app always results in a fullscreen experience with the lock in place.
+  if (typeof window !== 'undefined') {
     let applied = false;
     const applyOnce = () => {
       if (applied) return;
       applied = true;
-      applyScreenOrientation(preference);
+      // Request fullscreen first; orientation locks require this context.
+      const enterFullscreen = async () => {
+        try {
+          if (!document.fullscreenElement && document.documentElement?.requestFullscreen) {
+            await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+          }
+        } catch (_) {
+          // Installed PWAs/native wrappers may already be in fullscreen context.
+        }
+        // Apply the orientation lock only for portrait/landscape; auto leaves
+        // the screen to follow the sensor while staying fullscreen.
+        if (preference !== 'auto') {
+          applyScreenOrientation(preference);
+        }
+      };
+      enterFullscreen();
       ['touchstart', 'click', 'keydown'].forEach((evt) =>
         window.removeEventListener(evt, applyOnce)
       );
