@@ -98,8 +98,12 @@ export default function AddRefillDialog({ open, onClose, bike, onSaved, editRefi
     try {
       if (editRefill) await base44.entities.FuelRefill.update(editRefill.id, refillData);
       else await base44.entities.FuelRefill.create(refillData);
-      try { await base44.functions.invoke('recalculate-fuel-profile', { bike_id: bike.id }); } catch (e) { console.error('Profile recalc failed:', e); }
-      toast.success(editRefill ? 'Refill updated' : 'Refill logged');
+
+      const recalcResult = await base44.functions.invoke('recalculate-fuel-profile', { bike_id: bike.id });
+      const recalcData = recalcResult?.data || recalcResult;
+      if (recalcData?.error) throw new Error(recalcData.error);
+
+      toast.success(editRefill ? 'Refill updated and fuel stats recalculated' : 'Refill logged and fuel stats calculated');
       onSaved?.();
       onClose();
     } catch (e) {

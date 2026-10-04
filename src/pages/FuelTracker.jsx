@@ -231,6 +231,10 @@ export default function FuelTracker() {
         onSaved={() => {
           queryClient.invalidateQueries({ queryKey: ['fuel-refills', selectedBikeId] });
           queryClient.invalidateQueries({ queryKey: ['fuel-profile', selectedBikeId] });
+          queryClient.invalidateQueries({ queryKey: ['garage-fuel-profiles'] });
+          queryClient.invalidateQueries({ queryKey: ['garage-refills'] });
+          queryClient.invalidateQueries({ queryKey: ['bikes'] });
+          queryClient.invalidateQueries({ queryKey: ['bike-fuel-profile', selectedBikeId] });
         }}
       />
     </div>

@@ -54,6 +54,7 @@ export default function BikeGarage() {
     queryKey: ['garage-fuel-profiles', user?.id],
     queryFn: () => base44.entities.FuelProfile.filter({}, '-last_calculated', 200),
     enabled: !!user?.id,
+    refetchOnMount: 'always',
   });
 
   const saveMutation = useMutation({
