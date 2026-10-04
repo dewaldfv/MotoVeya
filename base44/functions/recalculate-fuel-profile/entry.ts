@@ -29,35 +29,32 @@ Deno.serve(async (req) => {
     let priceCount = 0;
     let actualConsumptions = [];
 
-    // Full-to-full calculation:
-    // Refill #1 establishes the starting odometer.
-    // Refill #2 supplies the fuel consumed over the #1 -> #2 distance.
-    // Thereafter each new full refill replaces the previous interval:
-    // #2 -> #3, #3 -> #4, etc.
-    // If partial refills occur between two full tanks, their litres are included.
-    let prevFullOdo = null;
-    let litresSinceLastFull = 0;
+    // Odometer-only consumption calculation.
+    // GPS distance is deliberately not used.
+    // Each refill is compared with the immediately previous refill that has
+    // a submitted odometer reading:
+    // consumption = current refill litres / odometer difference * 100.
+    let previousOdometer = null;
 
     for (const r of refills) {
       const litres = Number(r.litres) || 0;
       totalLitres += litres;
       totalCost += Number(r.total_cost) || 0;
+
       if (r.fuel_price_per_litre != null) {
         priceSum += Number(r.fuel_price_per_litre) || 0;
         priceCount++;
       }
 
-      if (r.is_full_tank !== false && r.odometer_km != null) {
-        const currentOdo = Number(r.odometer_km);
+      if (r.odometer_km != null) {
+        const currentOdometer = Number(r.odometer_km);
 
-        if (prevFullOdo != null) {
-          const distance = currentOdo - prevFullOdo;
-          // The current full refill is part of the fuel consumed since the
-          // previous full tank, so include it before calculating consumption.
-          const intervalLitres = litresSinceLastFull + litres;
+        if (previousOdometer != null) {
+          const distance = currentOdometer - previousOdometer;
 
-          if (distance > 0 && intervalLitres > 0) {
-            const consumption = (intervalLitres / distance) * 100;
+          if (distance > 0 && litres > 0) {
+            const consumption = (litres / distance) * 100;
+
             if (consumption > 0 && consumption < 30) {
               actualConsumptions.push(consumption);
               totalDistance += distance;
@@ -65,16 +62,12 @@ Deno.serve(async (req) => {
           }
         }
 
-        prevFullOdo = currentOdo;
-        litresSinceLastFull = 0;
-      } else {
-        litresSinceLastFull += litres;
+        previousOdometer = currentOdometer;
       }
     }
 
-    // Use the latest valid two-full-refill interval as the rider-facing average.
-    // With two refills this is refill #1 -> #2. With three it becomes #2 -> #3,
-    // and so on. This is deliberately not a lifetime average.
+    // The rider-facing value is always the latest valid refill-to-refill
+    // calculation based exclusively on submitted odometer readings.
     const latestConsumption = actualConsumptions.length > 0
       ? actualConsumptions[actualConsumptions.length - 1]
       : baseline;
