@@ -18,6 +18,8 @@ export default function FuelTracker() {
   const [selectedBikeId, setSelectedBikeId] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editingRefill, setEditingRefill] = useState(null);
+  const [deletingRefill, setDeletingRefill] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
@@ -104,6 +106,24 @@ export default function FuelTracker() {
     };
   }, [syncOfflineQueue]);
 
+  const handleDeleteRefill = async () => {
+    if (!deletingRefill) return;
+    setDeleteBusy(true);
+    try {
+      await base44.entities.FuelRefill.delete(deletingRefill.id);
+      try { await base44.functions.invoke('recalculate-fuel-profile', { bike_id: selectedBikeId }); } catch (e) { console.error('Profile recalc failed:', e); }
+      await queryClient.invalidateQueries({ queryKey: ['fuel-refills', selectedBikeId] });
+      await queryClient.invalidateQueries({ queryKey: ['fuel-profile', selectedBikeId] });
+      toast.success('Fuel refill deleted');
+      setDeletingRefill(null);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to delete fuel refill');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['fuel-refills'] });
     await queryClient.invalidateQueries({ queryKey: ['fuel-profile'] });
@@ -175,6 +195,7 @@ export default function FuelTracker() {
                     key={refill.id}
                     refill={refill}
                     onEdit={() => setEditingRefill(refill)}
+                    onDelete={() => setDeletingRefill(refill)}
                   />
                 ))}
               </div>
@@ -187,6 +208,19 @@ export default function FuelTracker() {
         <button onClick={() => { setEditingRefill(null); setAddOpen(true); }} className="fab flex items-center justify-center" aria-label="Add Refill">
           <Plus size={28} />
         </button>
+      )}
+
+      {deletingRefill && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-sm rounded-2xl bg-card p-5 shadow-xl">
+            <h2 className="text-lg font-bold">Delete fuel refill?</h2>
+            <p className="mt-2 text-sm text-muted-foreground">This will permanently remove the {Number(deletingRefill.litres || 0).toFixed(1)}L refill from your history and recalculate your fuel statistics.</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setDeletingRefill(null)} disabled={deleteBusy} className="rounded-lg px-4 py-2 text-sm font-medium">Cancel</button>
+              <button onClick={handleDeleteRefill} disabled={deleteBusy} className="rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground">{deleteBusy ? 'Deleting...' : 'Delete'}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       <AddRefillDialog
