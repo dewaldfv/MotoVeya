@@ -74,6 +74,38 @@ export default function FuelTracker() {
     enabled: !!selectedBikeId,
   });
 
+  // Display fallback: calculate directly from submitted odometer readings if
+  // the backend profile has not refreshed yet. GPS distance is never used.
+  const displayProfile = (() => {
+    if (profile) return profile;
+    const ordered = [...refills]
+      .filter((r) => r.odometer_km != null && Number(r.litres) > 0)
+      .sort((a, b) => new Date(a.refill_date) - new Date(b.refill_date));
+
+    if (ordered.length < 2) return null;
+
+    const previous = ordered[ordered.length - 2];
+    const latest = ordered[ordered.length - 1];
+    const distance = Number(latest.odometer_km) - Number(previous.odometer_km);
+    if (distance <= 0) return null;
+
+    const consumption = (Number(latest.litres) / distance) * 100;
+    if (!Number.isFinite(consumption) || consumption <= 0 || consumption >= 30) return null;
+
+    return {
+      adaptive_l_per_100km: consumption,
+      km_per_litre: 100 / consumption,
+      confidence_score: 0,
+      refill_count: refills.length,
+      total_distance_km: distance,
+      estimated_range_km: selectedBike?.tank_capacity_l ? selectedBike.tank_capacity_l * (100 / consumption) : 0,
+      total_fuel_cost: 0,
+      total_fuel_l: 0,
+      avg_price_per_litre: 0,
+      cost_per_km: 0,
+    };
+  })();
+
   const syncOfflineQueue = useCallback(async () => {
     const queue = JSON.parse(localStorage.getItem('motogo_fuel_queue') || '[]');
     if (queue.length === 0) return;
@@ -174,7 +206,7 @@ export default function FuelTracker() {
               </div>
             )}
 
-            <FuelStatsCard profile={profile} bike={selectedBike} />
+            <FuelStatsCard profile={displayProfile} bike={selectedBike} />
 
             <div className="mb-3 mt-6 flex items-center justify-between">
               <h2 className="font-bold">Refill History</h2>
