@@ -77,12 +77,28 @@ export default function FuelTracker() {
   // Display fallback: calculate directly from submitted odometer readings if
   // the backend profile has not refreshed yet. GPS distance is never used.
   const displayProfile = (() => {
-    if (profile) return profile;
     const ordered = [...refills]
       .filter((r) => r.odometer_km != null && Number(r.litres) > 0)
       .sort((a, b) => new Date(a.refill_date) - new Date(b.refill_date));
 
-    if (ordered.length < 2) return null;
+    const hasEnoughData = ordered.length >= 2;
+
+    // If a profile exists but the actual refills can no longer support live
+    // metrics (fewer than 2 with odometer readings), null out the four live
+    // tiles so they render '—' while cumulative totals stay intact.
+    if (profile && !hasEnoughData) {
+      return {
+        ...profile,
+        adaptive_l_per_100km: null,
+        km_per_litre: null,
+        cost_per_km: null,
+        estimated_range_km: null,
+      };
+    }
+
+    if (profile) return profile;
+
+    if (!hasEnoughData) return null;
 
     const previous = ordered[ordered.length - 2];
     const latest = ordered[ordered.length - 1];
