@@ -20,6 +20,15 @@
     "route_engine": {
       "type": "string"
     },
+    "route_style": {
+      "type": "string",
+      "enum": [
+        "fastest",
+        "balanced",
+        "twisties"
+      ],
+      "default": "fastest"
+    },
     "notes": {
       "type": "string"
     },
