@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Fuel, UtensilsCrossed, Plus, MapPin, Loader2, CheckCircle2, Navigation } from 'lucide-react';
+import { Fuel, UtensilsCrossed, Plus, MapPin, Loader2, CheckCircle2, Navigation, Wand2 } from 'lucide-react';
 import { useBikeRange, suggestStopPoints, findNearbyStops } from '@/lib/stopSuggestions';
 
-export default function StopSuggestions({ waypoints = [], routeData = null, onAddStop, onSuggestChange }) {
+export default function StopSuggestions({ waypoints = [], routeData = null, onAddStop, onAddRecommendedStops, onSuggestChange }) {
   const { safeRange, rangeKm } = useBikeRange();
   const [results, setResults] = useState({}); // { [stopKey]: { loading, candidates, error } }
   const [added, setAdded] = useState(new Set());
@@ -73,8 +73,19 @@ export default function StopSuggestions({ waypoints = [], routeData = null, onAd
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 px-1 text-sm font-bold">
-        <Fuel size={16} className="text-primary" /> Suggested stops along your route
+      <div className="flex items-center justify-between gap-3 px-1">
+        <div className="flex items-center gap-2 text-sm font-bold">
+          <Fuel size={16} className="text-primary" /> Suggested stops along your route
+        </div>
+        {onAddRecommendedStops && (
+          <button
+            type="button"
+            onClick={() => onAddRecommendedStops(stopPoints, results)}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground"
+          >
+            <Wand2 size={13} /> Add best stops
+          </button>
+        )}
       </div>
       {stopPoints.map((sp) => {
         const res = results[sp.key] || { loading: true, candidates: [], error: null };
