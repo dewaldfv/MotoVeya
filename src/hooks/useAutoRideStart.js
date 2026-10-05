@@ -104,6 +104,10 @@ export function useAutoRideStart({ enabled, onAutoStart }) {
         if (now - lastTriggerRef.current > COOLDOWN) {
           lastTriggerRef.current = now;
           triggeredRef.current = true;
+          if (watchIdRef.current != null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+          }
           onAutoStartRef.current?.();
         }
       },
