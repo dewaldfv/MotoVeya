@@ -319,7 +319,60 @@ export default function MapView({
   // ServiceMarkers applies its own proximity filtering and clustering.
   const SERVICE_MIN_ZOOM = 13;
   const rotating = navActive && heading != null && !isNaN(heading) && headingUp;
-  const navRot = rotating ? `${-heading}deg` : '0deg';
+  const navContainerRef = useRef(null);
+  const smoothHeadingRef = useRef(null);
+  const headingTargetRef = useRef(null);
+  const headingRafRef = useRef(null);
+
+  // Smooth the raw GPS course before rotating the entire map. A noisy heading
+  // can otherwise make a heading-up map twitch even when the rider is moving
+  // steadily. The CSS variable is updated directly so React does not re-render
+  // the whole Google Map for every heading sample.
+  useEffect(() => {
+    if (!navContainerRef.current) return;
+    if (!rotating) {
+      navContainerRef.current.style.setProperty('--nav-rot', '0deg');
+      smoothHeadingRef.current = null;
+      headingTargetRef.current = null;
+      if (headingRafRef.current) cancelAnimationFrame(headingRafRef.current);
+      headingRafRef.current = null;
+      return;
+    }
+
+    const raw = ((Number(heading) % 360) + 360) % 360;
+    if (smoothHeadingRef.current == null) smoothHeadingRef.current = raw;
+    if (headingTargetRef.current == null) headingTargetRef.current = raw;
+
+    const current = smoothHeadingRef.current;
+    let delta = raw - (current % 360);
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    headingTargetRef.current = current + delta;
+
+    if (headingRafRef.current) return;
+    const tickHeading = () => {
+      const target = headingTargetRef.current;
+      const cur = smoothHeadingRef.current;
+      if (target == null || cur == null || !navContainerRef.current) {
+        headingRafRef.current = null;
+        return;
+      }
+      const next = cur + (target - cur) * 0.22;
+      smoothHeadingRef.current = Math.abs(target - next) < 0.05 ? target : next;
+      navContainerRef.current.style.setProperty('--nav-rot', (-smoothHeadingRef.current) + 'deg');
+      if (Math.abs(target - smoothHeadingRef.current) > 0.05) {
+        headingRafRef.current = requestAnimationFrame(tickHeading);
+      } else {
+        headingRafRef.current = null;
+      }
+    };
+    headingRafRef.current = requestAnimationFrame(tickHeading);
+  }, [heading, rotating]);
+
+  useEffect(() => () => {
+    if (headingRafRef.current) cancelAnimationFrame(headingRafRef.current);
+  }, []);
+
   const initialCenterRef = useRef(null);
   if (!initialCenterRef.current) {
     initialCenterRef.current = { lat: center[0], lng: center[1] };
@@ -373,8 +426,9 @@ export default function MapView({
 
   return (
     <div
+      ref={navContainerRef}
       className={`absolute inset-0 z-0 ${rotating ? 'nav-map-heading-up' : ''} ${className}`}
-      style={{ background: bgColor, '--nav-rot': navRot }}
+      style={{ background: bgColor, '--nav-rot': '0deg' }}
     >
       <GoogleMap
         mapContainerClassName={`absolute inset-0 h-full w-full ${rotating ? 'gm-rotatable' : ''}`}
