@@ -1,9 +1,11 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 
 const GPS_CONFIGS = {
-  navigating: { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 },
-  riding: { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 },
-  stationary: { enableHighAccuracy: false, maximumAge: 15000, timeout: 30000 },
+  navigating: { enableHighAccuracy: true, maximumAge: 500, timeout: 8000 },
+  // Ride Mode must remain high-accuracy even when the platform reports 0 km/h.
+  // Android/WebView frequently omits coords.speed while the rider is moving.
+  riding: { enableHighAccuracy: true, maximumAge: 500, timeout: 10000 },
+  stationary: { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
 };
 
 const STATIONARY_DELAY = 30000;
