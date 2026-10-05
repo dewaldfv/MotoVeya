@@ -52,7 +52,7 @@ function wpIcon(color, number) {
   };
 }
 
-export default function RidePlannerMap({ waypoints = [], suggestedStops = [], onWaypointDrag }) {
+export default function RidePlannerMap({ waypoints = [], routeData = null, routeLoading = false, suggestedStops = [], onWaypointDrag }) {
   const isLoaded = useGoogleMapsLoaded();
   const center = waypoints[0] ? [waypoints[0].lat, waypoints[0].lng] : SA_CENTER;
   const initialCenterRef = useRef(null);
@@ -62,7 +62,8 @@ export default function RidePlannerMap({ waypoints = [], suggestedStops = [], on
     return <div className="h-72 w-full rounded-2xl bg-muted" />;
   }
 
-  const path = waypoints.map((w) => ({ lat: w.lat, lng: w.lng }));
+  const path = (routeData?.coordinates?.length ? routeData.coordinates : waypoints.map((w) => [w.lat, w.lng]))
+    .map(([lat, lng]) => ({ lat, lng }));
 
   return (
     <div className="relative h-72 w-full overflow-hidden rounded-2xl border border-border bg-card">
@@ -76,9 +77,14 @@ export default function RidePlannerMap({ waypoints = [], suggestedStops = [], on
         <FitWaypoints waypoints={waypoints} />
         {path.length > 1 && (
           <>
-            <Polyline path={path} options={{ strokeColor: '#ffffff', strokeWeight: 7, strokeOpacity: 0.9 }} />
-            <Polyline path={path} options={{ strokeColor: '#FF6F00', strokeWeight: 4, strokeOpacity: 1 }} />
+            <Polyline path={path} options={{ strokeColor: '#ffffff', strokeWeight: 8, strokeOpacity: 0.9 }} />
+            <Polyline path={path} options={{ strokeColor: '#FF6F00', strokeWeight: 5, strokeOpacity: 1 }} />
           </>
+        )}
+        {routeLoading && (
+          <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white">
+            Calculating route…
+          </div>
         )}
         {waypoints.map((w, i) => (
           <Marker
