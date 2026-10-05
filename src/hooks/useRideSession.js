@@ -194,6 +194,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
             }
           }
         }
+        newPos.__timestamp = pos.timestamp || Date.now();
         lastPosRef.current = newPos;
       },
       () => {},
