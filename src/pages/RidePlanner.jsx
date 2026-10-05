@@ -241,10 +241,45 @@ export default function RidePlanner() {
     setWaypoints((prev) => {
       const next = [...prev];
       const insertAt = Math.min(legIndex + 1, next.length);
+      const duplicate = next.some((w) => Math.abs(w.lat - loc.lat) < 0.0002 && Math.abs(w.lng - loc.lng) < 0.0002);
+      if (duplicate) return prev;
       next.splice(insertAt, 0, { name: loc.name, lat: loc.lat, lng: loc.lng });
       return next;
     });
     toast.success(`Added "${loc.name}" to your route`);
+  };
+
+  const addRecommendedStops = (stopPoints, results) => {
+    const candidates = [];
+    stopPoints.forEach((sp) => {
+      const list = results?.[sp.key]?.candidates || [];
+      if (list.length) candidates.push({ sp, candidate: list[0] });
+    });
+    if (!candidates.length) {
+      toast.error('No nearby stops are ready to add yet');
+      return;
+    }
+
+    setWaypoints((prev) => {
+      const inserts = candidates
+        .map(({ sp, candidate }) => ({
+          legIndex: sp.legIndex,
+          loc: { name: candidate.name, lat: candidate.lat, lng: candidate.lng },
+        }))
+        .filter(({ loc }) => !prev.some((w) => Math.abs(w.lat - loc.lat) < 0.0002 && Math.abs(w.lng - loc.lng) < 0.0002))
+        .sort((a, b) => a.legIndex - b.legIndex);
+
+      const next = [...prev];
+      let offset = 0;
+      inserts.forEach(({ legIndex, loc }) => {
+        const insertAt = Math.min(legIndex + 1 + offset, next.length);
+        next.splice(insertAt, 0, loc);
+        offset += 1;
+      });
+      return next;
+    });
+
+    toast.success(`Added ${candidates.length} recommended stop${candidates.length === 1 ? '' : 's'} — recalculating route`);
   };
 
   const handleSave = async () => {
@@ -416,6 +451,7 @@ export default function RidePlanner() {
               waypoints={waypoints}
               routeData={routeData}
               onAddStop={addSuggestedStop}
+              onAddRecommendedStops={addRecommendedStops}
               onSuggestChange={setSuggestedStops}
             />
             <RideReadiness
