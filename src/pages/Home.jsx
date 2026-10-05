@@ -271,9 +271,12 @@ export default function Home() {
       clearPendingNavigation();
       const start = pending.start ? [pending.start.lat, pending.start.lng] : undefined;
       if (pending.autoStart) {
-        session.navigateTo(pending.dest, start);
+        session.navigateTo(pending.dest, start, pending.waypoints || []);
       } else {
-        session.handleDestination(pending.dest);
+        session.handleDestination(pending.dest, {
+          start: pending.start,
+          waypoints: pending.waypoints || [],
+        });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
