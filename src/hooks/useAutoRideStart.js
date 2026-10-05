@@ -19,6 +19,7 @@ export function useAutoRideStart({ enabled, onAutoStart }) {
   const lastTriggerRef = useRef(0);
   const triggeredRef = useRef(false);
   const onAutoStartRef = useRef(onAutoStart);
+  const watchIdRef = useRef(null);
 
   useEffect(() => { onAutoStartRef.current = onAutoStart; }, [onAutoStart]);
 
