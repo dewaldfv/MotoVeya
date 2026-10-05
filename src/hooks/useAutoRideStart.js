@@ -119,6 +119,12 @@ export function useAutoRideStart({ enabled, onAutoStart }) {
       }
     );
 
-    return () => navigator.geolocation.clearWatch(watchId);
+    watchIdRef.current = watchId;
+    return () => {
+      if (watchIdRef.current != null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
   }, [enabled]);
 }
