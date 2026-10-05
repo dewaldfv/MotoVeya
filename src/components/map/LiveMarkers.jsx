@@ -55,10 +55,9 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
   const accuracyRef = useRef(null);
   const cbRef = useRef(onFriendClick);
   cbRef.current = onFriendClick;
-  // Smooth rider-marker interpolation state.
-  const riderAnimRef = useRef(null);
-  const riderDisplayRef = useRef(null);
-  const easeInOutQuad = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+  // The rider marker follows each validated GPS fix directly.
+  // Interpolating between fixes can make the marker permanently lag behind
+  // when GPS updates arrive faster than the animation duration.
 
   useEffect(() => {
     if (!map || !window.google) return;
