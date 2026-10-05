@@ -530,10 +530,19 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
 
   // --- Handlers ---
 
-  const fetchRoute = async (origin, dest) => {
+  const fetchRoute = async (origin, dest, routeWaypoints = []) => {
     setRouteLoading(true);
     try {
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=true`);
+      const intermediate = (Array.isArray(routeWaypoints) ? routeWaypoints : [])
+        .filter((p) => Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lng)))
+        .filter((p) => !(Number(p.lat) === Number(origin[0]) && Number(p.lng) === Number(origin[1])))
+        .filter((p) => !(Number(p.lat) === Number(dest.lat) && Number(p.lng) === Number(dest.lng)));
+      const points = [
+        `${origin[1]},${origin[0]}`,
+        ...intermediate.map((p) => `${p.lng},${p.lat}`),
+        `${dest.lng},${dest.lat}`,
+      ];
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${points.join(';')}?overview=full&geometries=geojson&steps=true&continue_straight=false`);
       const data = await res.json();
       if (data.routes?.[0]) {
         setRouteData(processRouteData(data));
@@ -546,13 +555,15 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     }
   };
 
-  const handleDestination = async (dest) => {
+  const handleDestination = async (dest, routeOptions = {}) => {
     setDestination(dest);
     setDestInput(dest.name);
     try {
-      const origin = await getCurrentPosition();
+      const origin = routeOptions.start
+        ? [routeOptions.start.lat, routeOptions.start.lng]
+        : await getCurrentPosition();
       setUserPos(origin);
-      await fetchRoute(origin, dest);
+      await fetchRoute(origin, dest, routeOptions.waypoints || []);
     } catch (e) {
       console.error(e);
       toast.error('Could not get your location. Enable GPS and try again.');
@@ -716,7 +727,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     }
   };
 
-  const startRide = async (destOverride, originOverride) => {
+  const startRide = async (destOverride, originOverride, routeWaypoints = []) => {
     await requestMotionPermission();
     setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
     setHeading(null); setAccuracy(null); setDistressActive(false);
@@ -735,7 +746,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       try {
         const origin = originOverride || await getCurrentPosition();
         setUserPos(origin);
-        await fetchRoute(origin, dest);
+        await fetchRoute(origin, dest, routeWaypoints);
       } catch (e) {
         console.error(e);
         toast.error('Could not get GPS for route');
@@ -834,6 +845,6 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     handleDestination, handleAddStop, handleDismissService, handleReportWarning,
     handleSimulateCrash, handleCancelCrash, handleResolveEmergency,
     handleDistress, startRide, endRide: handleEndRide,
-    navigateTo: (dest, origin) => { startRide(dest, origin); },
+    navigateTo: (dest, origin, routeWaypoints = []) => { startRide(dest, origin, routeWaypoints); },
   };
 }
