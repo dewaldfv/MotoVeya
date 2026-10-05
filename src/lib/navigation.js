@@ -32,25 +32,27 @@ export function getManeuverIcon(maneuver) {
 export function processRouteData(data) {
   const route = data.routes?.[0];
   if (!route) return null;
-  const rawSteps = route.legs?.[0]?.steps || [];
+  const legs = route.legs || [];
   const coordinates = [];
   const steps = [];
   let idx = 0;
-  for (const step of rawSteps) {
-    const stepCoords = step.geometry?.coordinates || [];
-    const startIdx = idx;
-    for (const c of stepCoords) {
-      coordinates.push([c[1], c[0]]);
-      idx++;
+  for (const leg of legs) {
+    for (const step of (leg.steps || [])) {
+      const stepCoords = step.geometry?.coordinates || [];
+      const startIdx = idx;
+      for (const c of stepCoords) {
+        coordinates.push([c[1], c[0]]);
+        idx++;
+      }
+      steps.push({
+        maneuver: step.maneuver,
+        name: step.name,
+        distance: step.distance,
+        duration: step.duration,
+        startIdx,
+        endIdx: idx - 1,
+      });
     }
-    steps.push({
-      maneuver: step.maneuver,
-      name: step.name,
-      distance: step.distance,
-      duration: step.duration,
-      startIdx,
-      endIdx: idx - 1,
-    });
   }
   return { coordinates, steps, distance: route.distance, duration: route.duration };
 }
