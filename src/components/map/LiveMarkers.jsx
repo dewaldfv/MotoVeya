@@ -78,27 +78,11 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       if (!m) {
         m = new g.maps.Marker({ position: latLng, map, icon, zIndex: 1200 });
         markers.set(id, m);
-        riderDisplayRef.current = { lat: rider.lat, lng: rider.lng };
       } else {
         m.setIcon(icon);
-        // Glide from the currently displayed position toward the new GPS fix.
-        if (riderAnimRef.current) cancelAnimationFrame(riderAnimRef.current);
-        const start = riderDisplayRef.current || { lat: rider.lat, lng: rider.lng };
-        const target = { lat: rider.lat, lng: rider.lng };
-        const startTime = performance.now();
-        const duration = 700;
-        const step = (now) => {
-          const t = Math.min(1, (now - startTime) / duration);
-          const eased = easeInOutQuad(t);
-          riderDisplayRef.current = {
-            lat: start.lat + (target.lat - start.lat) * eased,
-            lng: start.lng + (target.lng - start.lng) * eased,
-          };
-          if (m.getMap()) m.setPosition(new g.maps.LatLng(riderDisplayRef.current.lat, riderDisplayRef.current.lng));
-          if (t < 1) riderAnimRef.current = requestAnimationFrame(step);
-          else riderAnimRef.current = null;
-        };
-        riderAnimRef.current = requestAnimationFrame(step);
+        // Apply the newest GPS fix immediately. Camera smoothing is independent
+        // of the rider marker, so the marker never trails the actual GPS position.
+        m.setPosition(latLng);
       }
       if (rider.accuracy && rider.accuracy > 0) {
         if (!accuracyRef.current) {
