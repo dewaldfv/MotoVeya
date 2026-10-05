@@ -167,11 +167,10 @@ export function useLocationBroadcast() {
       await updateBattery();
       settingsPollId = setInterval(loadSettings, SETTINGS_POLL_MS);
       batteryPollId = setInterval(updateBattery, 30000);
-      if (navigator.geolocation) {
-        watchId = navigator.geolocation.watchPosition(onPos, onPosError, {
-          enableHighAccuracy: true, maximumAge: 5000, timeout: 15000,
-        });
-      }
+      // Ride Mode owns the authoritative GPS watch. Live sharing consumes the
+      // same fixes through a lightweight in-app event instead of opening a
+      // second watchPosition() that can compete for Android/WebView GPS updates.
+      window.addEventListener('motoveya:ride-location', onPos);
       intervalId = setInterval(broadcast, TICK_MS);
       document.addEventListener('visibilitychange', onVis);
       broadcast();
