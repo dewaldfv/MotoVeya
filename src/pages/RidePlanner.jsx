@@ -13,6 +13,7 @@ import RidePlannerMap from '@/components/ride-planner/RidePlannerMap';
 import WeatherCard from '@/components/ride-planner/WeatherCard';
 import RangeWarning from '@/components/ride-planner/RangeWarning';
 import StopSuggestions from '@/components/ride-planner/StopSuggestions';
+import RideReadiness from '@/components/ride-planner/RideReadiness';
 import { savePendingNavigation } from '@/lib/rideCache';
 import { getRouteWeather } from '@/lib/weather';
 import { calculatePlannedRoute } from '@/lib/ridePlanning';
@@ -416,6 +417,12 @@ export default function RidePlanner() {
               routeData={routeData}
               onAddStop={addSuggestedStop}
               onSuggestChange={setSuggestedStops}
+            />
+            <RideReadiness
+              waypoints={waypoints}
+              routeData={routeData}
+              routeLoading={routeLoading}
+              suggestedStops={suggestedStops}
             />
           </>
         )}
