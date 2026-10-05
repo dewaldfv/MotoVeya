@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, Navigation, Loader2, Calendar, CloudSun } from 'lucide-react';
+import { ChevronLeft, Repeat2, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, Navigation, Loader2, Calendar, CloudSun } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -28,6 +28,7 @@ export default function RidePlanner() {
   const [notes, setNotes] = useState('');
   const [plannedDate, setPlannedDate] = useState('');
   const [waypoints, setWaypoints] = useState([]);
+  const [loopRide, setLoopRide] = useState(false);
   const [routeData, setRouteData] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [weather, setWeather] = useState(null);
@@ -152,6 +153,7 @@ export default function RidePlanner() {
           setNotes(draft.notes || '');
           setPlannedDate(draft.plannedDate || '');
           setWaypoints(Array.isArray(draft.waypoints) ? draft.waypoints : []);
+          setLoopRide(!!draft.loopRide);
           setRouteData(draft.routeData || null);
           lastSavedSnapshot.current = JSON.stringify({ title: draft.title || '', notes: draft.notes || '', plannedDate: draft.plannedDate || '', waypoints: Array.isArray(draft.waypoints) ? draft.waypoints : [] });
         }
@@ -161,19 +163,27 @@ export default function RidePlanner() {
 
   // Persist draft locally
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, notes, plannedDate, waypoints, routeData }));
-  }, [title, notes, plannedDate, waypoints, routeData]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, notes, plannedDate, waypoints, loopRide, routeData }));
+  }, [title, notes, plannedDate, waypoints, loopRide, routeData]);
 
   // Calculate the real road route using the same OSRM engine used by live navigation.
   // This is the authoritative distance/time source for fuel and ride planning.
-  const routeKey = useMemo(() => waypoints.map((w) => `${w.lat},${w.lng}`).join('|'), [waypoints]);
+  const routedWaypoints = useMemo(() => {
+    if (!loopRide || waypoints.length < 2) return waypoints;
+    const first = waypoints[0];
+    const last = waypoints[waypoints.length - 1];
+    if (Math.abs(first.lat - last.lat) < 0.0002 && Math.abs(first.lng - last.lng) < 0.0002) return waypoints;
+    return [...waypoints, { ...first, name: `${first.name || 'Start'} (return)` }];
+  }, [waypoints, loopRide]);
+
+  const routeKey = useMemo(() => routedWaypoints.map((w) => `${w.lat},${w.lng}`).join('|'), [routedWaypoints]);
   useEffect(() => {
     if (waypoints.length < 2) { setRouteData(null); return; }
     let cancelled = false;
     setRouteLoading(true);
     const t = setTimeout(async () => {
       try {
-        const route = await calculatePlannedRoute(waypoints);
+        const route = await calculatePlannedRoute(routedWaypoints);
         if (!cancelled) setRouteData(route);
       } catch (e) {
         console.error('Ride planner routing:', e);
@@ -183,7 +193,7 @@ export default function RidePlanner() {
       }
     }, 250);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [routeKey]);
+  }, [routeKey, routedWaypoints]);
 
   // Fetch weather whenever waypoints or date change (debounced)
   const weatherKey = useMemo(
@@ -313,6 +323,7 @@ export default function RidePlanner() {
       setNotes(plan.notes || '');
       setPlannedDate(plan.planned_date ? plan.planned_date.slice(0, 10) : '');
       setWaypoints(wp);
+      setLoopRide(false);
       setRouteData(plan.route_data ? JSON.parse(plan.route_data) : null);
       setCurrentPlanId(plan.id);
       lastSavedSnapshot.current = JSON.stringify({ title: plan.title, notes: plan.notes || '', plannedDate: plan.planned_date ? plan.planned_date.slice(0, 10) : '', waypoints: wp });
@@ -365,12 +376,13 @@ export default function RidePlanner() {
 
   const handleStartRide = () => {
     if (waypoints.length < 2) { toast.error('Add at least two waypoints first'); return; }
-    const dest = waypoints[waypoints.length - 1];
     const start = waypoints[0];
+    const navigationWaypoints = loopRide ? routedWaypoints : waypoints;
+    const dest = navigationWaypoints[navigationWaypoints.length - 1];
     savePendingNavigation({
       dest: { name: dest.name, lat: dest.lat, lng: dest.lng },
       start: { lat: start.lat, lng: start.lng },
-      waypoints: waypoints.map((w) => ({ name: w.name, lat: w.lat, lng: w.lng })),
+      waypoints: navigationWaypoints.map((w) => ({ name: w.name, lat: w.lat, lng: w.lng })),
       routeData,
       autoStart: false,
     });
@@ -437,25 +449,42 @@ export default function RidePlanner() {
           <LocationSearchInput placeholder="Search for a place..." onSelect={addWaypoint} />
         </div>
 
+        {waypoints.length >= 2 && (
+          <button
+            type="button"
+            onClick={() => setLoopRide((v) => !v)}
+            className={`flex w-full items-center justify-between rounded-3xl border p-4 text-left transition ${loopRide ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}
+          >
+            <div className="flex items-center gap-3">
+              <span className={`flex h-10 w-10 items-center justify-center rounded-full ${loopRide ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}><Repeat2 size={19} /></span>
+              <div>
+                <p className="text-sm font-bold">Loop Ride</p>
+                <p className="text-xs text-muted-foreground">{loopRide ? 'Route will return to the starting point' : 'Finish where you started'}</p>
+              </div>
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${loopRide ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>{loopRide ? 'ON' : 'OFF'}</span>
+          </button>
+        )}
+
         {waypoints.length > 0 && (
           <>
-            <RidePlannerMap waypoints={waypoints} routeData={routeData} routeLoading={routeLoading} suggestedStops={suggestedStops} onWaypointDrag={updateWaypoint} />
+            <RidePlannerMap waypoints={routedWaypoints} routeData={routeData} routeLoading={routeLoading} suggestedStops={suggestedStops} onWaypointDrag={updateWaypoint} />
             {routeLoading && <div className="rounded-2xl border border-border bg-card p-3 text-sm text-muted-foreground">Calculating actual road route…</div>}
             {routeData && <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4 text-sm">
               <div><p className="text-xs text-muted-foreground">Road distance</p><p className="font-bold">{routeData.distance_km.toFixed(1)} km</p></div>
               <div><p className="text-xs text-muted-foreground">Estimated riding time</p><p className="font-bold">{Math.floor(routeData.duration_minutes / 60)}h {Math.round(routeData.duration_minutes % 60)}m</p></div>
             </div>}
             <WeatherCard weather={weather} loading={weatherLoading} plannedDate={plannedDate} />
-            <RangeWarning waypoints={waypoints} routeData={routeData} />
+            <RangeWarning waypoints={routedWaypoints} routeData={routeData} />
             <StopSuggestions
-              waypoints={waypoints}
+              waypoints={routedWaypoints}
               routeData={routeData}
               onAddStop={addSuggestedStop}
               onAddRecommendedStops={addRecommendedStops}
               onSuggestChange={setSuggestedStops}
             />
             <RideReadiness
-              waypoints={waypoints}
+              waypoints={routedWaypoints}
               routeData={routeData}
               routeLoading={routeLoading}
               suggestedStops={suggestedStops}
