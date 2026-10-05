@@ -179,7 +179,7 @@ export function useLocationBroadcast() {
 
     return () => {
       destroyed = true;
-      if (watchId) navigator.geolocation.clearWatch(watchId);
+      window.removeEventListener('motoveya:ride-location', onPos);
       if (intervalId) clearInterval(intervalId);
       if (settingsPollId) clearInterval(settingsPollId);
       if (batteryPollId) clearInterval(batteryPollId);
