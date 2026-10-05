@@ -15,6 +15,7 @@ import RangeWarning from '@/components/ride-planner/RangeWarning';
 import StopSuggestions from '@/components/ride-planner/StopSuggestions';
 import { savePendingNavigation } from '@/lib/rideCache';
 import { getRouteWeather } from '@/lib/weather';
+import { calculatePlannedRoute } from '@/lib/ridePlanning';
 import { toast } from 'sonner';
 
 const STORAGE_KEY = 'motogo_ride_plan_draft';
@@ -26,6 +27,8 @@ export default function RidePlanner() {
   const [notes, setNotes] = useState('');
   const [plannedDate, setPlannedDate] = useState('');
   const [waypoints, setWaypoints] = useState([]);
+  const [routeData, setRouteData] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [suggestedStops, setSuggestedStops] = useState([]);
@@ -49,10 +52,14 @@ export default function RidePlanner() {
   const buildPayload = useCallback(() => ({
     title: title.trim(),
     waypoints: JSON.stringify(waypoints),
+    route_data: routeData ? JSON.stringify(routeData) : undefined,
+    route_distance_km: routeData?.distance_km,
+    route_duration_minutes: routeData?.duration_minutes,
+    route_engine: routeData?.engine || undefined,
     notes: notes.trim(),
     planned_date: plannedDate ? new Date(plannedDate).toISOString() : undefined,
     weather: weather ? JSON.stringify(weather) : undefined,
-  }), [title, waypoints, notes, plannedDate, weather]);
+  }), [title, waypoints, routeData, notes, plannedDate, weather]);
 
   const autoSave = useCallback(async (createIfMissing) => {
     if (sharedRoute || !title.trim() || waypoints.length < 2) return;
@@ -142,6 +149,7 @@ export default function RidePlanner() {
           setNotes(draft.notes || '');
           setPlannedDate(draft.plannedDate || '');
           setWaypoints(Array.isArray(draft.waypoints) ? draft.waypoints : []);
+          setRouteData(draft.routeData || null);
           lastSavedSnapshot.current = JSON.stringify({ title: draft.title || '', notes: draft.notes || '', plannedDate: draft.plannedDate || '', waypoints: Array.isArray(draft.waypoints) ? draft.waypoints : [] });
         }
       } catch (e) { /* ignore */ }
@@ -150,8 +158,29 @@ export default function RidePlanner() {
 
   // Persist draft locally
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, notes, plannedDate, waypoints }));
-  }, [title, notes, plannedDate, waypoints]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, notes, plannedDate, waypoints, routeData }));
+  }, [title, notes, plannedDate, waypoints, routeData]);
+
+  // Calculate the real road route using the same OSRM engine used by live navigation.
+  // This is the authoritative distance/time source for fuel and ride planning.
+  const routeKey = useMemo(() => waypoints.map((w) => `${w.lat},${w.lng}`).join('|'), [waypoints]);
+  useEffect(() => {
+    if (waypoints.length < 2) { setRouteData(null); return; }
+    let cancelled = false;
+    setRouteLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const route = await calculatePlannedRoute(waypoints);
+        if (!cancelled) setRouteData(route);
+      } catch (e) {
+        console.error('Ride planner routing:', e);
+        if (!cancelled) { setRouteData(null); toast.error('Could not calculate the road route'); }
+      } finally {
+        if (!cancelled) setRouteLoading(false);
+      }
+    }, 250);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [routeKey]);
 
   // Fetch weather whenever waypoints or date change (debounced)
   const weatherKey = useMemo(
@@ -302,6 +331,9 @@ export default function RidePlanner() {
     savePendingNavigation({
       dest: { name: dest.name, lat: dest.lat, lng: dest.lng },
       start: { lat: start.lat, lng: start.lng },
+      waypoints: waypoints.map((w) => ({ name: w.name, lat: w.lat, lng: w.lng })),
+      routeData,
+      autoStart: false,
     });
     navigate('/');
   };
@@ -368,11 +400,17 @@ export default function RidePlanner() {
 
         {waypoints.length > 0 && (
           <>
-            <RidePlannerMap waypoints={waypoints} suggestedStops={suggestedStops} onWaypointDrag={updateWaypoint} />
+            <RidePlannerMap waypoints={waypoints} routeData={routeData} routeLoading={routeLoading} suggestedStops={suggestedStops} onWaypointDrag={updateWaypoint} />
+            {routeLoading && <div className="rounded-2xl border border-border bg-card p-3 text-sm text-muted-foreground">Calculating actual road route…</div>}
+            {routeData && <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4 text-sm">
+              <div><p className="text-xs text-muted-foreground">Road distance</p><p className="font-bold">{routeData.distance_km.toFixed(1)} km</p></div>
+              <div><p className="text-xs text-muted-foreground">Estimated riding time</p><p className="font-bold">{Math.floor(routeData.duration_minutes / 60)}h {Math.round(routeData.duration_minutes % 60)}m</p></div>
+            </div>}
             <WeatherCard weather={weather} loading={weatherLoading} plannedDate={plannedDate} />
-            <RangeWarning waypoints={waypoints} />
+            <RangeWarning waypoints={waypoints} routeData={routeData} />
             <StopSuggestions
               waypoints={waypoints}
+              routeData={routeData}
               onAddStop={addSuggestedStop}
               onSuggestChange={setSuggestedStops}
             />
