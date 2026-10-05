@@ -170,7 +170,6 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
 
   // Cleanup on unmount
   useEffect(() => () => {
-    if (riderAnimRef.current) cancelAnimationFrame(riderAnimRef.current);
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current.clear();
     infoWindowsRef.current.forEach((w) => w.close());
