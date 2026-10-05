@@ -160,7 +160,18 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         positionsRef.current.push(newPos);
         if (pos.coords.heading != null && !isNaN(pos.coords.heading)) setHeading(pos.coords.heading);
         if (pos.coords.accuracy != null) setAccuracy(pos.coords.accuracy);
-        const spd = pos.coords.speed != null && pos.coords.speed > 0 ? pos.coords.speed * 3.6 : 0;
+        // Android/WebView can report coords.speed as 0/null even with a valid
+        // high-accuracy GPS fix. Derive speed from consecutive GPS fixes.
+        let spd = pos.coords.speed != null && Number.isFinite(pos.coords.speed) && pos.coords.speed > 0
+          ? pos.coords.speed * 3.6
+          : 0;
+        if (lastPosRef.current?.__timestamp && spd < 1) {
+          const elapsedSec = (pos.timestamp - lastPosRef.current.__timestamp) / 1000;
+          if (elapsedSec > 0) {
+            const derivedSpeed = haversine(lastPosRef.current[0], lastPosRef.current[1], newPos[0], newPos[1]) * 3600 / elapsedSec;
+            if (Number.isFinite(derivedSpeed)) spd = derivedSpeed;
+          }
+        }
         setSpeed(Math.round(spd));
         setMaxSpeed((prev) => (spd > prev ? Math.round(spd) : prev));
         if (lastPosRef.current) {
