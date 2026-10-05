@@ -16,7 +16,7 @@ import StopSuggestions from '@/components/ride-planner/StopSuggestions';
 import RideReadiness from '@/components/ride-planner/RideReadiness';
 import { savePendingNavigation } from '@/lib/rideCache';
 import { getRouteWeather } from '@/lib/weather';
-import { calculatePlannedRoute } from '@/lib/ridePlanning';
+import { calculatePlannedRoute, ROUTE_STYLES } from '@/lib/ridePlanning';
 import { toast } from 'sonner';
 
 const STORAGE_KEY = 'motogo_ride_plan_draft';
@@ -29,6 +29,7 @@ export default function RidePlanner() {
   const [plannedDate, setPlannedDate] = useState('');
   const [waypoints, setWaypoints] = useState([]);
   const [loopRide, setLoopRide] = useState(false);
+  const [routeStyle, setRouteStyle] = useState('fastest');
   const [routeData, setRouteData] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [weather, setWeather] = useState(null);
@@ -154,6 +155,7 @@ export default function RidePlanner() {
           setPlannedDate(draft.plannedDate || '');
           setWaypoints(Array.isArray(draft.waypoints) ? draft.waypoints : []);
           setLoopRide(!!draft.loopRide);
+          setRouteStyle(draft.routeStyle || 'fastest');
           setRouteData(draft.routeData || null);
           lastSavedSnapshot.current = JSON.stringify({ title: draft.title || '', notes: draft.notes || '', plannedDate: draft.plannedDate || '', waypoints: Array.isArray(draft.waypoints) ? draft.waypoints : [] });
         }
@@ -163,7 +165,7 @@ export default function RidePlanner() {
 
   // Persist draft locally
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, notes, plannedDate, waypoints, loopRide, routeData }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ title, notes, plannedDate, waypoints, loopRide, routeStyle, routeData }));
   }, [title, notes, plannedDate, waypoints, loopRide, routeData]);
 
   // Calculate the real road route using the same OSRM engine used by live navigation.
@@ -183,7 +185,7 @@ export default function RidePlanner() {
     setRouteLoading(true);
     const t = setTimeout(async () => {
       try {
-        const route = await calculatePlannedRoute(routedWaypoints);
+        const route = await calculatePlannedRoute(routedWaypoints, routeStyle);
         if (!cancelled) setRouteData(route);
       } catch (e) {
         console.error('Ride planner routing:', e);
@@ -193,7 +195,7 @@ export default function RidePlanner() {
       }
     }, 250);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [routeKey, routedWaypoints]);
+  }, [routeKey, routedWaypoints, routeStyle]);
 
   // Fetch weather whenever waypoints or date change (debounced)
   const weatherKey = useMemo(
