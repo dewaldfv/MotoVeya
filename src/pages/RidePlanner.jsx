@@ -59,10 +59,11 @@ export default function RidePlanner() {
     route_distance_km: routeData?.distance_km,
     route_duration_minutes: routeData?.duration_minutes,
     route_engine: routeData?.engine || undefined,
+    route_style: routeStyle,
     notes: notes.trim(),
     planned_date: plannedDate ? new Date(plannedDate).toISOString() : undefined,
     weather: weather ? JSON.stringify(weather) : undefined,
-  }), [title, waypoints, routeData, notes, plannedDate, weather]);
+  }), [title, waypoints, routeData, routeStyle, notes, plannedDate, weather]);
 
   const autoSave = useCallback(async (createIfMissing) => {
     if (sharedRoute || !title.trim() || waypoints.length < 2) return;
