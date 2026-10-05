@@ -98,16 +98,10 @@ export function useBackgroundTracking({ enabled, isActive, isNavigating, stats }
       const s = statsRef.current || { speed: 0 };
       const nav = isNavigatingRef.current;
 
-      if (nav || s.speed >= 5) {
-        setGpsMode(nav ? 'navigating' : 'riding');
-        lowSpeedSinceRef.current = null;
-        return;
-      }
-      if (!lowSpeedSinceRef.current) {
-        lowSpeedSinceRef.current = Date.now();
-      } else if (Date.now() - lowSpeedSinceRef.current > STATIONARY_DELAY) {
-        setGpsMode('stationary');
-      }
+      // Never downgrade an active ride to a low-frequency GPS profile.
+      // Android/WebView can report coords.speed as 0/null while the rider is moving.
+      setGpsMode(nav ? 'navigating' : 'riding');
+      lowSpeedSinceRef.current = null;
     }, 5000);
 
     return () => clearInterval(interval);
