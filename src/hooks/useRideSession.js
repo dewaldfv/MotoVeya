@@ -196,6 +196,21 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         }
         newPos.__timestamp = pos.timestamp || Date.now();
         lastPosRef.current = newPos;
+
+        // Single authoritative GPS stream: consumers such as live sharing receive
+        // this exact fix instead of opening their own competing watchPosition().
+        try {
+          window.dispatchEvent(new CustomEvent('motoveya:ride-location', {
+            detail: {
+              lat: newPos[0],
+              lng: newPos[1],
+              speed: spd,
+              heading: pos.coords.heading != null && !isNaN(pos.coords.heading) ? pos.coords.heading : null,
+              accuracy: pos.coords.accuracy ?? null,
+              timestamp: pos.timestamp || Date.now(),
+            }
+          }));
+        } catch {}
       },
       () => {},
       gpsConfig
