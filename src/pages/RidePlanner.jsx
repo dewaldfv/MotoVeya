@@ -468,6 +468,24 @@ export default function RidePlanner() {
           </button>
         )}
 
+        {waypoints.length >= 2 && (
+          <div className="rounded-3xl border border-border bg-card p-4">
+            <p className="mb-2 text-sm font-bold">Ride style</p>
+            <div className="grid grid-cols-3 gap-2">
+              {Object.entries(ROUTE_STYLES).map(([key, option]) => (
+                <button key={key} type="button" onClick={() => setRouteStyle(key)}
+                  className={`rounded-2xl border p-3 text-left ${routeStyle === key ? 'border-primary bg-primary/10' : 'border-border bg-background/40'}`}>
+                  <p className="text-xs font-bold">{option.label}</p>
+                  <p className="mt-1 text-[10px] leading-snug text-muted-foreground">{option.description}</p>
+                </button>
+              ))}
+            </div>
+            {routeData?.alternatives?.length > 1 && (
+              <p className="mt-2 text-[10px] text-muted-foreground">Compared {routeData.alternatives.length} available road alternatives.</p>
+            )}
+          </div>
+        )}
+
         {waypoints.length > 0 && (
           <>
             <RidePlannerMap waypoints={routedWaypoints} routeData={routeData} routeLoading={routeLoading} suggestedStops={suggestedStops} onWaypointDrag={updateWaypoint} />
