@@ -2,14 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Fuel, UtensilsCrossed, Plus, MapPin, Loader2, CheckCircle2, Navigation } from 'lucide-react';
 import { useBikeRange, suggestStopPoints, findNearbyStops } from '@/lib/stopSuggestions';
 
-export default function StopSuggestions({ waypoints = [], onAddStop, onSuggestChange }) {
+export default function StopSuggestions({ waypoints = [], routeData = null, onAddStop, onSuggestChange }) {
   const { safeRange, rangeKm } = useBikeRange();
   const [results, setResults] = useState({}); // { [stopKey]: { loading, candidates, error } }
   const [added, setAdded] = useState(new Set());
   const onSuggestChangeRef = useRef(onSuggestChange);
   onSuggestChangeRef.current = onSuggestChange;
 
-  const stopPoints = suggestStopPoints(waypoints, safeRange);
+  const stopPoints = suggestStopPoints(waypoints, safeRange, routeData);
 
   // Lift the recommended stop points up so the map can render them.
   useEffect(() => {
