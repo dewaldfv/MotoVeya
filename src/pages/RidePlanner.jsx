@@ -45,8 +45,8 @@ export default function RidePlanner() {
   }, []);
 
   const planSnapshot = useMemo(
-    () => JSON.stringify({ title, notes, plannedDate, waypoints }),
-    [title, notes, plannedDate, waypoints]
+    () => JSON.stringify({ title, notes, plannedDate, waypoints, routeData }),
+    [title, notes, plannedDate, waypoints, routeData]
   );
 
   const buildPayload = useCallback(() => ({
@@ -117,6 +117,7 @@ export default function RidePlanner() {
           setPlannedDate(shared.planned_date ? shared.planned_date.slice(0, 10) : '');
           setWaypoints(wp);
           setWeather(shared.weather ? JSON.parse(shared.weather) : null);
+          setRouteData(shared.route_data ? JSON.parse(shared.route_data) : null);
           setSharedRoute(true);
           setCurrentPlanId(null);
           lastSavedSnapshot.current = JSON.stringify({ title: shared.title || '', notes: shared.notes || '', plannedDate: shared.planned_date ? shared.planned_date.slice(0, 10) : '', waypoints: wp });
@@ -133,6 +134,7 @@ export default function RidePlanner() {
             setNotes(plan.notes || '');
             setPlannedDate(plan.planned_date ? plan.planned_date.slice(0, 10) : '');
             setWaypoints(wp);
+            setRouteData(plan.route_data ? JSON.parse(plan.route_data) : null);
             setCurrentPlanId(plan.id);
             lastSavedSnapshot.current = JSON.stringify({ title: plan.title || '', notes: plan.notes || '', plannedDate: plan.planned_date ? plan.planned_date.slice(0, 10) : '', waypoints: wp });
             setAutoSaveStatus('idle');
@@ -275,6 +277,7 @@ export default function RidePlanner() {
       setNotes(plan.notes || '');
       setPlannedDate(plan.planned_date ? plan.planned_date.slice(0, 10) : '');
       setWaypoints(wp);
+      setRouteData(plan.route_data ? JSON.parse(plan.route_data) : null);
       setCurrentPlanId(plan.id);
       lastSavedSnapshot.current = JSON.stringify({ title: plan.title, notes: plan.notes || '', plannedDate: plan.planned_date ? plan.planned_date.slice(0, 10) : '', waypoints: wp });
       setAutoSaveStatus('idle');
