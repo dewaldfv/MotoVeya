@@ -46,7 +46,6 @@ export function useLocationBroadcast() {
   const notifiedRef = useRef(false);
 
   useEffect(() => {
-    let watchId = null;
     let intervalId = null;
     let settingsPollId = null;
     let batteryPollId = null;
