@@ -20,6 +20,7 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
   const targetRef = useRef(null);
   const followingRef = useRef(true);
   const suppressCameraEventsRef = useRef(false);
+  const programmaticZoomRef = useRef(null);
 
   // Ride Mode remains fully interactive. Manual pan/zoom disengages camera
   // following; GPS tracking itself continues uninterrupted.
@@ -30,8 +31,18 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
       if (suppressCameraEventsRef.current) return;
       followingRef.current = false;
     };
+    const onZoomChanged = () => {
+      // Google Maps fires zoom_changed asynchronously after setZoom(). Do not
+      // mistake our own camera update for a rider manually zooming the map.
+      const actualZoom = map.getZoom();
+      if (programmaticZoomRef.current != null && actualZoom === programmaticZoomRef.current) {
+        programmaticZoomRef.current = null;
+        return;
+      }
+      followingRef.current = false;
+    };
     const dragStart = map.addListener('dragstart', onManualInteraction);
-    const zoomChanged = map.addListener('zoom_changed', onManualInteraction);
+    const zoomChanged = map.addListener('zoom_changed', onZoomChanged);
     return () => {
       dragStart?.remove?.();
       zoomChanged?.remove?.();
@@ -53,7 +64,8 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
       currentZoomRef.current = target.zoom;
       suppressCameraEventsRef.current = true;
       map.setCenter(currentCenterRef.current);
-      map.setZoom(currentZoomRef.current);
+      programmaticZoomRef.current = Math.round(currentZoomRef.current);
+      map.setZoom(Math.round(currentZoomRef.current));
       queueMicrotask(() => { suppressCameraEventsRef.current = false; });
     }
   }, [userPos?.[0], userPos?.[1], speed, nextManeuverDistance, map]);
@@ -66,7 +78,8 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
     currentZoomRef.current = targetRef.current.zoom;
     suppressCameraEventsRef.current = true;
     map.setCenter(currentCenterRef.current);
-    map.setZoom(currentZoomRef.current);
+    programmaticZoomRef.current = Math.round(currentZoomRef.current);
+    map.setZoom(Math.round(currentZoomRef.current));
     queueMicrotask(() => { suppressCameraEventsRef.current = false; });
   }, [recenterToken, map]);
 
@@ -82,15 +95,13 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
       if (target && cur && followingRef.current) {
         const dLat = target.lat - cur.lat;
         const dLng = target.lng - cur.lng;
-        const dZoom = target.zoom - (currentZoomRef.current ?? target.zoom);
-        // Only repaint when the change is meaningful — avoids sub-pixel jitter at rest.
-        if (Math.abs(dLat) > 1e-6 || Math.abs(dLng) > 1e-6 || Math.abs(dZoom) > 0.01) {
+        // Keep zoom changes discrete. Animating zoom on every frame causes
+        // Google Maps to emit zoom_changed repeatedly and can fight the follow camera.
+        if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) {
           cur.lat += dLat * SMOOTH;
           cur.lng += dLng * SMOOTH;
-          currentZoomRef.current += dZoom * SMOOTH;
           suppressCameraEventsRef.current = true;
           map.setCenter({ lat: cur.lat, lng: cur.lng });
-          map.setZoom(currentZoomRef.current);
           queueMicrotask(() => { suppressCameraEventsRef.current = false; });
         }
       }
@@ -99,6 +110,18 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [map]);
+
+  // Apply zoom only when the desired navigation zoom actually changes.
+  useEffect(() => {
+    if (!map || !targetRef.current) return;
+    const desired = Math.round(targetRef.current.zoom);
+    if (Math.round(currentZoomRef.current ?? desired) === desired && map.getZoom() === desired) return;
+    currentZoomRef.current = desired;
+    programmaticZoomRef.current = desired;
+    suppressCameraEventsRef.current = true;
+    map.setZoom(desired);
+    queueMicrotask(() => { suppressCameraEventsRef.current = false; });
+  }, [speed, nextManeuverDistance, map]);
 
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 }
