@@ -50,7 +50,7 @@ export function useBikeRange() {
  * - fuel: when a leg exceeds 60% of the bike's safe range.
  * - food/pub: when a leg is longer than 80 km (a natural break).
  */
-export function suggestStopPoints(waypoints = [], safeRange = null) {
+export function suggestStopPoints(waypoints = [], safeRange = null, routeData = null) {
   if (!waypoints || waypoints.length < 2 || !safeRange) return [];
   const fuelThreshold = safeRange * 0.6;
   const foodThresholdKm = 80;
@@ -58,7 +58,7 @@ export function suggestStopPoints(waypoints = [], safeRange = null) {
   for (let i = 0; i < waypoints.length - 1; i++) {
     const a = waypoints[i];
     const b = waypoints[i + 1];
-    const km = haversineKm(a, b);
+    const km = Number(routeData?.legs?.[i]?.distance_km) || haversineKm(a, b);
     const mid = { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
     const legLabel = `${a.name || 'Point ' + (i + 1)} → ${b.name || 'Point ' + (i + 2)}`;
     if (km > fuelThreshold) {
