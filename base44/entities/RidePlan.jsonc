@@ -8,6 +8,18 @@
     "waypoints": {
       "type": "string"
     },
+    "route_data": {
+      "type": "string"
+    },
+    "route_distance_km": {
+      "type": "number"
+    },
+    "route_duration_minutes": {
+      "type": "number"
+    },
+    "route_engine": {
+      "type": "string"
+    },
     "notes": {
       "type": "string"
     },
