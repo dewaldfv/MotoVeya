@@ -1,14 +1,14 @@
 import { Fuel, AlertTriangle, Bike } from 'lucide-react';
 import { useBikeRange, haversineKm } from '@/lib/stopSuggestions';
 
-export default function RangeWarning({ waypoints = [] }) {
+export default function RangeWarning({ waypoints = [], routeData = null }) {
   const { bike, rangeKm, safeRange } = useBikeRange();
 
   if (waypoints.length < 2 || !bike || !rangeKm) return null;
   const legs = [];
   let totalKm = 0;
   for (let i = 0; i < waypoints.length - 1; i++) {
-    const km = haversineKm(waypoints[i], waypoints[i + 1]);
+    const km = Number(routeData?.legs?.[i]?.distance_km) || haversineKm(waypoints[i], waypoints[i + 1]);
     totalKm += km;
     legs.push({ from: waypoints[i].name, to: waypoints[i + 1].name, km, over: km > safeRange });
   }
@@ -20,6 +20,7 @@ export default function RangeWarning({ waypoints = [] }) {
         <Bike size={16} className="text-primary" />
         {bike.nickname ? `${bike.nickname} (${bike.make} ${bike.model})` : `${bike.make} ${bike.model}`}
       </div>
+      {routeData?.engine === 'osrm' && <p className="mt-1 text-[10px] text-muted-foreground">Fuel planning uses actual road distance.</p>}
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="flex items-center gap-1"><Fuel size={12} /> Est. range: {Math.round(rangeKm)} km</span>
         <span>Total route: {Math.round(totalKm)} km</span>
