@@ -399,14 +399,6 @@
   50% { transform: scale(1.07); }
 }
 
-/* Google Maps cockpit perspective: the rider sees more road ahead while the HUD stays flat. */
-.gm-rotatable {
-  transform: translate(-50%, calc(-50% + 14vh)) perspective(1200px) rotateX(28deg) rotateZ(var(--nav-rot, 0deg)) !important;
-  transform-origin: center center !important;
-  transition: transform 0.45s ease-out;
-  will-change: transform;
-}
-
 @media (max-width: 430px) {
   .motoveya-nav-card__main { min-height: 52px; padding: 5px 8px; gap: 7px; }
   .motoveya-nav-icon { width: 42px; height: 42px; border-radius: 14px; }
