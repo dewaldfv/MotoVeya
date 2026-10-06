@@ -375,12 +375,11 @@ export default function MapView({
 
   return (
     <div
-      ref={navContainerRef}
-      className={`absolute inset-0 z-0 ${rotating ? 'nav-map-heading-up' : ''} ${className}`}
-      style={{ background: bgColor, '--nav-rot': '0deg' }}
+      className={`absolute inset-0 z-0 ${className}`}
+      style={{ background: bgColor }}
     >
       <GoogleMap
-        mapContainerClassName={`absolute inset-0 h-full w-full ${rotating ? 'gm-rotatable' : ''}`}
+        mapContainerClassName="absolute inset-0 h-full w-full"
         center={initialCenterRef.current}
         zoom={zoom}
         options={getMapOptions(layer)}
@@ -454,7 +453,7 @@ export default function MapView({
 
         {destination && (
           <CustomMapMarker position={[destination.lat, destination.lng]} anchor="bottom">
-            <div style={{ width: 28, height: 28, background: '#4285F4', borderRadius: '50% 50% 50% 0', transform: `rotate(${rotating && heading != null ? -45 + heading : -45}deg)`, border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }} />
+            <div style={{ width: 28, height: 28, background: '#4285F4', borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }} />
           </CustomMapMarker>
         )}
 
