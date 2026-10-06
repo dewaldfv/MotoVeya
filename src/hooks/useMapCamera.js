@@ -9,11 +9,11 @@ import { useEffect, useRef } from 'react';
  * the background without moving the camera. The "My Location" / recenter button
  * explicitly restores rider-follow mode.
  *
- * Bottom-third placement and heading rotation are handled by CSS on the
- * rotating container (see .nav-map-heading-up in index.css), so the camera
- * center here simply tracks the rider's raw GPS position.
+ * Heading-up is handled by the Google Maps camera bearing. The map DOM is
+ * never CSS-rotated, which keeps map tiles, controls, markers and overlays in
+ * the same geographic coordinate system.
  */
-export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recenterToken }) {
+export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistance, recenterToken, headingUp = true }) {
   const rafRef = useRef(null);
   const currentCenterRef = useRef(null);
   const currentZoomRef = useRef(null);
@@ -57,6 +57,14 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
       lng: userPos[1],
       zoom: resolveTargetZoom(speed, nextManeuverDistance)
     };
+    // Google Maps bearing is the correct way to implement heading-up mode.
+    // Do not rotate the DOM/container: that rotates the entire rendered map layer.
+    if (headingUp && heading != null && Number.isFinite(Number(heading))) {
+      const bearing = ((Number(heading) % 360) + 360) % 360;
+      map.setHeading?.(bearing);
+    } else if (!headingUp) {
+      map.setHeading?.(0);
+    }
     targetRef.current = target;
     // First frame — snap to the rider with no animation.
     if (!currentCenterRef.current) {
@@ -68,7 +76,7 @@ export function useMapCamera({ map, userPos, speed, nextManeuverDistance, recent
       map.setZoom(Math.round(currentZoomRef.current));
       queueMicrotask(() => { suppressCameraEventsRef.current = false; });
     }
-  }, [userPos?.[0], userPos?.[1], speed, nextManeuverDistance, map]);
+  }, [userPos?.[0], userPos?.[1], heading, headingUp, speed, nextManeuverDistance, map]);
 
   // Manual recenter token (the "My Location" button) — snap immediately.
   useEffect(() => {
