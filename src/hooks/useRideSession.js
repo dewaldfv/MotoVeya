@@ -491,7 +491,10 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       setRecalculating(true);
       (async () => {
         try {
-          const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true`);
+          const recalcParams = new URLSearchParams({ overview: 'full', geometries: 'geojson', steps: 'true', continue_straight: 'false' });
+          if (routePreference === 'avoid_motorways') recalcParams.set('exclude', 'motorway');
+          if (routePreference === 'rider_roads' || routePreference === 'alternative') recalcParams.set('alternatives', 'true');
+          const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${destination.lng},${destination.lat}?${recalcParams.toString()}`);
           const data = await res.json();
           if (data.routes?.[0]) {
             const routes = data.routes || [];
