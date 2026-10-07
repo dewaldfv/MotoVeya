@@ -274,7 +274,7 @@ export default function Home() {
       const start = pending.start ? [pending.start.lat, pending.start.lng] : undefined;
       if (pending.replayTrack) {
         if (pending.autoStart) {
-          session.navigateTo(pending.dest, start, pending.waypoints || [], pending.replayTrack);
+          session.navigateTo(pending.dest, undefined, pending.waypoints || [], pending.replayTrack);
         } else {
           session.startRide(pending.dest, start, pending.waypoints || [], pending.replayTrack);
         }
