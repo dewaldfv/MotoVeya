@@ -56,6 +56,7 @@ export default function Home() {
   const [locationLocked, setLocationLocked] = useState(false);
   const [fitRouteSignal, setFitRouteSignal] = useState(0);
   const [controlOpen, setControlOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [selectedGroupPlace, setSelectedGroupPlace] = useState(null);
