@@ -543,10 +543,22 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         ...intermediate.map((p) => `${p.lng},${p.lat}`),
         `${dest.lng},${dest.lat}`,
       ];
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${points.join(';')}?overview=full&geometries=geojson&steps=true&continue_straight=false`);
+      const params = new URLSearchParams({
+        overview: 'full',
+        geometries: 'geojson',
+        steps: 'true',
+        continue_straight: 'false',
+      });
+      if (preference === 'avoid_motorways') params.set('exclude', 'motorway');
+      if (preference === 'alternative') params.set('alternatives', 'true');
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${points.join(';')}?${params.toString()}`);
       const data = await res.json();
       if (data.routes?.[0]) {
-        setRouteData(processRouteData(data));
+        let selectedRoute = data.routes[0];
+        if (preference === 'alternative' && data.routes.length > 1) {
+          selectedRoute = [...data.routes].sort((a, b) => b.distance - a.distance)[0];
+        }
+        setRouteData(processRouteData({ routes: [selectedRoute] }));
       }
     } catch (e) {
       console.error(e);
