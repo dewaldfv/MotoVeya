@@ -26,7 +26,7 @@ export default function NavigationOverlay({
     emergencyContactsNotified, nearbyRidersNotified, beacon,
     voiceSupported, voiceListening, batteryLevel, heading, userPos,
     routeWarnings, reportingWarning,
-    recalculating,
+    recalculating, replayMode,
     startRide, endRide, handleDistress, handleReportWarning, handleSimulateCrash,
     handleCancelCrash, handleResolveEmergency,
     handleAddStop, handleDismissService, setAutoStopCountdown, clearDestination,
@@ -149,6 +149,38 @@ export default function NavigationOverlay({
         <div className="absolute left-3 right-3 z-20 flex items-center gap-2 rounded-2xl bg-card/95 p-3 shadow-xl backdrop-blur-lg landscape:max-w-md" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
           <Loader2 size={20} className="animate-spin text-primary" />
           <span className="text-sm font-medium">Calculating route...</span>
+        </div>
+      )}
+
+      {replayMode && (
+        <div className="absolute left-1/2 z-20 -translate-x-1/2" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
+          <div className="rounded-full bg-black/80 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white shadow-xl backdrop-blur-lg">
+            Exact Replay · Original GPS Track
+          </div>
+        </div>
+      )}
+
+      {replayMode && navProgress?.offRouteDistance > 0.15 && navProgress?.offRouteDistance <= 1 && (
+        <div className="absolute left-3 right-3 z-20" style={{ top: 'calc(3.6rem + env(safe-area-inset-top))' }}>
+          <div className="mx-auto flex max-w-md items-center gap-2 rounded-2xl bg-amber-500/95 px-3 py-2 shadow-xl">
+            <span className="text-lg">⚠️</span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-black text-black">OFF ORIGINAL TRACK</p>
+              <p className="text-[10px] font-semibold text-black/70">{Math.round(navProgress.offRouteDistance * 1000)} m from the recorded route. No reroute will be performed.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {replayMode && navProgress?.offRouteDistance > 1 && (
+        <div className="absolute left-3 right-3 z-20" style={{ top: 'calc(3.6rem + env(safe-area-inset-top))' }}>
+          <div className="mx-auto flex max-w-md items-center gap-2 rounded-2xl bg-red-600/95 px-3 py-2 shadow-xl">
+            <span className="text-lg">⚠️</span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-black text-white">FAR FROM ORIGINAL TRACK</p>
+              <p className="text-[10px] font-semibold text-white/80">{navProgress.offRouteDistance.toFixed(1)} km away. Exact Replay will not reroute.</p>
+            </div>
+          </div>
         </div>
       )}
 
