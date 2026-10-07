@@ -47,6 +47,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const [destination, setDestination] = useState(null);
   const [destInput, setDestInput] = useState('');
   const [routeData, setRouteData] = useState(null);
+  const [replayMode, setReplayMode] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routePreference, setRoutePreference] = useState(() => {
     try {
@@ -474,11 +475,12 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     return getRouteProgress(routeData, userPos);
   }, [routeData, userPos]);
 
-  // Off-route recalculation — detects when the rider drifts from the route
-  // and fetches a fresh route from OSRM. Uses a speed-adaptive threshold and
-  // a throttle window to avoid hammering the router on every GPS tick.
+  // Off-route handling. Normal navigation recalculates through OSRM. Exact Replay
+  // deliberately NEVER reroutes: the recorded GPS track is the route. A deviation
+  // warning is still shown so the rider knows they have left the original track.
   useEffect(() => {
     if (rideStatus !== 'active' || !routeData || !destination || !userPos) return;
+    if (routeData.replayMode) return;
     const route = routeData.coordinates;
     if (!route || route.length < 2) return;
     // Find the nearest point on the route to the rider.
@@ -790,10 +792,11 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     }
   };
 
-  const startRide = async (destOverride, originOverride, routeWaypoints = []) => {
+  const startRide = async (destOverride, originOverride, routeWaypoints = [], replayTrack = null) => {
     await requestMotionPermission();
     setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
     setHeading(null); setAccuracy(null); setDistressActive(false);
+    setReplayMode(!!replayTrack);
     crashRecoveryRef.current = null; setCrashRecovery(null);
     positionsRef.current = []; lastPosRef.current = null;
     startTimeRef.current = Date.now();
@@ -804,7 +807,31 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       if (!result.started && result.native) console.warn('MotoVeya native foreground tracking could not start');
     }).catch((e) => console.warn('Native foreground tracking unavailable:', e));
     const dest = destOverride || destination;
-    if (dest) {
+    if (replayTrack?.coordinates?.length >= 2) {
+      const track = replayTrack.coordinates;
+      const replayDestination = dest || {
+        lat: Number(track[track.length - 1][0]),
+        lng: Number(track[track.length - 1][1]),
+        name: replayTrack.destinationName || 'Replay finish'
+      };
+      setDestination(replayDestination);
+      setDestInput(replayDestination.name);
+      setRouteData({
+        coordinates: track.map((p) => [Number(p[0]), Number(p[1])]),
+        steps: [],
+        distance: Number(replayTrack.distanceMeters) || 0,
+        duration: Number(replayTrack.durationSeconds) || 0,
+        replayMode: true,
+        sourceRideId: replayTrack.sourceRideId || null,
+      });
+      try {
+        const origin = originOverride || await getCurrentPosition();
+        setUserPos(origin);
+      } catch (e) {
+        console.error(e);
+        toast.error('Could not get GPS for replay');
+      }
+    } else if (dest) {
       if (destOverride) { setDestination(destOverride); setDestInput(destOverride.name); }
       try {
         const origin = originOverride || await getCurrentPosition();
@@ -864,6 +891,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     } finally {
       clearActiveRide();
       setRouteData(null);
+      setReplayMode(false);
       setDestination(null);
       setDestInput('');
       setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
@@ -906,7 +934,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     routeWarnings: [...routeWarnings, ...externalWarnings], reportingWarning,
     isActive, rideMode, recalculating,
     setDestInput, setDestination, setAutoStopCountdown, clearDestination,
-    routePreference, setRoutePreference,
+    routePreference, setRoutePreference, replayMode,
     handleDestination, handleAddStop, handleDismissService, handleReportWarning,
     handleSimulateCrash, handleCancelCrash, handleResolveEmergency,
     handleDistress, startRide, endRide: handleEndRide,
