@@ -129,6 +129,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       setDestination(cached.destination || null);
       setDestInput(cached.destination?.name || '');
       setRouteData(cached.routeData || null);
+      setReplayMode(!!cached.routeData?.replayMode);
       setRideStatus('active');
       toast.info('Resuming active ride');
     } else if (cached) {
@@ -938,6 +939,6 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     handleDestination, handleAddStop, handleDismissService, handleReportWarning,
     handleSimulateCrash, handleCancelCrash, handleResolveEmergency,
     handleDistress, startRide, endRide: handleEndRide,
-    navigateTo: (dest, origin, routeWaypoints = []) => { startRide(dest, origin, routeWaypoints); },
+    navigateTo: (dest, origin, routeWaypoints = [], replayTrack = null) => { startRide(dest, origin, routeWaypoints, replayTrack); },
   };
 }
