@@ -577,7 +577,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         ? [routeOptions.start.lat, routeOptions.start.lng]
         : await getCurrentPosition();
       setUserPos(origin);
-      await fetchRoute(origin, dest, routeOptions.waypoints || []);
+      await fetchRoute(origin, dest, routeOptions.waypoints || [], preference);
     } catch (e) {
       console.error(e);
       toast.error('Could not get your location. Enable GPS and try again.');
