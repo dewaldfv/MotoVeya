@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Clock, Gauge, Fuel, TrendingUp, Calendar, MapPin, Bike as BikeIcon } from 'lucide-react';
+import { ChevronLeft, Clock, Gauge, Fuel, TrendingUp, Calendar, MapPin, Bike as BikeIcon, Repeat2, Save } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import MapView from '@/components/MapView';
 
@@ -24,8 +24,29 @@ export default function RideDetail() {
   if (!ride) return <div className="flex h-screen flex-col items-center justify-center gap-4"><p className="text-muted-foreground">Ride not found</p><button onClick={() => navigate('/rides')} className="text-primary">Back to rides</button></div>;
 
   const route = ride.route_polyline ? (() => { try { return JSON.parse(ride.route_polyline); } catch { return null; } })() : null;
-  const date = new Date(ride.ride_date || ride.created_date).toLocaleString('en-ZA', { dateStyle: 'full', timeStyle: 'short' });
+  const startDate = new Date(ride.ride_date || ride.created_date);
+  const date = startDate.toLocaleString('en-ZA', { dateStyle: 'full', timeStyle: 'short' });
+  const completedAt = ride.completed_at ? new Date(ride.completed_at) : new Date(startDate.getTime() + Math.max(0, Number(ride.duration_minutes || 0)) * 60000);
+  const completedTime = completedAt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
   const center = route ? route[Math.floor(route.length / 2)] : (ride.start_lat ? [ride.start_lat, ride.start_lng] : [-26.2041, 28.0473]);
+
+  const buildRepeatWaypoints = () => {
+    if (!Array.isArray(route) || route.length < 2) return [];
+    const maxPoints = 32;
+    const step = Math.max(1, Math.ceil(route.length / maxPoints));
+    const sampled = route.filter((_, i) => i === 0 || i === route.length - 1 || i % step === 0);
+    return sampled.map((p, i) => ({ name: i === 0 ? (ride.start_location_name || 'Start') : i === sampled.length - 1 ? (ride.end_location_name || 'Destination') : 'Route point ' + i, lat: Number(p[0]), lng: Number(p[1]) }));
+  };
+
+  const saveAsRoute = async (startImmediately = false) => {
+    const waypoints = buildRepeatWaypoints();
+    if (waypoints.length < 2) { alert('This ride does not contain enough GPS route data to save as a repeatable route.'); return; }
+    try {
+      const plan = await base44.entities.RidePlan.create({ title: 'Repeat: ' + (ride.title || 'Completed Ride'), waypoints: JSON.stringify(waypoints), route_style: 'fastest', notes: 'Created from completed ride on ' + startDate.toLocaleDateString('en-ZA') + '. Original distance: ' + Number(ride.distance_km || 0).toFixed(1) + ' km.' });
+      if (startImmediately) navigate('/ride-planner?load=' + plan.id);
+      else alert('Route saved. You can find it under Saved Routes.');
+    } catch (e) { console.error(e); alert('Could not save this ride as a repeatable route.'); }
+  };
 
   const stats = [
     { icon: TrendingUp, label: 'Distance', value: `${ride.distance_km?.toFixed(1) || 0} km` },
@@ -33,6 +54,7 @@ export default function RideDetail() {
     { icon: Gauge, label: 'Avg Speed', value: `${ride.average_speed_kmh?.toFixed(0) || 0} km/h` },
     { icon: Gauge, label: 'Max Speed', value: `${ride.max_speed_kmh || 0} km/h` },
     { icon: Fuel, label: 'Fuel Used', value: ride.fuel_consumed_l ? `${ride.fuel_consumed_l.toFixed(1)} L` : '—' },
+    { icon: Clock, label: 'Time Completed', value: completedTime },
   ];
 
   return (
@@ -48,6 +70,10 @@ export default function RideDetail() {
 
       <div className="p-4">
         <h1 className="text-2xl font-bold">{ride.title}</h1>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button onClick={() => saveAsRoute(true)} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-primary px-3 text-sm font-bold text-primary-foreground"><Repeat2 size={18} /> Ride Again</button>
+          <button onClick={() => saveAsRoute(false)} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-card px-3 text-sm font-bold ring-1 ring-border"><Save size={18} /> Save Route</button>
+        </div>
         <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar size={14} /> {date}
         </div>

@@ -28,7 +28,10 @@ function RoutePreview({ polyline }) {
 }
 
 export default function RideHistoryCard({ ride }) {
-  const date = new Date(ride.ride_date || ride.created_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+  const startDate = new Date(ride.ride_date || ride.created_date);
+  const date = startDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+  const completedAt = ride.completed_at ? new Date(ride.completed_at) : new Date(startDate.getTime() + Math.max(0, Number(ride.duration_minutes || 0)) * 60000);
+  const completedTime = completedAt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
   return (
     <Link to={`/rides/${ride.id}`} className="block overflow-hidden rounded-3xl bg-card shadow-md ring-1 ring-border transition-transform active:scale-[0.99]">
       <div className="flex">
@@ -45,6 +48,7 @@ export default function RideHistoryCard({ ride }) {
       </div>
       <div className="flex gap-3 border-t border-border px-3 py-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1"><Clock size={12} /> {ride.duration_minutes || 0}m</span>
+        <span className="flex items-center gap-1">✓ {completedTime}</span>
         <span className="flex items-center gap-1"><Gauge size={12} /> {ride.average_speed_kmh?.toFixed(0) || 0}km/h</span>
         {ride.fuel_consumed_l != null && <span className="flex items-center gap-1"><Fuel size={12} /> {ride.fuel_consumed_l.toFixed(1)}L</span>}
       </div>

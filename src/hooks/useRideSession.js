@@ -842,6 +842,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       start_lat: positionsRef.current[0]?.[0], start_lng: positionsRef.current[0]?.[1],
       end_lat: userPos?.[0], end_lng: userPos?.[1],
       distance_km: Math.round(distance * 100) / 100, duration_minutes: mins,
+      completed_at: new Date().toISOString(),
       average_speed_kmh: Math.round(avg * 10) / 10, max_speed_kmh: maxSpeed,
       fuel_consumed_l: Math.round(fuelUsed * 10) / 10,
       route_polyline: JSON.stringify(positionsRef.current), bike_id: bike?.id,
