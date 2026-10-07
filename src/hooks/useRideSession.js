@@ -571,6 +571,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const handleDestination = async (dest, routeOptions = {}) => {
     setDestination(dest);
     setDestInput(dest.name);
+    const preference = routeOptions.preference || routePreference;
     try {
       const origin = routeOptions.start
         ? [routeOptions.start.lat, routeOptions.start.lng]
