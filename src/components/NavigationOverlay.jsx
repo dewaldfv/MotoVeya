@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigation, X, Loader2 } from 'lucide-react';
+import { Navigation, X, Loader2, Route, Bike, Mountain } from 'lucide-react';
 import { useVoiceNavigation } from '@/hooks/useVoiceNavigation';
 import NavActionButtons from '@/components/NavActionButtons';
 import EmergencyOverlay from '@/components/EmergencyOverlay';
@@ -30,6 +30,7 @@ export default function NavigationOverlay({
     startRide, endRide, handleDistress, handleReportWarning, handleSimulateCrash,
     handleCancelCrash, handleResolveEmergency,
     handleAddStop, handleDismissService, setAutoStopCountdown, clearDestination,
+    routePreference, setRoutePreference, handleDestination,
   } = session;
 
   const [voiceEnabled, setVoiceEnabled] = useState(
@@ -37,6 +38,18 @@ export default function NavigationOverlay({
   );
   const [hudExpanded, setHudExpanded] = useState(false);
   const [warningOpen, setWarningOpen] = useState(false);
+  const [routeChanging, setRouteChanging] = useState(false);
+  const changeRoutePreference = async (preference) => {
+    if (!destination || routeLoading || preference === routePreference) return;
+    setRouteChanging(true);
+    setRoutePreference(preference);
+    try {
+      await handleDestination(destination, { preference });
+    } finally {
+      setRouteChanging(false);
+    }
+  };
+
   const toggleVoice = () => {
     const next = !voiceEnabled;
     setVoiceEnabled(next);
@@ -70,7 +83,37 @@ export default function NavigationOverlay({
           </div>
         </div>
 
-        <div className="absolute left-0 right-0 z-20 space-y-2 bg-gradient-to-t from-black/60 to-transparent p-4 pt-10" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
+        <div className="absolute left-0 right-0 z-20 space-y-2 bg-gradient-to-t from-black/70 to-transparent p-4 pt-10" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
+          <div className="rounded-2xl bg-card/95 p-3 shadow-lg backdrop-blur-lg">
+            <div className="mb-2 flex items-center gap-2">
+              <Route size={16} className="text-primary" />
+              <span className="text-xs font-black uppercase tracking-wide">Route preference</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'fastest', label: 'Fastest', icon: Navigation },
+                { id: 'avoid_motorways', label: 'No Motorways', icon: Bike },
+                { id: 'alternative', label: 'Alternative', icon: Mountain },
+              ].map((option) => {
+                const Icon = option.icon;
+                const active = routePreference === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    disabled={routeLoading || routeChanging}
+                    onClick={() => changeRoutePreference(option.id)}
+                    className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-bold transition-colors ${active ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground'} disabled:opacity-50`}
+                  >
+                    <Icon size={17} />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            {routeChanging && <p className="mt-2 text-center text-[10px] font-semibold text-muted-foreground">Recalculating route…</p>}
+            {routePreference === 'alternative' && <p className="mt-2 text-[10px] leading-snug text-muted-foreground">Alternative routes favour a longer viable route. They are not guaranteed to be scenic.</p>}
+          </div>
           {user?.subscription_tier === 'premium' && (
             <RideInviteToggle enabled={notifyFriends} onChange={setNotifyFriends} />
           )}
