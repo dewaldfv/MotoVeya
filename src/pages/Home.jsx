@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Navigation, Phone, MapPin, ExternalLink, LocateFixed, Layers, X, Compass } from 'lucide-react';
+import { Navigation, Phone, MapPin, ExternalLink, LocateFixed, Layers, X, Compass, Search, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
