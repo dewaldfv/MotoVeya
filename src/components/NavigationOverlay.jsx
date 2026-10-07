@@ -20,7 +20,7 @@ export default function NavigationOverlay({
   routeFuelStops = [],
 }) {
   const {
-    isActive, rideMode, speed, speedLimit, navProgress, destination,
+    isActive, rideMode, speed, speedLimit, navProgress, destination, routeData,
     routeLoading, nearbyService, gpsWeak, fuelRange, fuelRemaining, distressActive, ending,
     crashPhase, crashCountdown, severity, autoStopCountdown,
     emergencyContactsNotified, nearbyRidersNotified, beacon,
@@ -114,6 +114,18 @@ export default function NavigationOverlay({
             {routeChanging && <p className="mt-2 text-center text-[10px] font-semibold text-muted-foreground">Recalculating route…</p>}
             {routePreference === 'alternative' && <p className="mt-2 text-[10px] leading-snug text-muted-foreground">Alternative routes favour a longer viable route. They are not guaranteed to be scenic.</p>}
           </div>
+          {routeData && !routeLoading && (
+            <div className="grid grid-cols-2 gap-2 rounded-2xl bg-card/95 p-3 shadow-lg backdrop-blur-lg">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Distance</p>
+                <p className="text-lg font-black">{(routeData.distance / 1000).toFixed(1)} km</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">ETA</p>
+                <p className="text-lg font-black">{Math.floor(routeData.duration / 3600)}h {Math.round((routeData.duration % 3600) / 60)}m</p>
+              </div>
+            </div>
+          )}
           {user?.subscription_tier === 'premium' && (
             <RideInviteToggle enabled={notifyFriends} onChange={setNotifyFriends} />
           )}
