@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Clock, Gauge, Fuel, TrendingUp, Calendar, MapPin, Bike as BikeIcon, Repeat2, Save } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { savePendingNavigation } from '@/lib/rideCache';
 import MapView from '@/components/MapView';
 
 export default function RideDetail() {
@@ -38,6 +39,36 @@ export default function RideDetail() {
     return sampled.map((p, i) => ({ name: i === 0 ? (ride.start_location_name || 'Start') : i === sampled.length - 1 ? (ride.end_location_name || 'Destination') : 'Route point ' + i, lat: Number(p[0]), lng: Number(p[1]) }));
   };
 
+  const startExactReplay = () => {
+    if (!Array.isArray(route) || route.length < 2) {
+      alert('This ride does not contain enough GPS track data for Exact Replay.');
+      return;
+    }
+    const track = route
+      .map((p) => [Number(p[0]), Number(p[1])])
+      .filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    if (track.length < 2) return;
+    const start = track[0];
+    const finish = track[track.length - 1];
+    savePendingNavigation({
+      dest: {
+        lat: finish[0],
+        lng: finish[1],
+        name: ride.end_location_name || 'Replay finish',
+      },
+      start: { lat: start[0], lng: start[1] },
+      autoStart: true,
+      replayTrack: {
+        coordinates: track,
+        distanceMeters: Number(ride.distance_km || 0) * 1000,
+        durationSeconds: Number(ride.duration_minutes || 0) * 60,
+        sourceRideId: ride.id,
+        destinationName: ride.end_location_name || 'Replay finish',
+      },
+    });
+    navigate('/');
+  };
+
   const saveAsRoute = async (startImmediately = false) => {
     const waypoints = buildRepeatWaypoints();
     if (waypoints.length < 2) { alert('This ride does not contain enough GPS route data to save as a repeatable route.'); return; }
@@ -71,12 +102,13 @@ export default function RideDetail() {
       <div className="p-4">
         <h1 className="text-2xl font-bold">{ride.title}</h1>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <button onClick={() => saveAsRoute(true)} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-primary px-3 text-sm font-bold text-primary-foreground"><Repeat2 size={18} /> Ride Again</button>
+          <button onClick={startExactReplay} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-primary px-3 text-sm font-bold text-primary-foreground"><Repeat2 size={18} /> Exact Replay</button>
           <button onClick={() => saveAsRoute(false)} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-card px-3 text-sm font-bold ring-1 ring-border"><Save size={18} /> Save Route</button>
         </div>
         <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar size={14} /> {date}
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">Exact Replay follows the recorded GPS track and will not recalculate the road.</p>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           {stats.map((s) => (
