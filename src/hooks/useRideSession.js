@@ -531,7 +531,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
 
   // --- Handlers ---
 
-  const fetchRoute = async (origin, dest, routeWaypoints = []) => {
+  const fetchRoute = async (origin, dest, routeWaypoints = [], preference = routePreference) => {
     setRouteLoading(true);
     try {
       const intermediate = (Array.isArray(routeWaypoints) ? routeWaypoints : [])
