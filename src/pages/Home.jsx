@@ -572,6 +572,27 @@ export default function Home() {
 
   return (
     <div className="relative h-screen w-full overflow-hidden" onClick={handleScreenTap}>
+      {showIdleControls && mapUiVisible && (
+        <div
+          className="absolute left-1/2 top-4 z-30 w-[min(88vw,520px)] -translate-x-1/2"
+          style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+          data-ui-control
+        >
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl bg-background/95 px-4 text-left shadow-xl ring-1 ring-border backdrop-blur-lg"
+            aria-label="Search for a destination"
+          >
+            <Search size={21} className="shrink-0 text-primary" />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
+              Where do you want to go?
+            </span>
+            <span className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Directions</span>
+          </button>
+        </div>
+      )}
+
       <MapView
         center={session.userPos || SA_CENTER}
         zoom={15}
