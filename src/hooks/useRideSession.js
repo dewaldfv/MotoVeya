@@ -48,7 +48,9 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const [destInput, setDestInput] = useState('');
   const [routeData, setRouteData] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
-  const [routePreference, setRoutePreference] = useState('fastest');
+  const [routePreference, setRoutePreference] = useState(() => {
+    try { return localStorage.getItem('motoveya_route_preference') || 'fastest'; } catch { return 'fastest'; }
+  });
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [crashPhase, setCrashPhase] = useState(null);
   const [crashAlertId, setCrashAlertId] = useState(null);
@@ -492,7 +494,9 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
           const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true`);
           const data = await res.json();
           if (data.routes?.[0]) {
-            setRouteData(processRouteData(data));
+            const routes = data.routes || [];
+            const selected = routePreference === 'rider_roads' ? selectMotorcycleRoute(routes) : routes[0];
+            if (selected) setRouteData(processRouteData({ routes: [selected] }));
             toast.info('Off route — recalculating...');
           }
         } catch (e) {
@@ -531,6 +535,40 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
 
   // --- Handlers ---
 
+  const scoreMotorcycleRoute = (route) => {
+    // OSRM does not expose a "scenic" or "motorcycle fun" route mode. Score
+    // the actual candidate using road-class metadata when available, then
+    // fall back to distance/duration signals. This keeps the feature honest.
+    let score = 0;
+    for (const leg of route.legs || []) {
+      for (const step of leg.steps || []) {
+        const km = Math.max(0, Number(step.distance || 0)) / 1000;
+        const classes = new Set();
+        for (const intersection of step.intersections || []) {
+          for (const c of intersection.classes || []) classes.add(String(c).toLowerCase());
+        }
+        const name = String(step.name || '').toLowerCase();
+        if (classes.has('motorway')) score -= km * 14;
+        else if (classes.has('trunk')) score -= km * 6;
+        else if (classes.has('primary')) score -= km * 2;
+        else if (classes.has('secondary')) score += km * 2;
+        else if (classes.has('tertiary')) score += km * 4;
+        else score += km * 5;
+        if (!classes.size && /motorway|freeway|toll/.test(name)) score -= km * 4;
+      }
+    }
+    const distanceKm = Math.max(0, Number(route.distance || 0)) / 1000;
+    const durationMin = Math.max(0, Number(route.duration || 0)) / 60;
+    score += Math.min(distanceKm, 120) * 0.4;
+    score -= Math.max(0, durationMin - distanceKm * 1.8) * 0.08;
+    return score;
+  };
+
+  const selectMotorcycleRoute = (routes = []) => {
+    if (!routes.length) return null;
+    return [...routes].sort((a, b) => scoreMotorcycleRoute(b) - scoreMotorcycleRoute(a))[0] || routes[0];
+  };
+
   const fetchRoute = async (origin, dest, routeWaypoints = [], preference = routePreference) => {
     setRouteLoading(true);
     try {
@@ -550,12 +588,13 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         continue_straight: 'false',
       });
       if (preference === 'avoid_motorways') params.set('exclude', 'motorway');
-      if (preference === 'alternative') params.set('alternatives', 'true');
+      if (preference === 'rider_roads' || preference === 'alternative') params.set('alternatives', 'true');
       const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${points.join(';')}?${params.toString()}`);
       const data = await res.json();
       if (data.routes?.[0]) {
         let selectedRoute = data.routes[0];
-        if (preference === 'alternative' && data.routes.length > 1) {
+        if (preference === 'rider_roads') selectedRoute = selectMotorcycleRoute(data.routes);
+        else if (preference === 'alternative' && data.routes.length > 1) {
           selectedRoute = [...data.routes].sort((a, b) => b.distance - a.distance)[0];
         }
         setRouteData(processRouteData({ routes: [selectedRoute] }));
@@ -583,6 +622,10 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       toast.error('Could not get your location. Enable GPS and try again.');
     }
   };
+
+  useEffect(() => {
+    try { localStorage.setItem('motoveya_route_preference', routePreference); } catch {}
+  }, [routePreference]);
 
   const clearDestination = () => {
     setDestination(null);
