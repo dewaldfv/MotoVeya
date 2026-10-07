@@ -15,6 +15,7 @@ import { useMapOverlays, POI_OVERLAY_MAP } from '@/lib/mapOverlays';
 import { useRideSession } from '@/hooks/useRideSession';
 import { useIdleMapUi, revealMapUi } from '@/hooks/useIdleMapUi';
 import NavigationOverlay from '@/components/NavigationOverlay';
+import SearchPanel from '@/components/SearchPanel';
 import TutorialWalkthrough from '@/components/TutorialWalkthrough';
 import SavedPlaceDialog from '@/components/SavedPlaceDialog';
 import { setRideActive } from '@/lib/rideStatus';
