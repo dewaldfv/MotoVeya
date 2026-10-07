@@ -721,6 +721,58 @@ export default function Home() {
         onToggleOverlay={toggleOverlay} />
 
       <BottomSheet
+        open={!!session.destination && !isActive}
+        onClose={handleCancelDestination}
+        title="Directions"
+      >
+        {session.destination && (
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-secondary/60 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                  <MapPin size={21} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold">{session.destination.name}</p>
+                  {session.destination.address && (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{session.destination.address}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {session.routeLoading ? (
+              <div className="flex items-center justify-center gap-2 rounded-2xl border border-border p-5 text-sm text-muted-foreground">
+                <Loader2 size={18} className="animate-spin" /> Calculating road route…
+              </div>
+            ) : session.routeData ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground">Distance</p>
+                  <p className="mt-1 text-lg font-black">{(session.routeData.distance / 1000).toFixed(1)} km</p>
+                </div>
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground">Estimated time</p>
+                  <p className="mt-1 text-lg font-black">
+                    {Math.floor(session.routeData.duration / 3600)}h {Math.round((session.routeData.duration % 3600) / 60)}m
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button variant="secondary" size="lg" className="min-h-[56px] flex-1" onClick={handleCancelDestination}>
+                Cancel
+              </Button>
+              <Button size="lg" className="min-h-[56px] flex-[2]" disabled={!session.routeData || session.routeLoading} onClick={handleStartDestinationRide}>
+                <Navigation size={18} className="mr-2" /> Start Ride
+              </Button>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
+
+      <BottomSheet
         open={!!selected}
         onClose={() => setSelected(null)}
         title={selected?.name || selected?.title}
