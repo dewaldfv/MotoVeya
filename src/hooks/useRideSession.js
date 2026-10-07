@@ -856,6 +856,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     routeWarnings: [...routeWarnings, ...externalWarnings], reportingWarning,
     isActive, rideMode, recalculating,
     setDestInput, setDestination, setAutoStopCountdown, clearDestination,
+    routePreference, setRoutePreference,
     handleDestination, handleAddStop, handleDismissService, handleReportWarning,
     handleSimulateCrash, handleCancelCrash, handleResolveEmergency,
     handleDistress, startRide, endRide: handleEndRide,
