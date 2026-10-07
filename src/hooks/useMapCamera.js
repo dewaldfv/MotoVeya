@@ -32,9 +32,12 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
       followingRef.current = false;
     };
     const onZoomChanged = () => {
-      // Google Maps fires zoom_changed asynchronously after setZoom(). Do not
-      // mistake our own camera update for a rider manually zooming the map.
+      // Keep the actual user-selected zoom in sync. A manual pinch/scroll must
+      // take control of the camera and must not be overwritten by the next GPS
+      // speed/navigation update.
       const actualZoom = map.getZoom();
+      if (actualZoom == null) return;
+      currentZoomRef.current = actualZoom;
       if (programmaticZoomRef.current != null && actualZoom === programmaticZoomRef.current) {
         programmaticZoomRef.current = null;
         return;
@@ -119,11 +122,17 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [map]);
 
-  // Apply zoom only when the desired navigation zoom actually changes.
+  // Automatic navigation zoom is allowed only while the camera is following
+  // the rider. Once the rider manually zooms, preserve that zoom until they
+  // explicitly recenter. This prevents GPS updates from fighting pinch zoom.
   useEffect(() => {
-    if (!map || !targetRef.current) return;
+    if (!map || !targetRef.current || !followingRef.current) return;
     const desired = Math.round(targetRef.current.zoom);
-    if (Math.round(currentZoomRef.current ?? desired) === desired && map.getZoom() === desired) return;
+    const actual = map.getZoom();
+    if (actual === desired) {
+      currentZoomRef.current = desired;
+      return;
+    }
     currentZoomRef.current = desired;
     programmaticZoomRef.current = desired;
     suppressCameraEventsRef.current = true;
