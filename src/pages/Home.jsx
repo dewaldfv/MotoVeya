@@ -523,7 +523,30 @@ export default function Home() {
   const handleSelectCategory = (key) => {setActiveCat(key);setSelected(null);};
   const handleDirections = (item) => {
     setSelected(null);
-    session.navigateTo({ lat: item.lat, lng: item.lng, name: item.name || item.title });
+    if (!item?.lat || !item?.lng) {
+      toast.error('This destination does not have a valid location');
+      return;
+    }
+    session.handleDestination({
+      lat: Number(item.lat),
+      lng: Number(item.lng),
+      name: item.name || item.title || 'Destination',
+      address: item.address || item.venue_name || '',
+    });
+  };
+
+  const handleHomeDestinationSelect = (item) => {
+    setSearchOpen(false);
+    handleDirections(item);
+  };
+
+  const handleStartDestinationRide = async () => {
+    if (!session.destination || session.routeLoading) return;
+    await session.startRide();
+  };
+
+  const handleCancelDestination = () => {
+    session.clearDestination();
   };
   const handleSavePin = (item) => {
     toast.success(`${item.name || item.title || item.rider_name || 'Location'} saved to favourites`);
