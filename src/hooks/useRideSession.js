@@ -48,6 +48,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const [destInput, setDestInput] = useState('');
   const [routeData, setRouteData] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [routePreference, setRoutePreference] = useState('fastest');
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [crashPhase, setCrashPhase] = useState(null);
   const [crashAlertId, setCrashAlertId] = useState(null);
