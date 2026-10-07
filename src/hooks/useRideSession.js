@@ -49,7 +49,10 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const [routeData, setRouteData] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routePreference, setRoutePreference] = useState(() => {
-    try { return localStorage.getItem('motoveya_route_preference') || 'fastest'; } catch { return 'fastest'; }
+    try {
+      const saved = localStorage.getItem('motoveya_route_preference') || 'fastest';
+      return saved === 'alternative' ? 'rider_roads' : saved;
+    } catch { return 'fastest'; }
   });
   const [crashCountdown, setCrashCountdown] = useState(null);
   const [crashPhase, setCrashPhase] = useState(null);
@@ -509,7 +512,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         }
       })();
     }
-  }, [userPos, rideStatus, routeData, destination, speed, recalculating]);
+  }, [userPos, rideStatus, routeData, destination, speed, recalculating, routePreference]);
 
   // Nearby service on route
   useEffect(() => {
