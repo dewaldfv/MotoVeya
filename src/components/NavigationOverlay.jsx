@@ -93,7 +93,7 @@ export default function NavigationOverlay({
               {[
                 { id: 'fastest', label: 'Fastest', icon: Navigation },
                 { id: 'avoid_motorways', label: 'No Motorways', icon: Bike },
-                { id: 'alternative', label: 'Alternative', icon: Mountain },
+                { id: 'rider_roads', label: 'Rider Roads', icon: Mountain },
               ].map((option) => {
                 const Icon = option.icon;
                 const active = routePreference === option.id;
@@ -112,6 +112,7 @@ export default function NavigationOverlay({
               })}
             </div>
             {routeChanging && <p className="mt-2 text-center text-[10px] font-semibold text-muted-foreground">Recalculating route…</p>}
+            {routePreference === 'rider_roads' && <p className="mt-2 text-[10px] leading-snug text-muted-foreground">Scores available alternatives toward secondary, tertiary and local roads while limiting excessive detours. It is not a guarantee of a scenic or twisty road.</p>}
             {routePreference === 'alternative' && <p className="mt-2 text-[10px] leading-snug text-muted-foreground">Alternative routes favour a longer viable route. They are not guaranteed to be scenic.</p>}
           </div>
           {routeData && !routeLoading && (
