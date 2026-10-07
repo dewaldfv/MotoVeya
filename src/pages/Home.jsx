@@ -272,7 +272,13 @@ export default function Home() {
     if (pending?.dest) {
       clearPendingNavigation();
       const start = pending.start ? [pending.start.lat, pending.start.lng] : undefined;
-      if (pending.autoStart) {
+      if (pending.replayTrack) {
+        if (pending.autoStart) {
+          session.navigateTo(pending.dest, start, pending.waypoints || [], pending.replayTrack);
+        } else {
+          session.startRide(pending.dest, start, pending.waypoints || [], pending.replayTrack);
+        }
+      } else if (pending.autoStart) {
         session.navigateTo(pending.dest, start, pending.waypoints || []);
       } else {
         session.handleDestination(pending.dest, {
