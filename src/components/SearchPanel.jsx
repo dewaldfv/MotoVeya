@@ -81,7 +81,7 @@ export default function SearchPanel({ open, onClose, onSelect, pois, events }) {
 
   const handleSelect = (item) => {
     const name = item.name || item.title;
-    onSelect({ lat: item.lat, lng: item.lng, name });
+    onSelect({ lat: item.lat, lng: item.lng, name, address: item.address || item.venue_name || '' });
     onClose();
   };
 
