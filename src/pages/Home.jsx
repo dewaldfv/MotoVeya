@@ -693,6 +693,14 @@ export default function Home() {
         </div>
       }
 
+      <SearchPanel
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onSelect={handleHomeDestinationSelect}
+        pois={poisToShow}
+        events={eventsToShow}
+      />
+
       <NavigationOverlay
         session={session}
         user={me}
