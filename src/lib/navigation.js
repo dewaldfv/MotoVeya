@@ -97,7 +97,18 @@ export function getRouteProgress(routeData, userPos) {
   const remainingDuration = distance > 0 ? duration * (remainingDistance / distance) : 0;
 
   const followingStep = steps[currentStepIdx + 2] || null;
-  return { completedRoute, remainingRoute, currentStepIdx, nextStep, followingStep, distanceToManeuver, remainingDistance, remainingDuration };
+  return {
+    completedRoute,
+    remainingRoute,
+    currentStepIdx,
+    nextStep,
+    followingStep,
+    distanceToManeuver,
+    remainingDistance,
+    remainingDuration,
+    offRouteDistance: minDist,
+    nearestIdx,
+  };
 }
 
 export function formatDistance(m) {
