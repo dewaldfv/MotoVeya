@@ -18,6 +18,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   const currentCenterRef = useRef(null);
   const currentZoomRef = useRef(null);
   const currentBearingRef = useRef(null);
+  const currentTiltRef = useRef(null);
   const targetRef = useRef(null);
   const followingRef = useRef(true);
   const suppressCameraEventsRef = useRef(false);
@@ -101,18 +102,23 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     const zoom = resolveTargetZoom(filteredSpeedRef.current, nextManeuverDistance);
     const targetCenter = getFollowCenter(map, userPos, effectiveHeading, zoom, headingUp);
     const bearing = headingUp && effectiveHeading != null ? effectiveHeading : 0;
-    const target = { ...targetCenter, zoom, bearing };
+    // 45° perspective in Ride Mode gives the rider a forward-looking navigation
+    // view while the camera offset keeps the rider in the lower third.
+    const tilt = headingUp ? 45 : 0;
+    const target = { ...targetCenter, zoom, bearing, tilt };
     targetRef.current = target;
     // First frame — snap to the rider with no animation.
     if (!currentCenterRef.current) {
       currentCenterRef.current = { lat: target.lat, lng: target.lng };
       currentZoomRef.current = target.zoom;
       currentBearingRef.current = target.bearing;
+      currentTiltRef.current = target.tilt;
       suppressCameraEventsRef.current = true;
       map.setCenter(currentCenterRef.current);
       programmaticZoomRef.current = currentZoomRef.current;
       programmaticHeadingRef.current = currentBearingRef.current;
       map.setHeading?.(currentBearingRef.current);
+      map.setTilt?.(currentTiltRef.current);
       map.setZoom(currentZoomRef.current);
       queueMicrotask(() => { suppressCameraEventsRef.current = false; });
     }
@@ -127,10 +133,12 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     currentCenterRef.current = { lat: targetRef.current.lat, lng: targetRef.current.lng };
     currentZoomRef.current = targetRef.current.zoom;
     currentBearingRef.current = targetRef.current.bearing ?? 0;
+    currentTiltRef.current = targetRef.current.tilt ?? (headingUp ? 45 : 0);
     suppressCameraEventsRef.current = true;
     map.setCenter(currentCenterRef.current);
     programmaticHeadingRef.current = currentBearingRef.current;
     map.setHeading?.(currentBearingRef.current);
+    map.setTilt?.(currentTiltRef.current);
     programmaticZoomRef.current = currentZoomRef.current;
     map.setZoom(currentZoomRef.current);
     queueMicrotask(() => { suppressCameraEventsRef.current = false; });
@@ -154,6 +162,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
 
         currentZoomRef.current = lerp(currentZoomRef.current ?? target.zoom, target.zoom, 0.07);
         currentBearingRef.current = moveAngle(currentBearingRef.current ?? target.bearing, target.bearing, 0.12);
+        currentTiltRef.current = lerp(currentTiltRef.current ?? target.tilt, target.tilt, 0.12);
 
         suppressCameraEventsRef.current = true;
         map.setCenter({ lat: cur.lat, lng: cur.lng });
@@ -161,6 +170,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
           programmaticHeadingRef.current = currentBearingRef.current;
           map.setHeading?.(currentBearingRef.current);
         }
+        map.setTilt?.(currentTiltRef.current ?? target.tilt ?? 45);
         programmaticZoomRef.current = currentZoomRef.current;
         map.setZoom(currentZoomRef.current);
         queueMicrotask(() => { suppressCameraEventsRef.current = false; });
@@ -179,11 +189,11 @@ function getFollowCenter(map, userPos, heading, zoom, headingUp) {
   const lng = Number(userPos[1]);
   if (!headingUp || heading == null || !map?.getDiv) return { lat, lng };
 
-  // Keep the motorcycle in the lower-middle of the display (~40–45% down)
-  // by putting the camera slightly ahead in the direction of travel.
+  // Keep the motorcycle in the lower third of the display (~68–72% down)
+  // by putting the camera substantially ahead in the direction of travel.
   const height = Math.max(320, Number(map.getDiv()?.clientHeight || 640));
   const metersPerPixel = 156543.03392 * Math.cos((lat * Math.PI) / 180) / Math.pow(2, Number(zoom) || 16);
-  const forwardMeters = Math.min(Math.max(height * metersPerPixel * 0.15, 35), 450);
+  const forwardMeters = Math.min(Math.max(height * metersPerPixel * 0.24, 55), 650);
   return destinationPoint(lat, lng, heading, forwardMeters);
 }
 
