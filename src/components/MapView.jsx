@@ -478,6 +478,7 @@ export default function MapView({
           friends={friends}
           groupRiders={groupRiders}
           onFriendClick={onFriendClick}
+          headingUp={navActive && headingUp}
         />
 
         {popupItem && (
