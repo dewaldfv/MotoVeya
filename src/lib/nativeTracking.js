@@ -22,10 +22,13 @@ export function getStoredDeviceId() {
 }
 
 export function detectPlatform() {
-  if (typeof window === 'undefined') return 'android';
-  const ua = (navigator.userAgent || '').toLowerCase();
-  if (/iphone|ipad|ipod/.test(ua)) return 'ios';
-  return 'android';
+  if (typeof window === 'undefined') return 'web';
+  const bridge = window.MotoVeyaNative || window.AndroidMotoVeya;
+  if (bridge?.isNativeLocationTrackingAvailable?.()) {
+    const ua = (navigator.userAgent || '').toLowerCase();
+    return /iphone|ipad|ipod/.test(ua) ? 'ios' : 'android';
+  }
+  return 'web';
 }
 
 // Register (or re-register) this device for background tracking. Called from the
@@ -99,18 +102,20 @@ export function requestNativeLocationPermission() {
   if (!bridge?.requestLocationPermissions) return Promise.resolve(null);
   return new Promise((resolve) => {
     const callbackName = '__motoveyaLocationPermissionResult';
-    window[callbackName] = (granted) => {
+    let settled = false;
+    const finish = (granted) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
       try { delete window[callbackName]; } catch {}
       resolve(!!granted);
     };
+    const timeoutId = setTimeout(() => finish(false), 30000);
+    window[callbackName] = finish;
     try {
-      const alreadyGranted = bridge.requestLocationPermissions(callbackName);
-      if (alreadyGranted === true) {
-        // Native bridge will also invoke the callback; do not resolve twice.
-      }
+      bridge.requestLocationPermissions(callbackName);
     } catch {
-      try { delete window[callbackName]; } catch {}
-      resolve(false);
+      finish(false);
     }
   });
 }
