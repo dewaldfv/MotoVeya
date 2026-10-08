@@ -50,6 +50,27 @@ function MapController({ mapRef, value, importZoomRef }) {
   return null;
 }
 
+function UserLocationCenterer({ active, onDone }) {
+  const map = useMapInstance();
+  useEffect(() => {
+    if (!active || !map) return;
+    if (!navigator.geolocation) { onDone?.(); return; }
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return;
+        map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 13, duration: 1500 });
+        onDone?.();
+      },
+      () => { if (!cancelled) onDone?.(); },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, map]);
+  return null;
+}
+
 function ZoomTracker({ onZoom }) {
   const map = useMapInstance();
   useEffect(() => {
@@ -71,6 +92,7 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
   const mapRef = useRef(null);
   const importZoomRef = useRef(0);
   const [zoom, setZoom] = useState(12);
+  const [userInitDone, setUserInitDone] = useState(false);
 
   const center = value ? { lat: value.lat, lng: value.lng } : { lat: DEFAULT_CENTER[0], lng: DEFAULT_CENTER[1] };
 
@@ -145,6 +167,7 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
         >
           <ClickHandler onPick={onChange} />
           <MapController mapRef={mapRef} value={value} importZoomRef={importZoomRef} />
+          <UserLocationCenterer active={!value && !userInitDone} onDone={() => setUserInitDone(true)} />
           <ZoomTracker onZoom={setZoom} />
 
           {value && (
