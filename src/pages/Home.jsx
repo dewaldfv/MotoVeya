@@ -364,6 +364,9 @@ export default function Home() {
 
   const isRemoteCat = !!REMOTE_CATS[activeCat];
   const isActive = session.isActive;
+  useEffect(() => {
+    if (!isActive) setRideCameraFollowing(true);
+  }, [isActive]);
   const hasDestination = !!session.destination;
   const showIdleControls = !isActive && !hasDestination;
 
