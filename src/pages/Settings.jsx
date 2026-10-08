@@ -255,7 +255,7 @@ export default function Settings() {
           </div>
           <Row icon={ShieldCheck} label="Always-On Tracking (Native)" value="Manage" onClick={() => navigate('/background-tracking')} />
           <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-            Keeps tracking your ride while the app is in your pocket or the screen is locked. Required for navigation, crash detection, and emergency alerts.
+            The installed Android app can continue an active ride in the background. Browser mode may pause GPS and motion sensors when it is backgrounded; emergency alerts also need a working network connection.
           </p>
         </Section>
 
@@ -308,13 +308,10 @@ export default function Settings() {
           <AlertDialogHeader>
             <AlertDialogTitle>Background Location Required</AlertDialogTitle>
             <AlertDialogDescription>
-              MotoVeya needs background location access to provide:
-              <br />• Turn-by-turn navigation while your screen is off
-              <br />• Crash detection while the phone is in your pocket
-              <br />• Emergency alerts with your exact location
-              <br />• Accurate ride recording (distance, speed, route)
-              <br /><br />
-              When prompted, select "Always Allow" to keep tracking active even when your screen is locked.
+              The installed Android app uses a foreground location service during an active ride to keep GPS and crash sensors running while the screen is locked.
+              <br />• Allow location access and keep notifications enabled so Android can show the tracking service.
+              <br />• Browser mode may pause GPS and motion sensors when it is backgrounded.
+              <br />• Emergency alerts require a network connection and current location access.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
