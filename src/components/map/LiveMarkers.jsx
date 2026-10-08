@@ -47,7 +47,7 @@ function makeIcon(g, type, heading, color) {
   };
 }
 
-export default function LiveMarkers({ rider, friends = [], groupRiders = [], onFriendClick }) {
+export default function LiveMarkers({ rider, friends = [], groupRiders = [], onFriendClick, headingUp = false }) {
   const map = useGoogleMap();
   const markersRef = useRef(new Map());
   const infoWindowsRef = useRef(new Map());
@@ -73,7 +73,10 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       seen.add(id);
       const latLng = new g.maps.LatLng(rider.lat, rider.lng);
       g.__motoveyaCrashRecovery = !!rider.isCrashRecovery;
-      const icon = makeIcon(g, 'rider', rider.heading);
+      // In heading-up Ride Mode the camera already points in the travel direction,
+      // so the rider arrow stays screen-up. In north-up mode it follows the actual heading.
+      const screenHeading = headingUp ? 0 : rider.heading;
+      const icon = makeIcon(g, 'rider', screenHeading);
       let m = markers.get(id);
       if (!m) {
         m = new g.maps.Marker({ position: latLng, map, icon, zIndex: 1200 });
