@@ -150,7 +150,7 @@ export default function Achievements() {
       groupRidesLed: ledRides.length,
       groupRidesSwept: sweptRides.length,
       emergencyContacts: user?.emergency_contact_name ? 1 : 0,
-      crashDetection: localStorage.getItem('motogo_auto_ride_detection') !== 'false' ? 1 : 0,
+      crashDetection: localStorage.getItem('motogo_crash_detection_enabled') !== 'false' ? 1 : 0,
       backgroundSharing: localStorage.getItem('motogo_background_tracking') === 'true' ? 1 : 0,
       services: services.length,
       tireServices,
