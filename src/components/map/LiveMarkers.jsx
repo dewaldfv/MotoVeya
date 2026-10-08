@@ -7,9 +7,10 @@ import { useGoogleMap } from '@react-google-maps/api';
  * as NATIVE google.maps.Marker instances, updated imperatively via setPosition().
  *
  * This component returns null — it has no DOM output and never triggers a React
- * re-render of the markers.  Every GPS tick simply calls marker.setPosition() on the
- * existing native marker, so the Google Maps API handles the repositioning in the
- * compositor with zero Virtual DOM diffing.  This is what eliminates the jitter.
+ * re-render of the markers.  Every GPS tick simply updates a target ref; a
+ * continuous requestAnimationFrame loop eases the rider marker toward the latest
+ * target.  This eliminates the cancel/restart jitter that occurred when each
+ * GPS fix cancelled a running animation and started a new one.
  */
 const FRIEND_COLORS = { riding: '#22c55e', stopped: '#94a3b8', distress: '#ef4444' };
 
@@ -53,12 +54,41 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
   const infoWindowsRef = useRef(new Map());
   const dataRef = useRef(new Map());
   const accuracyRef = useRef(null);
-  const riderAnimationRef = useRef(null);
+  const riderTargetRef = useRef(null);
+  const riderRafRef = useRef(null);
   const cbRef = useRef(onFriendClick);
   cbRef.current = onFriendClick;
-  // The rider marker follows each validated GPS fix directly.
-  // Interpolating between fixes can make the marker permanently lag behind
-  // when GPS updates arrive faster than the animation duration.
+
+  // Continuous smooth-interpolation loop for the rider marker.  Instead of
+  // cancelling and restarting an animation on every GPS tick (which caused
+  // visible jitter), this loop runs constantly and eases the marker 15% of
+  // the remaining gap toward the latest target every frame.  The easing itself
+  // acts as a low-pass filter that absorbs GPS position noise.
+  useEffect(() => {
+    if (!map || !window.google) return;
+    const g = window.google;
+    let lastHeading = null;
+    const animate = () => {
+      const m = markersRef.current.get('rider-self');
+      const target = riderTargetRef.current;
+      if (m && target) {
+        const cur = m.getPosition();
+        const curLat = cur?.lat?.() ?? target.lat;
+        const curLng = cur?.lng?.() ?? target.lng;
+        const newLat = curLat + (target.lat - curLat) * 0.15;
+        const newLng = curLng + (target.lng - curLng) * 0.15;
+        const newPos = new g.maps.LatLng(newLat, newLng);
+        m.setPosition(newPos);
+        if (accuracyRef.current) accuracyRef.current.setCenter(newPos);
+      }
+      riderRafRef.current = requestAnimationFrame(animate);
+    };
+    riderRafRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (riderRafRef.current) cancelAnimationFrame(riderRafRef.current);
+      riderRafRef.current = null;
+    };
+  }, [map]);
 
   useEffect(() => {
     if (!map || !window.google) return;
@@ -68,11 +98,12 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
     const data = dataRef.current;
     const seen = new Set();
 
-    // --- Rider (self) with smooth interpolation ---
+    // --- Rider (self) ---
+    // The marker target is updated here; the continuous RAF loop above
+    // handles the actual smooth position interpolation.
     if (rider && !isNaN(rider.lat) && !isNaN(rider.lng)) {
       const id = 'rider-self';
       seen.add(id);
-      const latLng = new g.maps.LatLng(rider.lat, rider.lng);
       g.__motoveyaCrashRecovery = !!rider.isCrashRecovery;
       // In heading-up Ride Mode the camera already points in the travel direction,
       // so the rider arrow stays screen-up. In north-up mode it follows the actual heading.
@@ -80,30 +111,13 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       const icon = makeIcon(g, 'rider', screenHeading);
       let m = markers.get(id);
       if (!m) {
+        const latLng = new g.maps.LatLng(rider.lat, rider.lng);
         m = new g.maps.Marker({ position: latLng, map, icon, zIndex: 1200 });
         markers.set(id, m);
+        riderTargetRef.current = { lat: rider.lat, lng: rider.lng };
       } else {
         m.setIcon(icon);
-        // Interpolate between GPS fixes instead of jumping directly to each fix.
-        // This removes visible marker jitter while keeping the target position
-        // authoritative.
-        if (riderAnimationRef.current) cancelAnimationFrame(riderAnimationRef.current);
-        const start = m.getPosition();
-        const startLat = start?.lat?.() ?? rider.lat;
-        const startLng = start?.lng?.() ?? rider.lng;
-        const startTime = performance.now();
-        const duration = 220;
-        const animate = (now) => {
-          const t = Math.min(1, (now - startTime) / duration);
-          const eased = t * (2 - t);
-          m.setPosition(new g.maps.LatLng(
-            startLat + (rider.lat - startLat) * eased,
-            startLng + (rider.lng - startLng) * eased
-          ));
-          if (t < 1) riderAnimationRef.current = requestAnimationFrame(animate);
-          else riderAnimationRef.current = null;
-        };
-        riderAnimationRef.current = requestAnimationFrame(animate);
+        riderTargetRef.current = { lat: rider.lat, lng: rider.lng };
       }
       if (rider.accuracy && rider.accuracy > 0) {
         if (!accuracyRef.current) {
@@ -112,7 +126,6 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
             strokeColor: '#FF6F00', strokeOpacity: 0.3, strokeWeight: 1,
           });
         }
-        accuracyRef.current.setCenter(latLng);
         accuracyRef.current.setRadius(rider.accuracy);
       } else if (accuracyRef.current) {
         accuracyRef.current.setMap(null);
@@ -122,6 +135,7 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       const m = markers.get('rider-self');
       if (m) { m.setMap(null); markers.delete('rider-self'); }
       if (accuracyRef.current) { accuracyRef.current.setMap(null); accuracyRef.current = null; }
+      riderTargetRef.current = null;
     }
 
     // --- Friends ---
@@ -193,8 +207,8 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
   useEffect(() => () => {
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current.clear();
-    if (riderAnimationRef.current) cancelAnimationFrame(riderAnimationRef.current);
-    riderAnimationRef.current = null;
+    if (riderRafRef.current) cancelAnimationFrame(riderRafRef.current);
+    riderRafRef.current = null;
     infoWindowsRef.current.forEach((w) => w.close());
     infoWindowsRef.current.clear();
     dataRef.current.clear();

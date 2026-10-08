@@ -248,7 +248,7 @@
 .motoveya-nav-icon--large { width: 48px; height: 48px; }
 .motoveya-nav-icon--compact { width: 42px; height: 42px; border-radius: 13px; }
 .motoveya-nav-hud__main {
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   min-height: 58px;
 }
 .motoveya-nav-distance {

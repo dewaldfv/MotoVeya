@@ -12,6 +12,12 @@ import { useEffect, useRef } from 'react';
  * Heading-up is handled by the Google Maps camera bearing. The map DOM is
  * never CSS-rotated, which keeps map tiles, controls, markers and overlays in
  * the same geographic coordinate system.
+ *
+ * Programmatic zoom/heading changes are distinguished from user gestures by
+ * comparing the actual map value against the value we just set, using a
+ * generous tolerance. This replaces a fragile microtask-based suppression flag
+ * that reset before Google Maps' async events fired, causing false manual-
+ * override detection and breaking camera following entirely.
  */
 export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistance, recenterToken, headingUp = true, onFollowingChange }) {
   const rafRef = useRef(null);
@@ -21,17 +27,16 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   const currentTiltRef = useRef(null);
   const targetRef = useRef(null);
   const followingRef = useRef(true);
-  const suppressCameraEventsRef = useRef(false);
   const programmaticZoomRef = useRef(null);
   const programmaticHeadingRef = useRef(null);
   const manualOverrideTimerRef = useRef(null);
   const filteredSpeedRef = useRef(0);
+  const filteredHeadingRef = useRef(null);
   const setFollowing = (value) => {
     if (followingRef.current === value) return;
     followingRef.current = value;
     onFollowingChange?.(value);
   };
-  const filteredHeadingRef = useRef(null);
 
   // Ride Mode remains fully interactive. Manual pan/zoom/rotation temporarily
   // disengages camera following for 5 seconds. Every new user gesture restarts
@@ -42,7 +47,6 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'greedy' });
 
     const restartManualOverride = () => {
-      if (suppressCameraEventsRef.current) return;
       setFollowing(false);
       if (manualOverrideTimerRef.current) clearTimeout(manualOverrideTimerRef.current);
       manualOverrideTimerRef.current = setTimeout(() => {
@@ -57,16 +61,19 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     const onZoomChanged = () => {
       const actualZoom = map.getZoom();
       if (actualZoom == null) return;
-      currentZoomRef.current = actualZoom;
-      if (programmaticZoomRef.current != null && Math.abs(actualZoom - programmaticZoomRef.current) < 0.02) {
+      // If this zoom change matches what we just set programmatically (within
+      // tolerance), it's our own change — don't trigger manual override.
+      if (programmaticZoomRef.current != null && Math.abs(actualZoom - programmaticZoomRef.current) < 0.3) {
         programmaticZoomRef.current = null;
         return;
       }
+      // User-initiated zoom change — sync internal state and engage override.
+      currentZoomRef.current = actualZoom;
       restartManualOverride();
     };
     const onHeadingChanged = () => {
       const actual = Number(map.getHeading?.() ?? 0);
-      if (programmaticHeadingRef.current != null && Math.abs(shortestAngleDelta(actual, programmaticHeadingRef.current)) < 2) {
+      if (programmaticHeadingRef.current != null && Math.abs(shortestAngleDelta(actual, programmaticHeadingRef.current)) < 8) {
         programmaticHeadingRef.current = null;
         return;
       }
@@ -113,14 +120,12 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
       currentZoomRef.current = target.zoom;
       currentBearingRef.current = target.bearing;
       currentTiltRef.current = target.tilt;
-      suppressCameraEventsRef.current = true;
-      map.setCenter(currentCenterRef.current);
       programmaticZoomRef.current = currentZoomRef.current;
       programmaticHeadingRef.current = currentBearingRef.current;
+      map.setCenter(currentCenterRef.current);
       map.setHeading?.(currentBearingRef.current);
       map.setTilt?.(currentTiltRef.current);
       map.setZoom(currentZoomRef.current);
-      queueMicrotask(() => { suppressCameraEventsRef.current = false; });
     }
   }, [userPos?.[0], userPos?.[1], heading, headingUp, speed, nextManeuverDistance, map]);
 
@@ -134,14 +139,12 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     currentZoomRef.current = targetRef.current.zoom;
     currentBearingRef.current = targetRef.current.bearing ?? 0;
     currentTiltRef.current = targetRef.current.tilt ?? (headingUp ? 45 : 0);
-    suppressCameraEventsRef.current = true;
-    map.setCenter(currentCenterRef.current);
     programmaticHeadingRef.current = currentBearingRef.current;
     map.setHeading?.(currentBearingRef.current);
     map.setTilt?.(currentTiltRef.current);
     programmaticZoomRef.current = currentZoomRef.current;
+    map.setCenter(currentCenterRef.current);
     map.setZoom(currentZoomRef.current);
-    queueMicrotask(() => { suppressCameraEventsRef.current = false; });
   }, [recenterToken, map]);
 
   // Continuous catch-up loop — eases toward the target every frame.
@@ -164,16 +167,14 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
         currentBearingRef.current = moveAngle(currentBearingRef.current ?? target.bearing, target.bearing, 0.12);
         currentTiltRef.current = lerp(currentTiltRef.current ?? target.tilt, target.tilt, 0.12);
 
-        suppressCameraEventsRef.current = true;
-        map.setCenter({ lat: cur.lat, lng: cur.lng });
-        if (headingUp) {
-          programmaticHeadingRef.current = currentBearingRef.current;
-          map.setHeading?.(currentBearingRef.current);
-        }
+        // Set programmatic refs BEFORE the set* calls so the event handlers
+        // can recognise these as our own changes and skip manual override.
+        programmaticHeadingRef.current = currentBearingRef.current;
+        map.setHeading?.(currentBearingRef.current);
         map.setTilt?.(currentTiltRef.current ?? target.tilt ?? 45);
         programmaticZoomRef.current = currentZoomRef.current;
+        map.setCenter({ lat: cur.lat, lng: cur.lng });
         map.setZoom(currentZoomRef.current);
-        queueMicrotask(() => { suppressCameraEventsRef.current = false; });
       }
       rafRef.current = requestAnimationFrame(tick);
     };

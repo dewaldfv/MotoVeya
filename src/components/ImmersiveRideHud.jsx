@@ -67,6 +67,12 @@ export default function ImmersiveRideHud({
             <div className="motoveya-nav-distance">{recalculating ? '…' : formatDistance(distanceToManeuver)}</div>
             <div className="truncate text-[12px] font-bold text-white/90">{recalculating ? 'Recalculating route…' : streetName}</div>
           </div>
+          <div className="flex min-w-[48px] flex-col items-center justify-center px-1.5">
+            <span className={`text-lg font-black tabular-nums leading-none ${overLimit ? 'text-red-400' : 'text-white'}`}>
+              {Math.round(Math.max(0, Number(speed) || 0))}
+            </span>
+            <span className="text-[8px] font-bold text-white/60">km/h</span>
+          </div>
           <div className="motoveya-nav-eta">
             <span>{etaStr}</span>
             <span>{formatDistance(remainingDistance)}</span>

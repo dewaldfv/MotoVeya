@@ -105,6 +105,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
 
   const speedRef = useRef(speed);
   const headingRef = useRef(heading);
+  const compassRef = useRef(null);
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { headingRef.current = heading; }, [heading]);
 
@@ -275,6 +276,61 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       }).catch(() => {});
     }
   }, []);
+
+  // Device compass — provides heading when the rider is stationary and GPS
+  // heading is unavailable. GPS heading remains authoritative while moving.
+  useEffect(() => {
+    if (rideStatus !== 'active') return;
+    if (typeof window === 'undefined' || !window.DeviceOrientationEvent) return;
+
+    const handleOrientation = (event) => {
+      // iOS: webkitCompassHeading is clockwise from true north.
+      if (typeof event.webkitCompassHeading === 'number' && !isNaN(event.webkitCompassHeading)) {
+        compassRef.current = ((event.webkitCompassHeading % 360) + 360) % 360;
+        return;
+      }
+      // Android: absolute deviceorientation alpha (counter-clockwise from north).
+      if (event.absolute && typeof event.alpha === 'number' && !isNaN(event.alpha)) {
+        compassRef.current = (((360 - event.alpha) % 360) + 360) % 360;
+      }
+    };
+
+    const start = async () => {
+      try {
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission !== 'granted') return;
+        }
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+        window.addEventListener('deviceorientation', handleOrientation, true);
+      } catch (e) { /* compass is a best-effort fallback */ }
+    };
+
+    start();
+    return () => {
+      window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+      window.removeEventListener('deviceorientation', handleOrientation, true);
+    };
+  }, [rideStatus]);
+
+  // Compass fallback: when stationary, rotate map and rider icon to face the
+  // direction the phone is pointing. GPS heading takes over once moving.
+  useEffect(() => {
+    if (rideStatus !== 'active') return;
+    const interval = setInterval(() => {
+      if (speedRef.current >= 3) return;
+      const compass = compassRef.current;
+      if (compass == null) return;
+      setHeading((prev) => {
+        if (prev != null) {
+          const delta = ((compass - prev + 540) % 360) - 180;
+          if (Math.abs(delta) < 2) return prev;
+        }
+        return compass;
+      });
+    }, 500);
+    return () => clearInterval(interval);
+  }, [rideStatus]);
 
   // Fuel calculation
   useEffect(() => {
