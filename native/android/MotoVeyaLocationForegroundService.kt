@@ -129,12 +129,13 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
             }
             ACTION_SET_CRASH_DETECTION -> {
                 crashDetectionEnabled = intent.getBooleanExtra(EXTRA_CRASH_DETECTION_ENABLED, true)
-                if (locationCallback != null) {
+                val trackingActive = locationCallback != null
+                if (trackingActive) {
                     if (crashDetectionEnabled) startCrashDetection() else stopCrashDetection()
                 } else {
                     stopSelf()
                 }
-                return START_NOT_STICKY
+                return if (trackingActive) START_STICKY else START_NOT_STICKY
             }
             ACTION_START -> {
                 intent.getStringExtra(EXTRA_DEVICE_TOKEN)?.takeIf { it.length >= 32 }?.let {
