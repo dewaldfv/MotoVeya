@@ -32,7 +32,15 @@ export function usePushNotifications() {
 
         swMessageHandler = (event) => {
           const d = event && event.data;
-          if (d && d.type === 'motogo:open-conversation' && d.conversationId) {
+          if (!d) return;
+          // Deep-link navigation from a tapped push notification.
+          if (d.type === 'motoveya:navigate') {
+            window.dispatchEvent(
+              new CustomEvent('motoveya:navigate', { detail: { url: d.url, conversationId: d.conversationId } })
+            );
+          }
+          // Legacy: message deep-link from in-app notification click.
+          if (d.type === 'motogo:open-conversation' && d.conversationId) {
             window.dispatchEvent(
               new CustomEvent('motogo:open-conversation', { detail: { conversationId: d.conversationId } })
             );
@@ -44,13 +52,9 @@ export function usePushNotifications() {
         if (cancelled) return;
         await navigator.serviceWorker.ready;
 
-        if (Notification.permission === 'default') {
-          try {
-            await Notification.requestPermission();
-          } catch (e) {
-            /* some browsers require a user gesture */
-          }
-        }
+        // Only subscribe if the user has already granted permission (from the
+        // Settings button gesture). Auto-requesting permission on page load
+        // is silently rejected by browsers and is bad UX.
         if (Notification.permission !== 'granted' || cancelled) return;
 
         const cfgRes = await base44.functions.invoke('get-push-config', {});

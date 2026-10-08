@@ -63,12 +63,26 @@ export default function AppLayout() {
   const navHidden = isHome && !mapUiVisible;
 
   useEffect(() => {
-    const handler = (e) => {
+    const conversationHandler = (e) => {
       const conversationId = e?.detail?.conversationId;
       navigate('/community', { state: { tab: 'messages', conversationId } });
     };
-    window.addEventListener('motogo:open-conversation', handler);
-    return () => window.removeEventListener('motogo:open-conversation', handler);
+    window.addEventListener('motogo:open-conversation', conversationHandler);
+
+    const navigateHandler = (e) => {
+      const { url, conversationId } = e?.detail || {};
+      if (conversationId) {
+        navigate('/community', { state: { tab: 'messages', conversationId } });
+      } else if (url) {
+        navigate(url);
+      }
+    };
+    window.addEventListener('motoveya:navigate', navigateHandler);
+
+    return () => {
+      window.removeEventListener('motogo:open-conversation', conversationHandler);
+      window.removeEventListener('motoveya:navigate', navigateHandler);
+    };
   }, [navigate]);
 
   if (!isLoadingAuth && user && user.onboarding_completed !== true) {

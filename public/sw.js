@@ -3,6 +3,8 @@
 // app is closed. Clicking the notification focuses/opens the app and
 // jumps to the relevant conversation.
 const APP_NAME = 'MotoVeya';
+const NOTIFICATION_ICON = 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/f859a5527_MotoVeya1.png';
+const NOTIFICATION_BADGE = '/icon.svg';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -27,6 +29,8 @@ self.addEventListener('push', (event) => {
     body: (data.body || '').slice(0, 200),
     tag: data.clipId ? `crowd-clip-${data.clipId}` : (conversationId || 'motogo-message'),
     renotify: true,
+    icon: NOTIFICATION_ICON,
+    badge: NOTIFICATION_BADGE,
     data: {
       conversationId,
       url: targetUrl,
@@ -61,9 +65,10 @@ self.addEventListener('notificationclick', (event) => {
       for (const c of allClients) {
         if ('focus' in c) {
           await c.focus();
-          if (conversationId) {
-            c.postMessage({ type: 'motogo:open-conversation', conversationId });
-          }
+          // Post a navigation message so the app deep-links to the
+          // notification's target, whether it's a conversation or a
+          // general page (ride invite, event, distress alert, etc.).
+          c.postMessage({ type: 'motoveya:navigate', url: targetUrl, conversationId });
           return;
         }
       }
@@ -71,7 +76,7 @@ self.addEventListener('notificationclick', (event) => {
       if (newClient && conversationId) {
         setTimeout(() => {
           try {
-            newClient.postMessage({ type: 'motogo:open-conversation', conversationId });
+            newClient.postMessage({ type: 'motoveya:navigate', url: targetUrl, conversationId });
           } catch (e) {
             /* ignore */
           }

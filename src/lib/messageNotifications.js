@@ -1,8 +1,7 @@
-// Lightweight helpers for OS-level (Web Notifications API) message alerts.
-// The Base44 platform does not support server-side push, so notifications
-// are triggered client-side from the realtime Message subscription while
-// the app is installed/open. On Android Chrome PWA and iOS (home-screen
-// installed) these surface in the system notification center like WhatsApp.
+// Lightweight helpers for OS-level (Web Notifications API) message alerts
+// shown when the app is open and focused. Server-side Web Push (VAPID)
+// handles delivery when the app is closed; the service worker suppresses
+// duplicate system notifications when a page is focused.
 
 let activeConversationId = null;
 
