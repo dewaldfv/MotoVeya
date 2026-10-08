@@ -17,6 +17,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   const rafRef = useRef(null);
   const currentCenterRef = useRef(null);
   const currentZoomRef = useRef(null);
+  const currentBearingRef = useRef(null);
   const targetRef = useRef(null);
   const followingRef = useRef(true);
   const suppressCameraEventsRef = useRef(false);
@@ -103,10 +104,13 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     followingRef.current = true;
     currentCenterRef.current = { lat: targetRef.current.lat, lng: targetRef.current.lng };
     currentZoomRef.current = targetRef.current.zoom;
+    currentBearingRef.current = targetRef.current.bearing ?? 0;
     suppressCameraEventsRef.current = true;
     map.setCenter(currentCenterRef.current);
-    programmaticZoomRef.current = Math.round(currentZoomRef.current);
-    map.setZoom(Math.round(currentZoomRef.current));
+    programmaticHeadingRef.current = currentBearingRef.current;
+    map.setHeading?.(currentBearingRef.current);
+    programmaticZoomRef.current = currentZoomRef.current;
+    map.setZoom(currentZoomRef.current);
     queueMicrotask(() => { suppressCameraEventsRef.current = false; });
   }, [recenterToken, map]);
 
