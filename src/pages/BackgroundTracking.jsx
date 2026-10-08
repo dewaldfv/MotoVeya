@@ -88,6 +88,9 @@ export default function BackgroundTracking() {
       toast.success(`Always-on tracking ${enabled ? 'enabled' : 'disabled'}`);
       await load();
     } catch (e) {
+      if (enabled) {
+        try { await setTrackingEnabled(primaryDevice.id, false); } catch {}
+      }
       console.error(e);
       toast.error('Could not update tracking');
     }
