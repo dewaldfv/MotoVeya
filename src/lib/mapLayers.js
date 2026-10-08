@@ -165,6 +165,9 @@ export function getMapOptions(layer) {
     // Allow map rotation on supported Google Maps map types. MotoVeya provides
     // its own Compass button to return the camera to true north.
     rotateControl: true,
+    // Ride Mode uses fractional zoom targets so speed changes produce a
+    // visible, smooth camera response instead of snapping between integers.
+    isFractionalZoomEnabled: true,
     clickableIcons: false,
   };
 }
