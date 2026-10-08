@@ -122,7 +122,9 @@ export default function BackgroundTracking() {
           <ShieldCheck size={32} className="mb-2" />
           <h2 className="text-lg font-bold">Keep riding protected, screen off</h2>
           <p className="mt-1 text-sm text-white/85">
-            Native background tracking keeps your live location, crash detection, and ride progress running continuously — even when your phone is locked and MotoVeya is in your pocket.
+            {platform === 'android'
+              ? 'The MotoVeya Android service can keep ride location and crash sensors active while the screen is locked.'
+              : 'Always-on GPS and crash sensors require the installed MotoVeya Android app. A browser may pause location and motion sensors when it is backgrounded.'}
           </p>
         </div>
 
