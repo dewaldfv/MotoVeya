@@ -17,6 +17,7 @@ class MotoVeyaNativeBridge(
 ) {
     companion object {
         const val LOCATION_PERMISSION_REQUEST = 7402
+        const val BACKGROUND_LOCATION_REQUEST = 7403
         const val PREFS_NAME = "motoveya_prefs"
         const val PREF_ORIENTATION = "screen_orientation"
     }
@@ -35,41 +36,86 @@ class MotoVeyaNativeBridge(
     fun requestLocationPermissions(callbackName: String): Boolean {
         val fine = ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarse = ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        pendingLocationCallback = sanitize(callbackName)
+        val notificationsGranted = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
-        if (fine || coarse) {
-            if (android.os.Build.VERSION.SDK_INT >= 33 &&
-                ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    activity,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    LOCATION_PERMISSION_REQUEST
-                )
-                return false
-            }
-            invokeLocationCallback(callbackName, true)
-            pendingLocationCallback = null
+        if ((fine || coarse) && notificationsGranted) {
+            // Foreground location already granted — request background location if needed
+            requestBackgroundLocationIfNeeded(callbackName)
             return true
         }
 
+        pendingLocationCallback = sanitize(callbackName)
+        val permissions = mutableListOf<String>()
+        if (!fine && !coarse) {
+            permissions += Manifest.permission.ACCESS_FINE_LOCATION
+            permissions += Manifest.permission.ACCESS_COARSE_LOCATION
+        }
+        if (!notificationsGranted) permissions += Manifest.permission.POST_NOTIFICATIONS
         ActivityCompat.requestPermissions(
             activity,
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ),
+            permissions.toTypedArray(),
             LOCATION_PERMISSION_REQUEST
         )
         return false
     }
 
+    /**
+     * On Android 10+, ACCESS_BACKGROUND_LOCATION must be requested separately
+     * (on 11+ it cannot be combined with foreground location). Without it the
+     * foreground service may stop receiving location fixes when the screen locks
+     * on manufacturer ROMs (Samsung, Xiaomi, Huawei).
+     */
+    private fun requestBackgroundLocationIfNeeded(callbackName: String) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
+            invokeCallback(callbackName, true)
+            return
+        }
+        val bgGranted = ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (bgGranted) {
+            invokeCallback(callbackName, true)
+            return
+        }
+        if (callbackName.isBlank()) return
+        pendingLocationCallback = sanitize(callbackName)
+        ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+            BACKGROUND_LOCATION_REQUEST
+        )
+    }
+
     fun onRequestPermissionsResult(requestCode: Int, grantResults: IntArray) {
-        if (requestCode != LOCATION_PERMISSION_REQUEST) return
-        val locationGranted =
-            ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        pendingLocationCallback?.let { invokeCallback(it, locationGranted) }
-        pendingLocationCallback = null
+        when (requestCode) {
+            LOCATION_PERMISSION_REQUEST -> {
+                val locationGranted =
+                    ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                if (locationGranted) {
+                    // Foreground location granted — now request background location
+                    val cb = pendingLocationCallback
+                    requestBackgroundLocationIfNeeded(cb ?: "")
+                } else {
+                    pendingLocationCallback?.let { invokeCallback(it, false) }
+                    pendingLocationCallback = null
+                }
+            }
+            BACKGROUND_LOCATION_REQUEST -> {
+                // Background location result — tracking can proceed either way,
+                // but background tracking only works reliably if granted.
+                val locationGranted =
+                    ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                pendingLocationCallback?.let { invokeCallback(it, locationGranted) }
+                pendingLocationCallback = null
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun isBackgroundLocationGranted(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return true
+        return ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
     @JavascriptInterface
@@ -81,8 +127,6 @@ class MotoVeyaNativeBridge(
                 else -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
             }
         }
-        // Persist so the Activity can restore the orientation on the next cold
-        // start before the web bundle has loaded (avoids an orientation flash).
         activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putString(PREF_ORIENTATION, preference)
@@ -91,9 +135,19 @@ class MotoVeyaNativeBridge(
     }
 
     @JavascriptInterface
-    fun startNativeLocationTracking(deviceToken: String): Boolean {
+    fun startNativeLocationTracking(deviceToken: String): Boolean =
+        startNativeLocationTrackingWithCrashDetection(deviceToken, true)
+
+    @JavascriptInterface
+    fun startNativeLocationTrackingWithCrashDetection(deviceToken: String, crashDetectionEnabled: Boolean): Boolean {
         if (deviceToken.length < 32) return false
-        MotoVeyaLocationForegroundService.start(activity, deviceToken)
+        MotoVeyaLocationForegroundService.start(activity, deviceToken, crashDetectionEnabled)
+        return true
+    }
+
+    @JavascriptInterface
+    fun setNativeCrashDetectionEnabled(enabled: Boolean): Boolean {
+        MotoVeyaLocationForegroundService.setCrashDetectionEnabled(activity, enabled)
         return true
     }
 

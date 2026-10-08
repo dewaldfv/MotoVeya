@@ -10,6 +10,7 @@ import {
   revokeNativeTracking,
   getStoredDeviceToken,
   detectPlatform,
+  isBackgroundLocationGranted,
 } from '@/lib/nativeTracking';
 import { toast } from 'sonner';
 
@@ -27,6 +28,19 @@ export default function BackgroundTracking() {
   const [registering, setRegistering] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const platform = detectPlatform();
+  const [bgLocationGranted, setBgLocationGranted] = useState(true);
+
+  useEffect(() => {
+    if (platform !== 'android') return;
+    setBgLocationGranted(isBackgroundLocationGranted());
+    const onFocus = () => setBgLocationGranted(isBackgroundLocationGranted());
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [platform]);
 
   const load = async () => {
     setLoading(true);
@@ -196,6 +210,18 @@ export default function BackgroundTracking() {
             </button>
           )}
         </div>
+
+        {platform === 'android' && primaryDevice && trackingOn && !bgLocationGranted && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+            <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-500" />
+            <div>
+              <p className="text-sm font-bold text-amber-600 dark:text-amber-400">Background location not granted</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Tracking may stop when the screen locks. Open Android Settings &rarr; Permissions &rarr; Location &rarr; MotoVeya, and select <strong>Allow all the time</strong>.
+              </p>
+            </div>
+          </div>
+        )}
 
         {token && primaryDevice && (
           <div className="rounded-2xl border border-dashed border-border bg-secondary/30 p-4">

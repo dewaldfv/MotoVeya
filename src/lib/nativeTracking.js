@@ -97,6 +97,11 @@ export function isNativeLocationTrackingAvailable() {
   try { return !!bridge?.isNativeLocationTrackingAvailable?.(); } catch { return false; }
 }
 
+export function isBackgroundLocationGranted() {
+  const bridge = getNativeBridge();
+  try { return !!bridge?.isBackgroundLocationGranted?.(); } catch { return true; }
+}
+
 export function requestNativeLocationPermission() {
   const bridge = getNativeBridge();
   if (!bridge?.requestLocationPermissions) return Promise.resolve(null);
