@@ -10,6 +10,19 @@ import { useSpeedLimit } from '@/hooks/useSpeedLimit';
 import { saveRideState, getActiveRide, clearActiveRide, savePendingRide, getPendingRides, clearPendingRide } from '@/lib/rideCache';
 import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '@/lib/emergencyCache';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
+
+function normalizeBearing(deg) {
+  return ((Number(deg) % 360) + 360) % 360;
+}
+
+function calculateBearing(lat1, lng1, lat2, lng2) {
+  const p1 = Number(lat1) * Math.PI / 180;
+  const p2 = Number(lat2) * Math.PI / 180;
+  const dlng = (Number(lng2) - Number(lng1)) * Math.PI / 180;
+  const y = Math.sin(dlng) * Math.cos(p2);
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dlng);
+  return normalizeBearing(Math.atan2(y, x) * 180 / Math.PI);
+}
 import { toast } from 'sonner';
 import { notifyFriendsOfRide } from '@/lib/rideInvite';
 import { startNativeLocationTracking, stopNativeLocationTracking } from '@/lib/nativeTracking';
@@ -166,20 +179,37 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         setUserPos(newPos);
         try { localStorage.setItem('motogo_last_location', JSON.stringify(newPos)); } catch {}
         positionsRef.current.push(newPos);
-        if (pos.coords.heading != null && !isNaN(pos.coords.heading)) setHeading(pos.coords.heading);
         if (pos.coords.accuracy != null) setAccuracy(pos.coords.accuracy);
-        // Android/WebView can report coords.speed as 0/null even with a valid
-        // high-accuracy GPS fix. Derive speed from consecutive GPS fixes.
+        // Android/WebView can report coords.speed and coords.heading as null/zero
+        // even with a valid high-accuracy GPS fix. Derive both from consecutive
+        // fixes so Ride Mode always has a usable travel direction.
         let spd = pos.coords.speed != null && Number.isFinite(pos.coords.speed) && pos.coords.speed > 0
           ? pos.coords.speed * 3.6
           : 0;
-        if (lastPosRef.current?.__timestamp && spd < 1) {
+        let derivedHeading = null;
+        if (lastPosRef.current?.__timestamp) {
           const elapsedSec = (pos.timestamp - lastPosRef.current.__timestamp) / 1000;
           if (elapsedSec > 0) {
-            const derivedSpeed = haversine(lastPosRef.current[0], lastPosRef.current[1], newPos[0], newPos[1]) * 3600 / elapsedSec;
-            if (Number.isFinite(derivedSpeed)) spd = derivedSpeed;
+            const movedKm = haversine(lastPosRef.current[0], lastPosRef.current[1], newPos[0], newPos[1]);
+            if (spd < 1) {
+              const derivedSpeed = movedKm * 3600 / elapsedSec;
+              if (Number.isFinite(derivedSpeed)) spd = derivedSpeed;
+            }
+            if (movedKm >= 0.003 && spd >= 3) {
+              derivedHeading = calculateBearing(
+                lastPosRef.current[0],
+                lastPosRef.current[1],
+                newPos[0],
+                newPos[1]
+              );
+            }
           }
         }
+        const gpsHeading = pos.coords.heading != null && Number.isFinite(pos.coords.heading)
+          ? pos.coords.heading
+          : null;
+        if (gpsHeading != null && spd >= 3) setHeading(normalizeBearing(gpsHeading));
+        else if (derivedHeading != null) setHeading(derivedHeading);
         setSpeed(Math.round(spd));
         setMaxSpeed((prev) => (spd > prev ? Math.round(spd) : prev));
         if (lastPosRef.current) {
