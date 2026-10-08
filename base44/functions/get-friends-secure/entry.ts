@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       let lat = null;
       let lng = null;
       let location_shared = false;
-      if (audience !== 'nobody' && fLat != null && fLng != null) {
+      if (locFresh && audience !== 'nobody' && fLat != null && fLng != null) {
         let reveal = false;
         if (audience === 'friends' || audience === 'group_rides') {
           // Friends can see each other permanently — no group-ride requirement.
