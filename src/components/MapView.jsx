@@ -255,9 +255,9 @@ function FitRoute({ route, signal }) {
   return null;
 }
 
-function NavCamera({ userPos, heading, speed, nextManeuverDistance, recenterToken, headingUp }) {
+function NavCamera({ userPos, heading, speed, nextManeuverDistance, recenterToken, headingUp, onFollowingChange }) {
   const map = useGoogleMap();
-  useMapCamera({ map, userPos, heading, headingUp, speed, nextManeuverDistance, recenterToken });
+  useMapCamera({ map, userPos, heading, headingUp, speed, nextManeuverDistance, recenterToken, onFollowingChange });
   return null;
 }
 
@@ -310,6 +310,7 @@ export default function MapView({
   remainingRoute = null,
   destination = null,
   favoriteEventIds = null,
+  onFollowingChange,
 }) {
   const isLoaded = useGoogleMapsLoaded();
   const [popupItem, setPopupItem] = useState(null);
@@ -402,6 +403,7 @@ export default function MapView({
             nextManeuverDistance={nextManeuverDistance}
             recenterToken={recenterSignal}
             headingUp={headingUp}
+            onFollowingChange={onFollowingChange}
           />
         ) : (
           <>
