@@ -36,18 +36,21 @@ export default function NativeEventMarkers({ events = [], favoriteEventIds = [],
       let m = markers.get(id);
       if (!m) {
         const el = document.createElement('div');
-        el.style.cssText = 'width:44px;height:44px;pointer-events:auto;cursor:pointer;position:relative;';
+        el.style.cssText = 'width:44px;height:44px;pointer-events:auto;cursor:pointer;';
+        const inner = document.createElement('div');
+        inner.style.cssText = 'position:relative;width:44px;height:44px;';
         const img = document.createElement('img');
         img.src = iconUrl;
         img.style.cssText = 'width:44px;height:44px;';
         img.draggable = false;
-        el.appendChild(img);
+        inner.appendChild(img);
         if (isFav) {
           const heart = document.createElement('div');
           heart.textContent = '\u2665';
           heart.style.cssText = 'position:absolute;top:-8px;left:-8px;color:#ef4444;font-size:16px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.4);';
-          el.appendChild(heart);
+          inner.appendChild(heart);
         }
+        el.appendChild(inner);
         el.addEventListener('click', () => cbRef.current?.(ev));
         m = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([markerLng, markerLat])

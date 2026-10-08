@@ -78,7 +78,6 @@ export default function CustomMapMarker({ position, children, onClick, zIndex = 
           display: 'flex',
           alignItems: anchor === 'bottom' ? 'flex-end' : 'center',
           justifyContent: 'center',
-          willChange: 'transform',
         }}
       >
         {children}
