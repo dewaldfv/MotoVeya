@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ShieldCheck, MapPin, Activity, Route, Power, Check, AlertTriangle, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import {
-  registerNativeDevice,
+  startNativeLocationTracking,
+  stopNativeLocationTracking,
   getMyDevices,
   setTrackingEnabled,
   revokeNativeTracking,
@@ -52,8 +53,17 @@ export default function BackgroundTracking() {
   const handleEnable = async () => {
     setRegistering(true);
     try {
-      await registerNativeDevice({ platform });
-      toast.success('This device is registered for background tracking');
+      const result = await startNativeLocationTracking();
+      if (!result.native) {
+        toast.error('Always-on tracking requires the MotoVeya Android app. A browser cannot keep GPS active with the screen locked.');
+        return;
+      }
+      if (result.permissionDenied) {
+        toast.error('Location permission is required for always-on tracking');
+        return;
+      }
+      if (!result.started) throw new Error('Native location tracking did not start');
+      toast.success('Always-on tracking is active on this device');
       await load();
     } catch (e) {
       console.error(e);
@@ -67,10 +77,13 @@ export default function BackgroundTracking() {
     if (!primaryDevice) return;
     try {
       await setTrackingEnabled(primaryDevice.id, enabled);
-      if (!enabled) {
-        // Tell the server to immediately stop accepting background fixes and
-        // clear the live position, then refresh the device list.
-        await revokeNativeTracking().catch(() => {});
+      if (enabled) {
+        const result = await startNativeLocationTracking();
+        if (!result.started) throw new Error(result.permissionDenied ? 'Location permission denied' : 'Native tracking could not start');
+      } else {
+        stopNativeLocationTracking();
+        // Stop the native service and revoke server acceptance before clearing local credentials.
+        await revokeNativeTracking();
       }
       toast.success(`Always-on tracking ${enabled ? 'enabled' : 'disabled'}`);
       await load();
@@ -83,6 +96,7 @@ export default function BackgroundTracking() {
   const handleRevoke = async () => {
     setRevoking(true);
     try {
+      stopNativeLocationTracking();
       await revokeNativeTracking();
       toast.success('Background tracking revoked');
       await load();
