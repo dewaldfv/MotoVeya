@@ -18,41 +18,6 @@ function markerSvgUrl(service, category) {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
-function distanceMeters(a, b) {
-  const lat1 = Number(a.lat) * Math.PI / 180;
-  const lat2 = Number(b.lat) * Math.PI / 180;
-  const dLat = lat2 - lat1;
-  const dLng = (Number(b.lng) - Number(a.lng)) * Math.PI / 180;
-  const x = dLng * Math.cos((lat1 + lat2) / 2);
-  const y = dLat;
-  return Math.sqrt(x * x + y * y) * 6371000;
-}
-
-function spiderfy(services) {
-  const groups = [];
-  services.forEach((service) => {
-    const existing = groups.find((group) => distanceMeters(service, group[0]) <= 60);
-    if (existing) existing.push(service);
-    else groups.push([service]);
-  });
-
-  const result = [];
-  groups.forEach((group) => {
-    group.forEach((service, index) => {
-      let lat = Number(service.lat);
-      let lng = Number(service.lng);
-      if (group.length > 1) {
-        const angle = (index / group.length) * Math.PI * 2 - Math.PI / 2;
-        const radius = group.length <= 4 ? 28 : 34;
-        lat += Math.sin(angle) * radius / 111320;
-        lng += Math.cos(angle) * radius / (111320 * Math.cos(lat * Math.PI / 180));
-      }
-      result.push({ service, lat, lng });
-    });
-  });
-  return result;
-}
-
 export default function ServiceMarkers({ services = [], userPos, onMarkerClick }) {
   const map = useMapInstance();
   const markersRef = useRef(new Map());
@@ -71,14 +36,16 @@ export default function ServiceMarkers({ services = [], userPos, onMarkerClick }
     if (!map) return;
     const markers = markersRef.current;
     const shouldShow = zoom >= SERVICE_MIN_ZOOM;
-    const visible = shouldShow ? spiderfy(validServices) : [];
+    const visible = shouldShow ? validServices : [];
     const seen = new Set();
 
-    visible.forEach(({ service, lat, lng }) => {
+    visible.forEach((service) => {
       const id = `service-${service.id}`;
       seen.add(id);
       const category = getServiceCategory(service.category);
       const iconUrl = markerSvgUrl(service, category);
+      const lat = service.lat;
+      const lng = service.lng;
 
       let marker = markers.get(id);
       if (!marker) {
