@@ -26,7 +26,7 @@ export default function EmergencySafetySheet({ user, open, onClose, onSaved }) {
       medical_notes: user.medical_notes || '',
       medical_aid: user.medical_aid || '',
     });
-    setCrashDetection(localStorage.getItem('motogo_auto_ride_detection') !== 'false');
+    setCrashDetection(localStorage.getItem('motogo_crash_detection_enabled') !== 'false');
   }, [open, user]);
 
   if (!open || !form) return null;
@@ -34,7 +34,9 @@ export default function EmergencySafetySheet({ user, open, onClose, onSaved }) {
 
   const toggleCrash = (checked) => {
     setCrashDetection(checked);
-    localStorage.setItem('motogo_auto_ride_detection', checked ? 'true' : 'false');
+    localStorage.setItem('motogo_crash_detection_enabled', checked ? 'true' : 'false');
+    window.dispatchEvent(new Event('motoveya:crash-detection-changed'));
+    try { window.MotoVeyaNative?.setNativeCrashDetectionEnabled?.(checked); } catch {}
   };
 
   const handleSave = async () => {
