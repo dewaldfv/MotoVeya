@@ -6,6 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import GeofencePreview from '@/components/GeofencePreview';
 import { toast } from 'sonner';
 
 const RADII=[5,10,25,50,75,100];
@@ -98,6 +99,7 @@ export default function SavedPlaces() {
          <div className="flex items-center justify-between"><span className="text-sm">Exit notification</span><Switch checked={!!form.notify_exit} onCheckedChange={v=>setForm({...form,notify_exit:v})}/></div>
          <div><p className="mb-2 text-sm font-medium">Groups</p>{groups.length?groups.map(g=><label key={g.id} className="flex items-center gap-2 py-1 text-sm"><input type="checkbox" checked={(form.group_ids||[]).includes(g.id)} onChange={()=>toggleGroup(g.id)}/>{g.name}</label>):<p className="text-xs text-muted-foreground">No active groups.</p>}</div>
          <div className="flex items-center justify-between"><span className="text-sm">Geofence active</span><Switch checked={form.active!==false} onCheckedChange={v=>setForm({...form,active:v})}/></div>
+         <GeofencePreview name={form.name||''} radius={Number(form.radius_m)||50} enter={!!form.notify_enter} exit={!!form.notify_exit} active={form.active!==false} groupNames={groups.filter(g=>(form.group_ids||[]).includes(g.id)).map(g=>g.name)} />
          <Button className="w-full" onClick={save} disabled={busy}><Save size={16} className="mr-2"/>Save Changes</Button>
        </div> :
        <div key={p.id} className={`rounded-2xl border bg-card p-4 ${p.active===false?'opacity-60':''}`}>

@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import GeofencePreview from '@/components/GeofencePreview';
 import { toast } from 'sonner';
 
 const RADII = [5, 10, 25, 50, 75, 100];
@@ -111,6 +112,7 @@ export default function SavedPlaceDialog({ position, user, onClose, onSaved, edi
             <div className="mt-2 space-y-2 max-h-32 overflow-auto">{groups.map(g=><label key={g.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selectedGroups.includes(g.id)} onChange={()=>toggleGroup(g.id)}/><span>{g.name}</span></label>)}</div>}
           </div>
           <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground"><span>{limit} active Saved Places allowed</span>{!premium&&<span className="flex items-center gap-1"><Crown size={13}/> Premium: 64</span>}</div>
+          <GeofencePreview name={name} radius={radius} enter={enter} exit={exit} active={active} groupNames={groups.filter(g=>selectedGroups.includes(g.id)).map(g=>g.name)} />
           <Button className="mt-4 w-full" onClick={save} disabled={saving}><Save size={16} className="mr-2"/>{saving ? 'Saving…' : (isEdit ? 'Update Place' : 'Save Place')}</Button>
         </>
       )}
