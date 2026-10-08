@@ -100,6 +100,7 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
         deviceToken = getSharedPreferences(PREFS, MODE_PRIVATE).getString(TOKEN_KEY, null)
         crashDetectionEnabled = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(CRASH_DETECTION_KEY, true)
         pendingCrashPayload = getSharedPreferences(PREFS, MODE_PRIVATE).getString("pending_crash_payload", null)
+        stopAfterCrashDelivered = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("stop_after_crash", false)
         restorePendingLocation()
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -111,6 +112,7 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
             ACTION_STOP -> {
                 if (pendingCrashPayload != null) {
                     stopAfterCrashDelivered = true
+                    getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("stop_after_crash", true).commit()
                     locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
                     locationCallback = null
                     stopCrashDetection()
@@ -287,7 +289,10 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
             if (delivered) {
                 pendingCrashPayload = null
                 emergencyRetryAttempt = 0
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove("pending_crash_payload").commit()
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .remove("pending_crash_payload")
+                    .remove("stop_after_crash")
+                    .commit()
                 if (stopAfterCrashDelivered) {
                     android.os.Handler(mainLooper).post {
                         stopTracking()
