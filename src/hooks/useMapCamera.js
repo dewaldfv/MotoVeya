@@ -21,6 +21,9 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   const followingRef = useRef(true);
   const suppressCameraEventsRef = useRef(false);
   const programmaticZoomRef = useRef(null);
+  const programmaticHeadingRef = useRef(null);
+  const filteredSpeedRef = useRef(0);
+  const filteredHeadingRef = useRef(null);
 
   // Ride Mode remains fully interactive. Manual pan/zoom disengages camera
   // following; GPS tracking itself continues uninterrupted.
@@ -32,51 +35,64 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
       followingRef.current = false;
     };
     const onZoomChanged = () => {
-      // Keep the actual user-selected zoom in sync. A manual pinch/scroll must
-      // take control of the camera and must not be overwritten by the next GPS
-      // speed/navigation update.
       const actualZoom = map.getZoom();
       if (actualZoom == null) return;
       currentZoomRef.current = actualZoom;
-      if (programmaticZoomRef.current != null && actualZoom === programmaticZoomRef.current) {
+      if (programmaticZoomRef.current != null && Math.abs(actualZoom - programmaticZoomRef.current) < 0.02) {
         programmaticZoomRef.current = null;
+        return;
+      }
+      followingRef.current = false;
+    };
+    const onHeadingChanged = () => {
+      const actual = Number(map.getHeading?.() ?? 0);
+      if (programmaticHeadingRef.current != null && Math.abs(shortestAngleDelta(actual, programmaticHeadingRef.current)) < 2) {
+        programmaticHeadingRef.current = null;
         return;
       }
       followingRef.current = false;
     };
     const dragStart = map.addListener('dragstart', onManualInteraction);
     const zoomChanged = map.addListener('zoom_changed', onZoomChanged);
+    const headingChanged = map.addListener('heading_changed', onHeadingChanged);
     return () => {
       dragStart?.remove?.();
       zoomChanged?.remove?.();
+      headingChanged?.remove?.();
     };
   }, [map]);
 
-  // Update the tracking target whenever the rider's position or zoom inputs change.
+  // Update the tracking target whenever the rider's GPS inputs change.
   useEffect(() => {
     if (!map || !userPos) return;
-    const target = {
-      lat: userPos[0],
-      lng: userPos[1],
-      zoom: resolveTargetZoom(speed, nextManeuverDistance)
-    };
-    // Google Maps bearing is the correct way to implement heading-up mode.
-    // Do not rotate the DOM/container: that rotates the entire rendered map layer.
-    if (headingUp && heading != null && Number.isFinite(Number(heading))) {
-      const bearing = ((Number(heading) % 360) + 360) % 360;
-      map.setHeading?.(bearing);
-    } else if (!headingUp) {
-      map.setHeading?.(0);
+
+    const rawSpeed = Math.max(0, Number(speed) || 0);
+    filteredSpeedRef.current = lerp(filteredSpeedRef.current, rawSpeed, 0.18);
+
+    const rawHeading = Number.isFinite(Number(heading)) ? normalizeAngle(Number(heading)) : null;
+    if (rawHeading != null) {
+      filteredHeadingRef.current = filteredHeadingRef.current == null
+        ? rawHeading
+        : moveAngle(filteredHeadingRef.current, rawHeading, 0.16);
     }
+
+    const effectiveHeading = filteredHeadingRef.current;
+    const zoom = resolveTargetZoom(filteredSpeedRef.current, nextManeuverDistance);
+    const targetCenter = getFollowCenter(map, userPos, effectiveHeading, zoom, headingUp);
+    const bearing = headingUp && effectiveHeading != null ? effectiveHeading : 0;
+    const target = { ...targetCenter, zoom, bearing };
     targetRef.current = target;
     // First frame — snap to the rider with no animation.
     if (!currentCenterRef.current) {
       currentCenterRef.current = { lat: target.lat, lng: target.lng };
       currentZoomRef.current = target.zoom;
+      currentBearingRef.current = target.bearing;
       suppressCameraEventsRef.current = true;
       map.setCenter(currentCenterRef.current);
-      programmaticZoomRef.current = Math.round(currentZoomRef.current);
-      map.setZoom(Math.round(currentZoomRef.current));
+      programmaticZoomRef.current = currentZoomRef.current;
+      programmaticHeadingRef.current = currentBearingRef.current;
+      map.setHeading?.(currentBearingRef.current);
+      map.setZoom(currentZoomRef.current);
       queueMicrotask(() => { suppressCameraEventsRef.current = false; });
     }
   }, [userPos?.[0], userPos?.[1], heading, headingUp, speed, nextManeuverDistance, map]);
@@ -95,6 +111,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   }, [recenterToken, map]);
 
   // Continuous catch-up loop — eases toward the target every frame.
+  // Camera position, bearing and zoom are deliberately smoothed independently.
   // Robust to frequent GPS updates: the loop never restarts, the target just
   // shifts, so motion stays fluid instead of stuttering on each new fix.
   useEffect(() => {
@@ -106,15 +123,21 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
       if (target && cur && followingRef.current) {
         const dLat = target.lat - cur.lat;
         const dLng = target.lng - cur.lng;
-        // Keep zoom changes discrete. Animating zoom on every frame causes
-        // Google Maps to emit zoom_changed repeatedly and can fight the follow camera.
-        if (Math.abs(dLat) > 1e-7 || Math.abs(dLng) > 1e-7) {
-          cur.lat += dLat * SMOOTH;
-          cur.lng += dLng * SMOOTH;
-          suppressCameraEventsRef.current = true;
-          map.setCenter({ lat: cur.lat, lng: cur.lng });
-          queueMicrotask(() => { suppressCameraEventsRef.current = false; });
+        cur.lat += dLat * SMOOTH;
+        cur.lng += dLng * SMOOTH;
+
+        currentZoomRef.current = lerp(currentZoomRef.current ?? target.zoom, target.zoom, 0.07);
+        currentBearingRef.current = moveAngle(currentBearingRef.current ?? target.bearing, target.bearing, 0.12);
+
+        suppressCameraEventsRef.current = true;
+        map.setCenter({ lat: cur.lat, lng: cur.lng });
+        if (headingUp) {
+          programmaticHeadingRef.current = currentBearingRef.current;
+          map.setHeading?.(currentBearingRef.current);
         }
+        programmaticZoomRef.current = currentZoomRef.current;
+        map.setZoom(currentZoomRef.current);
+        queueMicrotask(() => { suppressCameraEventsRef.current = false; });
       }
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -122,26 +145,37 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [map]);
 
-  // Automatic navigation zoom is allowed only while the camera is following
-  // the rider. Once the rider manually zooms, preserve that zoom until they
-  // explicitly recenter. This prevents GPS updates from fighting pinch zoom.
-  useEffect(() => {
-    if (!map || !targetRef.current || !followingRef.current) return;
-    const desired = Math.round(targetRef.current.zoom);
-    const actual = map.getZoom();
-    if (actual === desired) {
-      currentZoomRef.current = desired;
-      return;
-    }
-    currentZoomRef.current = desired;
-    programmaticZoomRef.current = desired;
-    suppressCameraEventsRef.current = true;
-    map.setZoom(desired);
-    queueMicrotask(() => { suppressCameraEventsRef.current = false; });
-  }, [speed, nextManeuverDistance, map]);
-
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 }
+
+function getFollowCenter(map, userPos, heading, zoom, headingUp) {
+  const lat = Number(userPos[0]);
+  const lng = Number(userPos[1]);
+  if (!headingUp || heading == null || !map?.getDiv) return { lat, lng };
+
+  // Keep the motorcycle in the lower-middle of the display (~40–45% down)
+  // by putting the camera slightly ahead in the direction of travel.
+  const height = Math.max(320, Number(map.getDiv()?.clientHeight || 640));
+  const metersPerPixel = 156543.03392 * Math.cos((lat * Math.PI) / 180) / Math.pow(2, Number(zoom) || 16);
+  const forwardMeters = Math.min(Math.max(height * metersPerPixel * 0.15, 35), 450);
+  return destinationPoint(lat, lng, heading, forwardMeters);
+}
+
+function destinationPoint(lat, lng, bearingDeg, distanceMeters) {
+  const R = 6371000;
+  const brng = bearingDeg * Math.PI / 180;
+  const lat1 = lat * Math.PI / 180;
+  const lng1 = lng * Math.PI / 180;
+  const delta = distanceMeters / R;
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(delta) + Math.cos(lat1) * Math.sin(delta) * Math.cos(brng));
+  const lng2 = lng1 + Math.atan2(Math.sin(brng) * Math.sin(delta) * Math.cos(lat1), Math.cos(delta) - Math.sin(lat1) * Math.sin(lat2));
+  return { lat: lat2 * 180 / Math.PI, lng: lng2 * 180 / Math.PI };
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function normalizeAngle(deg) { return ((deg % 360) + 360) % 360; }
+function shortestAngleDelta(from, to) { return ((to - from + 540) % 360) - 180; }
+function moveAngle(from, to, t) { return normalizeAngle(from + shortestAngleDelta(from, to) * t); }
 
 function resolveTargetZoom(speed, nextManeuverDistance) {
   const s = Math.max(0, Number(speed) || 0);
