@@ -30,8 +30,9 @@ Deno.serve(async (req) => {
     const speed = Number(body.speed_kmh);
     const heading = Number(body.heading);
     const accuracy = Number(body.accuracy);
+    const svc = base44.asServiceRole;
 
-    await base44.asServiceRole.entities.NativeDevice.update(device.id, {
+    await svc.entities.NativeDevice.update(device.id, {
       last_lat: lat,
       last_lng: lng,
       last_accuracy: Number.isFinite(accuracy) ? accuracy : null,
@@ -40,15 +41,55 @@ Deno.serve(async (req) => {
       last_location_at: now,
     });
 
-    await base44.asServiceRole.entities.User.update(device.user_id, {
-      last_lat: lat,
-      last_lng: lng,
-      last_location_updated: now,
-      last_speed_kmh: Number.isFinite(speed) ? speed : null,
-      last_heading: Number.isFinite(heading) ? heading : null,
-    });
+    // Match the consent gate used by update-my-location. Native tracking must not
+    // publish a rider's coordinates just because the device token is valid.
+    let privacy = {
+      share_live_location: true,
+      background_sharing_enabled: false,
+      location_audience: 'friends',
+      location_group_rides_only: false,
+    };
+    try {
+      const settings = await svc.entities.PrivacySetting.filter(
+        { created_by_id: device.user_id }, '-created_date', 1
+      );
+      if (settings?.[0]) privacy = { ...privacy, ...settings[0] };
+    } catch (error) {
+      console.error('native-location privacy lookup failed:', error);
+    }
 
-    return Response.json({ updated: true, timestamp: now });
+    const audience = privacy.location_audience
+      || (privacy.location_group_rides_only ? 'group_rides' : (privacy.share_live_location ? 'friends' : 'nobody'));
+    const sharingAllowed = (privacy.share_live_location === true || privacy.background_sharing_enabled === true)
+      && audience !== 'nobody';
+
+    if (sharingAllowed) {
+      await svc.entities.User.update(device.user_id, {
+        last_lat: lat,
+        last_lng: lng,
+        last_location_updated: now,
+        last_speed_kmh: Number.isFinite(speed) ? speed : null,
+        last_heading: Number.isFinite(heading) ? heading : null,
+      });
+    } else {
+      const activeSessions = await svc.entities.LocationSession.filter(
+        { user_id: device.user_id, status: 'active' }, '-started_at', 50
+      ).catch(() => []);
+      for (const session of activeSessions || []) {
+        try {
+          await svc.entities.LocationSession.update(session.id, { status: 'expired', ended_at: now });
+        } catch (error) {
+          console.error('native-location session expiry failed:', error);
+        }
+      }
+      await svc.entities.User.update(device.user_id, {
+        last_lat: null,
+        last_lng: null,
+        last_location_updated: null,
+      });
+    }
+
+    return Response.json({ updated: true, sharing: sharingAllowed, timestamp: now });
   } catch (error) {
     console.error('native-location:', error);
     return Response.json({ error: error.message }, { status: 500 });
