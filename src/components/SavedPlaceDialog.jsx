@@ -73,7 +73,7 @@ export default function SavedPlaceDialog({ position, user, onClose, onSaved, edi
       toast.success(isEdit ? 'Saved Place updated' : 'Saved Place created');
       onSaved?.(res.data.place);
       onClose();
-    } catch (e) { toast.error(e.message || 'Could not save place'); }
+    } catch (e) { toast.error(e.message || 'Could not save place. Please try again.'); }
     finally { setSaving(false); }
   };
 
