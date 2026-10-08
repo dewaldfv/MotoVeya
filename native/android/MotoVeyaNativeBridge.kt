@@ -70,9 +70,19 @@ class MotoVeyaNativeBridge(
     }
 
     @JavascriptInterface
-    fun startNativeLocationTracking(deviceToken: String): Boolean {
+    fun startNativeLocationTracking(deviceToken: String): Boolean =
+        startNativeLocationTrackingWithCrashDetection(deviceToken, true)
+
+    @JavascriptInterface
+    fun startNativeLocationTrackingWithCrashDetection(deviceToken: String, crashDetectionEnabled: Boolean): Boolean {
         if (deviceToken.length < 32) return false
-        MotoVeyaLocationForegroundService.start(activity, deviceToken)
+        MotoVeyaLocationForegroundService.start(activity, deviceToken, crashDetectionEnabled)
+        return true
+    }
+
+    @JavascriptInterface
+    fun setNativeCrashDetectionEnabled(enabled: Boolean): Boolean {
+        MotoVeyaLocationForegroundService.setCrashDetectionEnabled(activity, enabled)
         return true
     }
 
