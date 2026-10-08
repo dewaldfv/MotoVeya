@@ -403,9 +403,6 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
         val corroborated = (impact && (rotation || decel)) || (decel && rotation)
         if (!corroborated) return
 
-        crashCooldownUntil = now + 60000L
-        val location = lastKnownLocation ?: latestUnsentLocation ?: return
-        val token = deviceToken ?: return
         val location = lastKnownLocation ?: latestUnsentLocation ?: return
         val token = deviceToken ?: return
         crashCooldownUntil = now + 60000L
