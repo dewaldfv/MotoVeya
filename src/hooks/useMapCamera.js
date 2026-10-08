@@ -109,9 +109,9 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     const zoom = resolveTargetZoom(filteredSpeedRef.current, nextManeuverDistance);
     const targetCenter = getFollowCenter(map, userPos, effectiveHeading, zoom, headingUp);
     const bearing = headingUp && effectiveHeading != null ? effectiveHeading : 0;
-    // 45° perspective in Ride Mode gives the rider a forward-looking navigation
-    // view while the camera offset keeps the rider in the lower third.
-    const tilt = headingUp ? 45 : 0;
+    // 60° perspective in Ride Mode gives the rider a steeper forward-looking
+    // navigation view while the camera offset keeps the rider in the lower third.
+    const tilt = headingUp ? 60 : 0;
     const target = { ...targetCenter, zoom, bearing, tilt };
     targetRef.current = target;
     // First frame — snap to the rider with no animation.
@@ -138,7 +138,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     currentCenterRef.current = { lat: targetRef.current.lat, lng: targetRef.current.lng };
     currentZoomRef.current = targetRef.current.zoom;
     currentBearingRef.current = targetRef.current.bearing ?? 0;
-    currentTiltRef.current = targetRef.current.tilt ?? (headingUp ? 45 : 0);
+    currentTiltRef.current = targetRef.current.tilt ?? (headingUp ? 60 : 0);
     programmaticHeadingRef.current = currentBearingRef.current;
     map.setHeading?.(currentBearingRef.current);
     map.setTilt?.(currentTiltRef.current);
@@ -171,7 +171,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
         // can recognise these as our own changes and skip manual override.
         programmaticHeadingRef.current = currentBearingRef.current;
         map.setHeading?.(currentBearingRef.current);
-        map.setTilt?.(currentTiltRef.current ?? target.tilt ?? 45);
+        map.setTilt?.(currentTiltRef.current ?? target.tilt ?? 60);
         programmaticZoomRef.current = currentZoomRef.current;
         map.setCenter({ lat: cur.lat, lng: cur.lng });
         map.setZoom(currentZoomRef.current);
