@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 
 // Crash detection uses correlated signals rather than a single sensor spike.
 const G_FORCE_MODERATE = 4.0;
@@ -30,6 +30,21 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
   const cooldownRef = useRef(0);
   const speedRef = useRef(speed);
   const onCrashRef = useRef(onCrashDetected);
+  const [preferenceEnabled, setPreferenceEnabled] = useState(() => {
+    try { return localStorage.getItem('motogo_crash_detection_enabled') !== 'false'; } catch { return true; }
+  });
+
+  useEffect(() => {
+    const refreshPreference = () => {
+      try { setPreferenceEnabled(localStorage.getItem('motogo_crash_detection_enabled') !== 'false'); } catch { setPreferenceEnabled(true); }
+    };
+    window.addEventListener('motoveya:crash-detection-changed', refreshPreference);
+    window.addEventListener('storage', refreshPreference);
+    return () => {
+      window.removeEventListener('motoveya:crash-detection-changed', refreshPreference);
+      window.removeEventListener('storage', refreshPreference);
+    };
+  }, []);
 
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { onCrashRef.current = onCrashDetected; }, [onCrashDetected]);
@@ -74,7 +89,7 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
   }).current;
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !preferenceEnabled) return;
 
     const speedInterval = setInterval(() => {
       const now = Date.now();
@@ -143,7 +158,7 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
       clearInterval(speedInterval);
       window.removeEventListener('devicemotion', handleMotion);
     };
-  }, [enabled, checkTrigger]);
+  }, [enabled, preferenceEnabled, checkTrigger]);
 }
 
 export async function requestMotionPermission() {
