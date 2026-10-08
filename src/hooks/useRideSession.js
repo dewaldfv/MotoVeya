@@ -794,7 +794,10 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   };
 
   const startRide = async (destOverride, originOverride, routeWaypoints = [], replayTrack = null) => {
-    await requestMotionPermission();
+    const motionPermissionGranted = await requestMotionPermission();
+    if (!motionPermissionGranted) {
+      toast.warning('Motion-sensor access is unavailable or denied. Browser-based crash detection may not run on this device.');
+    }
     setSpeed(0); setMaxSpeed(0); setDistance(0); setDuration(0);
     setHeading(null); setAccuracy(null); setDistressActive(false);
     setReplayMode(!!replayTrack);
