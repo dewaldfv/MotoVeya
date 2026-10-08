@@ -1,12 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { resolveEntitlement } from '../../shared/entitlement.ts';
 
-function isPremium(subscriptions) {
-  const now = new Date();
-  return (subscriptions || []).some((sub) =>
-    sub.plan === 'premium' && ['active', 'trialing'].includes(sub.status) &&
-    (!sub.expiry_date || new Date(sub.expiry_date) > now)
-  );
-}
+const FREE_LIMIT = 2;
+const PREMIUM_LIMIT = 32;
+const ALL_PREMIUM_LIMIT = 64;
 
 export default async function(req) {
   try {
@@ -24,12 +21,15 @@ export default async function(req) {
     }
 
     const svc = base44.asServiceRole;
-    const premium = isPremium(await svc.entities.Subscription.filter({ user_id: me.id }, '-created_date', 50));
+    const myEntitlement = await resolveEntitlement(svc, me.id);
+    const premium = myEntitlement.is_premium;
 
     if (action === 'create') {
       const name = String(body.name || '').trim();
       if (!name) return Response.json({ error: 'Group name required' }, { status: 400 });
-      const maxMembers = premium ? 32 : 2;
+      // Creator is the sole member at creation; if Premium the group starts
+      // all-Premium and qualifies for the 64-rider capacity.
+      const maxMembers = premium ? ALL_PREMIUM_LIMIT : FREE_LIMIT;
       const inviteCode = String(body.invite_code || '').trim().toUpperCase().slice(0, 12);
       if (!inviteCode) return Response.json({ error: 'Invite code required' }, { status: 400 });
 
@@ -65,11 +65,37 @@ export default async function(req) {
     if (mine?.status === 'active') return Response.json({ success: true, already_member: true });
 
     const activeMembers = await svc.entities.GroupMember.filter({ group_id: groupId, status: 'active' });
-    const serverLimit = premium ? 32 : 2;
-    const configuredLimit = Number(group.max_members || 2);
-    const effectiveLimit = Math.min(configuredLimit, serverLimit);
+
+    // Determine whether every current member (leader included) AND the joining
+    // rider all have active Premium. Only then does the 64-rider capacity apply.
+    const allMemberIds = [...new Set([...(activeMembers || []).map((m) => m.user_id), me.id])];
+    const allEntitlements = await Promise.all(allMemberIds.map((id) => resolveEntitlement(svc, id)));
+    const isAllPremium = allEntitlements.every((e) => e.is_premium);
+
+    const configuredLimit = Number(group.max_members || FREE_LIMIT);
+    let effectiveLimit;
+    if (isAllPremium) {
+      effectiveLimit = ALL_PREMIUM_LIMIT;
+    } else {
+      effectiveLimit = Math.min(configuredLimit, premium ? PREMIUM_LIMIT : FREE_LIMIT);
+    }
+
+    // Keep the stored max_members in sync with the effective limit so the
+    // frontend capacity display stays accurate.
+    if (effectiveLimit !== configuredLimit) {
+      await svc.entities.Group.update(groupId, { max_members: effectiveLimit });
+    }
+
     if ((activeMembers || []).length >= effectiveLimit) {
-      return Response.json({ error: 'Group is full', max_members: effectiveLimit }, { status: 409 });
+      let message;
+      if (isAllPremium) {
+        message = 'This group has reached its 64-rider Premium capacity.';
+      } else if (premium) {
+        message = 'Group is full. All members need Premium to unlock the 64-rider capacity.';
+      } else {
+        message = 'Group is full. Upgrade to Premium for larger groups.';
+      }
+      return Response.json({ error: message, max_members: effectiveLimit, all_premium: isAllPremium }, { status: 409 });
     }
 
     const membership = await svc.entities.GroupMember.create({
@@ -80,7 +106,7 @@ export default async function(req) {
       role: 'member',
       status: 'active',
     });
-    return Response.json({ membership, max_members: effectiveLimit, is_premium: premium });
+    return Response.json({ membership, max_members: effectiveLimit, is_premium: premium, all_premium: isAllPremium });
   } catch (error) {
     console.error('group-membership-secure error:', error);
     return Response.json({ error: error.message }, { status: 500 });

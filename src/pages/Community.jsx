@@ -154,11 +154,18 @@ export default function Community() {
       const grp = found[0];
       const existing = memberships.find((m) => m.group_id === grp.id);
       if (existing) { toast.info('Already a member'); return true; }
-      const members = await base44.entities.GroupMember.filter({ group_id: grp.id, status: 'active' });
-      if (members.length >= grp.max_members) { toast.error('Group is full'); return false; }
-      await joinGroupMutation.mutateAsync({ group: grp });
-      toast.success(`Joined ${grp.name}`);
-      return true;
+      // The backend is authoritative for capacity (it checks all-member Premium
+      // status for the 64-rider limit). Skip the premature client-side check —
+      // max_members may be stale and would block valid joins.
+      try {
+        await joinGroupMutation.mutateAsync({ group: grp });
+        toast.success(`Joined ${grp.name}`);
+        return true;
+      } catch (e) {
+        const msg = e?.response?.data?.error || e?.data?.error || e?.message;
+        toast.error(msg || 'Could not join group');
+        return false;
+      }
     } catch (e) { console.error(e); toast.error('Could not join group'); return false; }
   };
 
@@ -267,7 +274,7 @@ export default function Community() {
                 <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setJoinOpen(true)}><Ticket size={18} className="mr-2" /> Join</Button>
                 <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => { setScannerMode('group'); setScannerOpen(true); }}><QrIcon size={18} className="mr-2" /> Scan</Button>
               </div>
-            {!isPremium && <p className="text-xs text-muted-foreground">Free tier: max 2 riders per group. Upgrade to Premium for 32 riders.</p>}
+            {!isPremium && <p className="text-xs text-muted-foreground">Free tier: max 2 riders per group. Premium groups with all-Premium members can hold up to 64 riders.</p>}
             {myGroups.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-16 text-center">
                 <Users size={48} className="text-muted-foreground" />
