@@ -29,11 +29,20 @@ export default function SafetyDashboard() {
     enabled: !!user?.id,
   });
 
-  const { data: crashAlerts = [] } = useQuery({
+  const { data: crashAlerts = [], refetch: refetchCrash } = useQuery({
     queryKey: ['safety-crash', user?.id],
     queryFn: () => base44.entities.CrashAlert.filter({ rider_id: user.id }, '-timestamp', 100),
     enabled: !!user?.id,
   });
+
+  // Automatically clear weekly false-alarm crash alerts when the dashboard opens,
+  // then refetch so the score reflects only valid incidents.
+  useEffect(() => {
+    if (!user?.id) return;
+    base44.functions.invoke('clear-false-crash-alerts', {})
+      .then(() => refetchCrash())
+      .catch(() => { /* non-fatal — score calc already excludes false alarms */ });
+  }, [user?.id, refetchCrash]);
 
   const { data: distressAlerts = [] } = useQuery({
     queryKey: ['safety-distress', user?.id],
@@ -45,7 +54,8 @@ export default function SafetyDashboard() {
     const totalDistance = Math.round(user?.total_distance_km || rides.reduce((s, r) => s + (r.distance_km || 0), 0));
     const totalRides = user?.total_rides || rides.length;
     const totalIncidents = user?.total_incidents || 0;
-    const crashCount = crashAlerts.length;
+    const validCrashes = crashAlerts.filter((a) => a.status !== 'false_alarm');
+    const crashCount = validCrashes.length;
     const distressCount = distressAlerts.length;
     const resolved = [...crashAlerts, ...distressAlerts].filter((a) => a.status === 'resolved' || a.status === 'false_alarm').length;
     const safetyScore = Math.max(0, 100 - (crashCount * 10) - (distressCount * 5));
