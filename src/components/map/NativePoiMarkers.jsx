@@ -1,19 +1,19 @@
-/* global google */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useGoogleMap } from '@react-google-maps/api';
+import maplibregl from 'maplibre-gl';
+import { useMapInstance } from '@/lib/maplibreContext';
 
 const CATEGORY = {
-  fuel: { color: '#22c55e', emoji: '⛽' },
-  food: { color: '#f59e0b', emoji: '🍽️' },
-  pub: { color: '#a855f7', emoji: '🍺' },
-  workshop: { color: '#3b82f6', emoji: '🔧' },
-  dealership: { color: '#06b6d4', emoji: '🏍️' },
-  emergency: { color: '#ef4444', emoji: '⚕️' },
-  hospital: { color: '#ef4444', emoji: '⚕️' },
-  rest_stop: { color: '#64748b', emoji: '🅿️' },
-  scenic: { color: '#10b981', emoji: '🏔️' },
-  accommodation: { color: '#8b5cf6', emoji: '🛏️' },
-  atm: { color: '#eab308', emoji: '💳' },
+  fuel: { color: '#22c55e', emoji: '\u26fd' },
+  food: { color: '#f59e0b', emoji: '\ud83c\udf7d\ufe0f' },
+  pub: { color: '#a855f7', emoji: '\ud83c\udf7a' },
+  workshop: { color: '#3b82f6', emoji: '\ud83d\udd27' },
+  dealership: { color: '#06b6d4', emoji: '\ud83c\udfcd\ufe0f' },
+  emergency: { color: '#ef4444', emoji: '\u2695\ufe0f' },
+  hospital: { color: '#ef4444', emoji: '\u2695\ufe0f' },
+  rest_stop: { color: '#64748b', emoji: '\ud83c\udd7f\ufe0f' },
+  scenic: { color: '#10b981', emoji: '\ud83c\udfd6\ufe0f' },
+  accommodation: { color: '#8b5cf6', emoji: '\ud83d\udecf\ufe0f' },
+  atm: { color: '#eab308', emoji: '\ud83d\udcb3' },
 };
 
 function esc(value) {
@@ -22,12 +22,7 @@ function esc(value) {
   }[c]));
 }
 
-function isEngen(poi) {
-  return /engen/i.test(`${poi?.name || ''} ${poi?.brand || ''} ${poi?.operator || ''}`);
-}
-
-function markerIcon(poi) {
-  // Fuel stations always use the dedicated MotoVeya petrol-pump symbol.
+function markerIconUrl(poi) {
   if (poi?.category === 'fuel') {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
       <g fill="none" stroke="#FFA500" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
@@ -45,17 +40,18 @@ function markerIcon(poi) {
 
   const custom = poi?._marker;
   const customUrl = custom?.image_data || custom?.image_url;
-  if (customUrl) return {
-    url: customUrl,
-    scaledSize: new google.maps.Size(Number(custom.width_px) || 28, Number(custom.height_px) || 28),
-    anchor: new google.maps.Point(Number(custom.anchor_x) || 14, Number(custom.anchor_y) || 14),
-  };
+  if (customUrl) return { url: customUrl, width: Number(custom.width_px) || 28, height: Number(custom.height_px) || 28 };
 
   const config = CATEGORY[poi?.category] || CATEGORY.rest_stop;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
     <path d="M28 3C14.2 3 3 14.2 3 28c0 13.8 11.2 25 25 25s25-11.2 25-25S41.8 3 28 3z" fill="${config.color}" stroke="#fff" stroke-width="4"/>
     <text x="28" y="36" text-anchor="middle" font-size="24" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">${esc(config.emoji)}</text>
   </svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function clusterIconUrl(count) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38"><circle cx="19" cy="19" r="16" fill="#334155" stroke="#fff" stroke-width="3"/><text x="19" y="24" text-anchor="middle" font-size="13" font-family="Arial,sans-serif" font-weight="700" fill="#fff">${count > 999 ? '999+' : count}</text></svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
@@ -79,11 +75,6 @@ function clusterPois(pois, zoom) {
   return clusters.map((c) => c.items.length === 1 ? { type: 'poi', poi: c.items[0] } : { type: 'cluster', ...c });
 }
 
-function clusterIcon(count) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38"><circle cx="19" cy="19" r="16" fill="#334155" stroke="#fff" stroke-width="3"/><text x="19" y="24" text-anchor="middle" font-size="13" font-family="Arial,sans-serif" font-weight="700" fill="#fff">${count > 999 ? '999+' : count}</text></svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
-
 function dedupePois(pois) {
   const seen = new Set();
   return pois.filter((poi) => {
@@ -99,7 +90,7 @@ function dedupePois(pois) {
 }
 
 export default function NativePoiMarkers({ pois = [], onPoiClick }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   const markersRef = useRef(new Map());
   const callbackRef = useRef(onPoiClick);
   const [zoom, setZoom] = useState(() => map?.getZoom() || 0);
@@ -112,8 +103,7 @@ export default function NativePoiMarkers({ pois = [], onPoiClick }) {
   ), [pois]);
 
   useEffect(() => {
-    if (!map || !window.google?.maps) return;
-    const g = window.google;
+    if (!map) return;
     const markers = markersRef.current;
     const seen = new Set();
     const visible = clusterPois(validPois, zoom);
@@ -122,53 +112,51 @@ export default function NativePoiMarkers({ pois = [], onPoiClick }) {
       const poi = item.poi;
       const id = item.type === 'cluster' ? `poi-cluster-${index}-${item.lat}-${item.lng}` : `poi-${poi.id || `${poi.name}-${poi.lat}-${poi.lng}`}`;
       seen.add(id);
-      const iconConfig = item.type === 'cluster' ? { url: clusterIcon(item.items.length), scaledSize: new g.maps.Size(38, 38), anchor: new g.maps.Point(19, 19) } : markerIcon(poi);
-      const icon = iconConfig ? (typeof iconConfig === 'string' ? {
-        url: iconConfig,
-        scaledSize: new g.maps.Size(item.type === 'poi' && poi?.category === 'fuel' ? 30 : 46, item.type === 'poi' && poi?.category === 'fuel' ? 30 : 46),
-        anchor: new g.maps.Point(item.type === 'poi' && poi?.category === 'fuel' ? 15 : 23, item.type === 'poi' && poi?.category === 'fuel' ? 15 : 23),
-      } : iconConfig) : undefined;
+
+      const isFuel = item.type === 'poi' && poi?.category === 'fuel';
+      const iconResult = item.type === 'cluster'
+        ? { url: clusterIconUrl(item.items.length), width: 38, height: 38 }
+        : (typeof markerIconUrl(poi) === 'string' ? { url: markerIconUrl(poi), width: isFuel ? 30 : 46, height: isFuel ? 30 : 46 } : markerIconUrl(poi));
+
+      const itemLat = item.lat ?? poi.lat;
+      const itemLng = item.lng ?? poi.lng;
 
       let marker = markers.get(id);
       if (!marker) {
-        marker = new g.maps.Marker({
-          map,
-          position: { lat: item.lat ?? poi.lat, lng: item.lng ?? poi.lng },
-          icon,
-          title: item.type === 'cluster' ? `${item.items.length} POIs` : (poi.name || poi.category || 'POI'),
-          zIndex: item.type === 'cluster' ? 550 : (isEngen(poi) ? 650 : 600),
-          optimized: true,
-        });
-        marker.addListener('click', () => {
+        const el = document.createElement('div');
+        el.style.cssText = `width:${iconResult.width}px;height:${iconResult.height}px;pointer-events:auto;cursor:pointer;`;
+        const img = document.createElement('img');
+        img.src = iconResult.url;
+        img.style.cssText = `width:100%;height:100%;`;
+        img.draggable = false;
+        el.appendChild(img);
+        el.addEventListener('click', () => {
           if (item.type === 'cluster') map.setZoom(Math.min((map.getZoom() || 12) + 2, 18));
           else callbackRef.current?.(poi);
         });
+        marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([itemLng, itemLat])
+          .addTo(map);
         markers.set(id, marker);
       } else {
-        marker.setMap(map);
-        marker.setPosition({ lat: item.lat ?? poi.lat, lng: item.lng ?? poi.lng });
-        marker.setIcon(icon);
-        marker.setTitle(item.type === 'cluster' ? `${item.items.length} POIs` : (poi.name || poi.category || 'POI'));
-        marker.setZIndex(item.type === 'cluster' ? 550 : (isEngen(poi) ? 650 : 600));
+        marker.setLngLat([itemLng, itemLat]);
       }
     });
 
     for (const [id, marker] of markers) {
-      if (!seen.has(id)) {
-        marker.setMap(null);
-        markers.delete(id);
-      }
+      if (!seen.has(id)) { marker.remove(); markers.delete(id); }
     }
   }, [map, validPois, zoom]);
 
   useEffect(() => {
     if (!map) return;
-    const listener = map.addListener('zoom_changed', () => setZoom(map.getZoom() || 0));
-    return () => window.google?.maps?.event?.removeListener(listener);
+    const onZoom = () => setZoom(map.getZoom() || 0);
+    map.on('zoom', onZoom);
+    return () => map.off('zoom', onZoom);
   }, [map]);
 
   useEffect(() => () => {
-    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current.forEach((marker) => marker.remove());
     markersRef.current.clear();
   }, []);
 

@@ -1,55 +1,75 @@
 import { useState, useEffect } from 'react';
 
+/**
+ * Map layer configuration for MapLibre GL JS using OpenFreeMap's public
+ * vector tile service and ESRI/OpenTopoMap raster tiles for satellite/terrain.
+ *
+ * OpenFreeMap provides free OSM-derived vector tiles with no API key required.
+ * Attribution to OpenStreetMap and OpenFreeMap is handled automatically by
+ * MapLibre's attribution control from the style metadata.
+ */
+
+const OPENFREEMAP_BASE = 'https://tiles.openfreemap.org/styles';
 const STORAGE_KEY = 'motogo_map_layer';
 const THEME_KEY = 'motogo-theme';
 
-// Dark map style built from the app's dark-mode CSS tokens so the map feels
-// like part of the app:
-//   --background (4%)  -> #0a0a0a   land/geometry
-//   --card (10%)       -> #1a1a1a   arterial roads
-//   --secondary (14%)  -> #242424   road outlines / highway casing
-//   --border (18%)     -> #2e2e2e   local road casing
-//   --primary (26 100% 50%) -> #FF6F00  highway accent + labels
-//   --muted-foreground -> #a3a3a3  label fill
-const DARK_STYLE = [
-  { elementType: 'geometry', stylers: [{ color: '#0a0a0a' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0a0a0a' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#a3a3a3' }] },
+// --- Raster styles for satellite, terrain, and hybrid ---
 
-  // Primary roads (highways) — orange accent tying into the brand primary
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3d2812' }] },
-  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#242424' }] },
-  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#FF6F00' }] },
-  { featureType: 'road.highway.controlled_access', elementType: 'geometry', stylers: [{ color: '#4a3216' }] },
+const SATELLITE_STYLE = {
+  version: 8,
+  sources: {
+    satellite: {
+      type: 'raster',
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      attribution: 'Imagery \u00a9 Esri',
+      maxzoom: 19,
+    },
+  },
+  layers: [{ id: 'satellite', type: 'raster', source: 'satellite' }],
+};
 
-  // Secondary roads (arterials) — card-level gray
-  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#1f1f1f' }] },
-  { featureType: 'road.arterial', elementType: 'geometry.stroke', stylers: [{ color: '#2a2a2a' }] },
-  { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#b5b5b5' }] },
+const TERRAIN_STYLE = {
+  version: 8,
+  sources: {
+    terrain: {
+      type: 'raster',
+      tiles: [
+        'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
+        'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
+        'https://c.tile.opentopomap.org/{z}/{x}/{y}.png',
+      ],
+      tileSize: 256,
+      attribution: '\u00a9 OpenTopoMap (CC-BY-SA) \u00b7 \u00a9 OpenStreetMap contributors',
+      maxzoom: 17,
+    },
+  },
+  layers: [{ id: 'terrain', type: 'raster', source: 'terrain' }],
+};
 
-  // Tertiary / local roads — deepest gray
-  { featureType: 'road.local', elementType: 'geometry', stylers: [{ color: '#141414' }] },
-  { featureType: 'road.local', elementType: 'geometry.stroke', stylers: [{ color: '#2e2e2e' }] },
-  { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#7a7a7a' }] },
+const HYBRID_STYLE = {
+  version: 8,
+  sources: {
+    satellite: {
+      type: 'raster',
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      maxzoom: 19,
+    },
+    reference: {
+      type: 'raster',
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    { id: 'satellite', type: 'raster', source: 'satellite' },
+    { id: 'reference', type: 'raster', source: 'reference' },
+  ],
+};
 
-  { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a1520' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3a5a7a' }] },
-
-  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#0f0f0f' }] },
-  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#121212' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#0f1a0f' }] },
-
-  { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#5a5a5a' }] },
-
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#1a1a1a' }] },
-
-  { featureType: 'administrative', elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
-  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#c0c0c0' }] },
-  { featureType: 'administrative.neighborhood', elementType: 'labels.text.fill', stylers: [{ color: '#9a9a9a' }] },
-];
+// --- Layer definitions (preserves the same key/label/preview interface) ---
 
 export const MAP_LAYERS = [
   {
@@ -57,8 +77,6 @@ export const MAP_LAYERS = [
     label: 'Auto',
     description: 'Follow app theme',
     preview: 'linear-gradient(135deg, #0a0a0a 0%, #1f1f1f 45%, #FF6F00 100%)',
-    mapTypeId: 'roadmap',
-    styles: null,
     auto: true,
   },
   {
@@ -66,40 +84,35 @@ export const MAP_LAYERS = [
     label: 'Default',
     description: 'Clean road map',
     preview: 'linear-gradient(135deg, #f4f6f9 0%, #e6edf3 45%, #dce4ec 100%)',
-    mapTypeId: 'roadmap',
-    styles: null,
+    styleUrl: `${OPENFREEMAP_BASE}/liberty`,
   },
   {
     key: 'satellite',
     label: 'Satellite',
     description: 'Aerial imagery',
     preview: 'linear-gradient(135deg, #1f2a14 0%, #3b4a22 45%, #5d6e34 100%)',
-    mapTypeId: 'satellite',
-    styles: null,
+    style: SATELLITE_STYLE,
   },
   {
     key: 'terrain',
     label: 'Terrain',
     description: 'Elevation & hills',
     preview: 'linear-gradient(135deg, #d8c9a0 0%, #a9bc8e 50%, #6e8a5c 100%)',
-    mapTypeId: 'terrain',
-    styles: null,
+    style: TERRAIN_STYLE,
   },
   {
     key: 'hybrid',
     label: 'Hybrid',
     description: 'Satellite with labels',
     preview: 'linear-gradient(135deg, #1f2a14 0%, #3b4a22 50%, #5d6e34 100%)',
-    mapTypeId: 'hybrid',
-    styles: null,
+    style: HYBRID_STYLE,
   },
   {
     key: 'dark',
     label: 'Dark',
     description: 'Night riding',
     preview: 'linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 50%, #3d2812 100%)',
-    mapTypeId: 'roadmap',
-    styles: DARK_STYLE,
+    styleUrl: `${OPENFREEMAP_BASE}/dark`,
   },
 ];
 
@@ -142,36 +155,19 @@ export function getLayerBackground(key) {
   return LAYER_BG[resolved] || '#e8eaed';
 }
 
-export function getLayerStyles(layer) {
+/** Returns the MapLibre style URL or style object for a given layer key */
+export function getMapStyle(layer) {
   const resolved = resolveLayer(layer);
-  const config = MAP_LAYERS.find((l) => l.key === resolved) || MAP_LAYERS[0];
-  const poiHide = [
-    { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-  ];
-  return config.styles ? [...poiHide, ...config.styles] : poiHide;
+  const config = MAP_LAYERS.find((l) => l.key === resolved) || MAP_LAYERS[1];
+  return config.styleUrl || config.style;
 }
 
-export function getMapOptions(layer) {
-  const resolved = resolveLayer(layer);
-  const config = MAP_LAYERS.find((l) => l.key === resolved) || MAP_LAYERS[0];
-  return {
-    mapTypeId: config.mapTypeId,
-    styles: getLayerStyles(resolved),
-    zoomControl: false,
-    streetViewControl: false,
-    mapTypeControl: false,
-    fullscreenControl: false,
-    // Allow map rotation on supported Google Maps map types. MotoVeya provides
-    // its own Compass button to return the camera to true north.
-    rotateControl: true,
-    // Ride Mode uses fractional zoom targets so speed changes produce a
-    // visible, smooth camera response instead of snapping between integers.
-    isFractionalZoomEnabled: true,
-    clickableIcons: false,
-  };
-}
-
+/**
+ * Hook that manages the persisted map layer preference and resolves 'auto'
+ * based on the current app theme (dark/light).
+ *
+ * Returns [resolvedLayer, setLayer, rawLayer] — same interface as before.
+ */
 export function useMapLayer() {
   const [rawLayer, setRawLayer] = useState(() => {
     try {
@@ -182,7 +178,6 @@ export function useMapLayer() {
   });
   const [isDark, setIsDark] = useState(() => isAppDark());
 
-  // Re-resolve "auto" whenever the app theme flips (same-tab toggle or system change)
   useEffect(() => {
     const check = () => setIsDark(isAppDark());
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -203,6 +198,5 @@ export function useMapLayer() {
     setRawLayer(next);
     try { localStorage.setItem(STORAGE_KEY, next); } catch {}
   };
-  // [resolvedLayerForMap, setLayer, rawLayerForPicker]
   return [resolved, setLayer, rawLayer];
 }

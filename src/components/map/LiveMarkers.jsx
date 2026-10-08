@@ -1,16 +1,13 @@
-/* global google */
 import { useEffect, useRef } from 'react';
-import { useGoogleMap } from '@react-google-maps/api';
+import maplibregl from 'maplibre-gl';
+import { useMapInstance, useMapStyleVersion } from '@/lib/maplibreContext';
+import { circlePolygon } from '@/lib/maplibreUtils';
 
 /**
- * LiveMarkers — manages the user's own marker, friends, and group-ride participants
- * as NATIVE google.maps.Marker instances, updated imperatively via setPosition().
- *
- * This component returns null — it has no DOM output and never triggers a React
- * re-render of the markers.  Every GPS tick simply updates a target ref; a
- * continuous requestAnimationFrame loop eases the rider marker toward the latest
- * target.  This eliminates the cancel/restart jitter that occurred when each
- * GPS fix cancelled a running animation and started a new one.
+ * LiveMarkers — manages the user's own marker, friends, and group-ride
+ * participants as MapLibre Marker instances, updated imperatively via
+ * setLngLat(). A continuous requestAnimationFrame loop eases the rider
+ * marker toward the latest GPS target, absorbing position noise.
  */
 const FRIEND_COLORS = { riding: '#22c55e', stopped: '#94a3b8', distress: '#ef4444' };
 
@@ -26,60 +23,72 @@ function groupColor(g) {
   return '#3b82f6';
 }
 
-function makeIcon(g, type, heading, color) {
-  if (type === 'rider') {
-    return {
-      path: g.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-      fillColor: g.__motoveyaCrashRecovery ? '#ef4444' : '#FF6F00',
-      fillOpacity: 1,
-      strokeColor: '#ffffff',
-      strokeWeight: 2,
-      scale: 4,
-      rotation: heading || 0,
-    };
-  }
-  return {
-    path: g.maps.SymbolPath.CIRCLE,
-    fillColor: color,
-    fillOpacity: 1,
-    strokeColor: '#ffffff',
-    strokeWeight: 2,
-    scale: type === 'group' ? 8 : 7,
-  };
+function riderSvg(heading, isCrashRecovery) {
+  const color = isCrashRecovery ? '#ef4444' : '#FF6F00';
+  return `<svg width="28" height="28" viewBox="0 0 24 24" fill="${color}" stroke="#fff" stroke-width="2" stroke-linejoin="round" style="transform:rotate(${heading || 0}deg);transition:transform 0.3s ease"><path d="M12 2 L20 20 L12 16 L4 20 Z"/></svg>`;
 }
 
+function circleElement(color, size = 14) {
+  const el = document.createElement('div');
+  el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);pointer-events:auto;cursor:pointer;`;
+  return el;
+}
+
+const ACC_SRC = 'live-rider-accuracy';
+const ACC_FILL = 'live-rider-accuracy-fill';
+const ACC_LINE = 'live-rider-accuracy-line';
+
 export default function LiveMarkers({ rider, friends = [], groupRiders = [], onFriendClick, headingUp = false }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
+  const styleVersion = useMapStyleVersion();
   const markersRef = useRef(new Map());
-  const infoWindowsRef = useRef(new Map());
+  const popupsRef = useRef(new Map());
   const dataRef = useRef(new Map());
-  const accuracyRef = useRef(null);
+  const accuracyReadyRef = useRef(false);
   const riderTargetRef = useRef(null);
   const riderRafRef = useRef(null);
   const cbRef = useRef(onFriendClick);
   cbRef.current = onFriendClick;
 
-  // Continuous smooth-interpolation loop for the rider marker.  Instead of
-  // cancelling and restarting an animation on every GPS tick (which caused
-  // visible jitter), this loop runs constantly and eases the marker 15% of
-  // the remaining gap toward the latest target every frame.  The easing itself
-  // acts as a low-pass filter that absorbs GPS position noise.
+  // Ensure accuracy source/layers exist (re-create after style change)
   useEffect(() => {
-    if (!map || !window.google) return;
-    const g = window.google;
-    let lastHeading = null;
+    if (!map) return;
+    if (!map.getSource(ACC_SRC)) {
+      map.addSource(ACC_SRC, {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [] } },
+      });
+      map.addLayer({ id: ACC_FILL, type: 'fill', source: ACC_SRC, paint: { 'fill-color': '#FF6F00', 'fill-opacity': 0.08 } });
+      map.addLayer({ id: ACC_LINE, type: 'line', source: ACC_SRC, paint: { 'line-color': '#FF6F00', 'line-opacity': 0.3, 'line-width': 1 } });
+    }
+    accuracyReadyRef.current = true;
+    return () => {
+      try {
+        if (map.getLayer(ACC_FILL)) map.removeLayer(ACC_FILL);
+        if (map.getLayer(ACC_LINE)) map.removeLayer(ACC_LINE);
+        if (map.getSource(ACC_SRC)) map.removeSource(ACC_SRC);
+      } catch {}
+      accuracyReadyRef.current = false;
+    };
+  }, [map, styleVersion]);
+
+  // Continuous smooth-interpolation loop for the rider marker
+  useEffect(() => {
+    if (!map) return;
     const animate = () => {
       const m = markersRef.current.get('rider-self');
       const target = riderTargetRef.current;
       if (m && target) {
-        const cur = m.getPosition();
-        const curLat = cur?.lat?.() ?? target.lat;
-        const curLng = cur?.lng?.() ?? target.lng;
+        const ll = m.getLngLat();
+        const curLat = ll?.lat ?? target.lat;
+        const curLng = ll?.lng ?? target.lng;
         const newLat = curLat + (target.lat - curLat) * 0.15;
         const newLng = curLng + (target.lng - curLng) * 0.15;
-        const newPos = new g.maps.LatLng(newLat, newLng);
-        m.setPosition(newPos);
-        if (accuracyRef.current) accuracyRef.current.setCenter(newPos);
+        m.setLngLat([newLng, newLat]);
+        if (accuracyReadyRef.current && target.accuracy > 0) {
+          const src = map.getSource(ACC_SRC);
+          if (src) src.setData(circlePolygon(newLat, newLng, target.accuracy));
+        }
       }
       riderRafRef.current = requestAnimationFrame(animate);
     };
@@ -90,52 +99,42 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
     };
   }, [map]);
 
+  // Sync markers with data
   useEffect(() => {
-    if (!map || !window.google) return;
-    const g = window.google;
+    if (!map) return;
     const markers = markersRef.current;
-    const infoWins = infoWindowsRef.current;
+    const popups = popupsRef.current;
     const data = dataRef.current;
     const seen = new Set();
 
     // --- Rider (self) ---
-    // The marker target is updated here; the continuous RAF loop above
-    // handles the actual smooth position interpolation.
     if (rider && !isNaN(rider.lat) && !isNaN(rider.lng)) {
       const id = 'rider-self';
       seen.add(id);
-      g.__motoveyaCrashRecovery = !!rider.isCrashRecovery;
-      // In heading-up Ride Mode the camera already points in the travel direction,
-      // so the rider arrow stays screen-up. In north-up mode it follows the actual heading.
       const screenHeading = headingUp ? 0 : rider.heading;
-      const icon = makeIcon(g, 'rider', screenHeading);
+      const isCrashRecovery = !!rider.isCrashRecovery;
       let m = markers.get(id);
       if (!m) {
-        const latLng = new g.maps.LatLng(rider.lat, rider.lng);
-        m = new g.maps.Marker({ position: latLng, map, icon, zIndex: 1200 });
+        const el = document.createElement('div');
+        el.style.pointerEvents = 'auto';
+        el.innerHTML = riderSvg(screenHeading, isCrashRecovery);
+        m = new maplibregl.Marker({ element: el })
+          .setLngLat([rider.lng, rider.lat])
+          .addTo(map);
         markers.set(id, m);
-        riderTargetRef.current = { lat: rider.lat, lng: rider.lng };
+        riderTargetRef.current = { lat: rider.lat, lng: rider.lng, accuracy: rider.accuracy || 0 };
       } else {
-        m.setIcon(icon);
-        riderTargetRef.current = { lat: rider.lat, lng: rider.lng };
-      }
-      if (rider.accuracy && rider.accuracy > 0) {
-        if (!accuracyRef.current) {
-          accuracyRef.current = new g.maps.Circle({
-            map, fillColor: '#FF6F00', fillOpacity: 0.08,
-            strokeColor: '#FF6F00', strokeOpacity: 0.3, strokeWeight: 1,
-          });
-        }
-        accuracyRef.current.setRadius(rider.accuracy);
-      } else if (accuracyRef.current) {
-        accuracyRef.current.setMap(null);
-        accuracyRef.current = null;
+        m.getElement().innerHTML = riderSvg(screenHeading, isCrashRecovery);
+        riderTargetRef.current = { lat: rider.lat, lng: rider.lng, accuracy: rider.accuracy || 0 };
       }
     } else {
       const m = markers.get('rider-self');
-      if (m) { m.setMap(null); markers.delete('rider-self'); }
-      if (accuracyRef.current) { accuracyRef.current.setMap(null); accuracyRef.current = null; }
+      if (m) { m.remove(); markers.delete('rider-self'); }
       riderTargetRef.current = null;
+      if (accuracyReadyRef.current) {
+        const src = map.getSource(ACC_SRC);
+        if (src) src.setData({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [] } });
+      }
     }
 
     // --- Friends ---
@@ -144,16 +143,18 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       const id = `friend-${f.user_id || f.id}`;
       seen.add(id);
       data.set(id, f);
-      const latLng = new g.maps.LatLng(f.lat, f.lng);
       const color = friendColor(f);
       let m = markers.get(id);
       if (!m) {
-        m = new g.maps.Marker({ position: latLng, map, icon: makeIcon(g, 'friend', null, color), zIndex: 1000 });
-        m.addListener('click', () => cbRef.current?.(data.get(id)));
+        const el = circleElement(color, 14);
+        el.addEventListener('click', () => cbRef.current?.(data.get(id)));
+        m = new maplibregl.Marker({ element: el })
+          .setLngLat([f.lng, f.lat])
+          .addTo(map);
         markers.set(id, m);
       } else {
-        m.setPosition(latLng);
-        m.setIcon(makeIcon(g, 'friend', null, color));
+        m.setLngLat([f.lng, f.lat]);
+        m.getElement().style.background = color;
       }
     });
 
@@ -163,56 +164,59 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       const id = `group-${gr.user_id}`;
       seen.add(id);
       data.set(id, gr);
-      const latLng = new g.maps.LatLng(gr.lat, gr.lng);
       const color = groupColor(gr);
       let m = markers.get(id);
       if (!m) {
-        m = new g.maps.Marker({ position: latLng, map, icon: makeIcon(g, 'group', null, color), zIndex: 1100 });
-        m.addListener('click', () => {
-          let win = infoWins.get(id);
-          if (!win) { win = new g.maps.InfoWindow(); infoWins.set(id, win); }
+        const el = circleElement(color, 16);
+        el.addEventListener('click', () => {
           const latest = data.get(id) || gr;
+          let popup = popups.get(id);
+          if (!popup) {
+            popup = new maplibregl.Popup({ offset: 20, closeButton: true });
+            popups.set(id, popup);
+          }
           const role = latest.role === 'leader' ? 'Leader' : latest.role === 'sweep' ? 'Sweep' : 'Member';
           const status = (latest.riding_status || 'stopped').replace('_', ' ');
           const speed = latest.speed_kmh != null ? `${Math.round(latest.speed_kmh)} km/h` : '';
-          win.setContent(
+          popup.setHTML(
             `<div style="font-family:Inter,sans-serif;padding:6px 8px;min-width:150px">` +
               `<div style="font-weight:700;font-size:14px;margin-bottom:2px">${latest.user_name || 'Rider'}</div>` +
-              `<div style="font-size:12px;color:#666">${role} · ${status}</div>` +
+              `<div style="font-size:12px;color:#666">${role} \u00b7 ${status}</div>` +
               (speed ? `<div style="font-size:12px;color:#666">${speed}</div>` : '') +
             `</div>`
-          );
-          win.open(map, m);
+          ).setLngLat([latest.lng, latest.lat]).addTo(map);
         });
+        m = new maplibregl.Marker({ element: el })
+          .setLngLat([gr.lng, gr.lat])
+          .addTo(map);
         markers.set(id, m);
       } else {
-        m.setPosition(latLng);
-        m.setIcon(makeIcon(g, 'group', null, color));
+        m.setLngLat([gr.lng, gr.lat]);
+        m.getElement().style.background = color;
       }
     });
 
-    // --- Remove markers no longer present ---
+    // Remove markers no longer present
     for (const [id, m] of markers) {
       if (!seen.has(id)) {
-        m.setMap(null);
-        const win = infoWins.get(id);
-        if (win) { win.close(); infoWins.delete(id); }
+        m.remove();
+        const p = popups.get(id);
+        if (p) { p.remove(); popups.delete(id); }
         data.delete(id);
         markers.delete(id);
       }
     }
-  }, [map, rider, friends, groupRiders]);
+  }, [map, rider, friends, groupRiders, headingUp]);
 
   // Cleanup on unmount
   useEffect(() => () => {
-    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current.forEach((m) => m.remove());
     markersRef.current.clear();
     if (riderRafRef.current) cancelAnimationFrame(riderRafRef.current);
     riderRafRef.current = null;
-    infoWindowsRef.current.forEach((w) => w.close());
-    infoWindowsRef.current.clear();
+    popupsRef.current.forEach((p) => p.remove());
+    popupsRef.current.clear();
     dataRef.current.clear();
-    if (accuracyRef.current) { accuracyRef.current.setMap(null); accuracyRef.current = null; }
   }, []);
 
   return null;

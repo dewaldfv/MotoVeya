@@ -1,6 +1,6 @@
-/* global google */
 import { useEffect, useRef } from 'react';
-import { useGoogleMap } from '@react-google-maps/api';
+import maplibregl from 'maplibre-gl';
+import { useMapInstance } from '@/lib/maplibreContext';
 
 const OWN_ICON = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40"><path d="M16 0C7.2 0 0 7.2 0 16c0 12 16 24 16 24s16-12 16-24C32 7.2 24.8 0 16 0z" fill="#FF6F00" stroke="#fff" stroke-width="2"/><circle cx="16" cy="16" r="5" fill="#fff"/></svg>`
@@ -11,12 +11,11 @@ const GROUP_ICON = 'data:image/svg+xml;utf8,' + encodeURIComponent(
 );
 
 /**
- * SavedPlaceMarkers — renders Saved Place pins as native google.maps.Marker
- * instances following the imperative pattern from NativeEventMarkers.
+ * SavedPlaceMarkers — renders Saved Place pins as MapLibre Marker instances.
  * Own places use a primary orange pin; group members' places use a muted pin.
  */
 export default function SavedPlaceMarkers({ ownPlaces = [], groupPlaces = [], visible = true, onOwnClick, onGroupClick }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   const markersRef = useRef(new Map());
   const ownCbRef = useRef(onOwnClick);
   const groupCbRef = useRef(onGroupClick);
@@ -24,11 +23,10 @@ export default function SavedPlaceMarkers({ ownPlaces = [], groupPlaces = [], vi
   groupCbRef.current = onGroupClick;
 
   useEffect(() => {
-    if (!map || !window.google) return;
-    const g = window.google;
+    if (!map) return;
 
     if (!visible) {
-      markersRef.current.forEach((m) => m.setMap(null));
+      markersRef.current.forEach((m) => m.remove());
       markersRef.current.clear();
       return;
     }
@@ -40,18 +38,22 @@ export default function SavedPlaceMarkers({ ownPlaces = [], groupPlaces = [], vi
       if (place.lat == null || place.lng == null || isNaN(place.lat) || isNaN(place.lng)) return;
       const id = `own-saved-${place.id}`;
       seen.add(id);
-      const latLng = new g.maps.LatLng(Number(place.lat), Number(place.lng));
       let m = markers.get(id);
       if (!m) {
-        m = new g.maps.Marker({
-          position: latLng, map,
-          icon: { url: OWN_ICON, scaledSize: new g.maps.Size(32, 40), anchor: new g.maps.Point(16, 40) },
-          zIndex: 2500,
-        });
-        m.addListener('click', () => ownCbRef.current?.(place));
+        const el = document.createElement('div');
+        el.style.cssText = 'width:32px;height:40px;pointer-events:auto;cursor:pointer;';
+        const img = document.createElement('img');
+        img.src = OWN_ICON;
+        img.style.cssText = 'width:32px;height:40px;';
+        img.draggable = false;
+        el.appendChild(img);
+        el.addEventListener('click', () => ownCbRef.current?.(place));
+        m = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([Number(place.lng), Number(place.lat)])
+          .addTo(map);
         markers.set(id, m);
       } else {
-        m.setPosition(latLng);
+        m.setLngLat([Number(place.lng), Number(place.lat)]);
       }
     });
 
@@ -59,28 +61,32 @@ export default function SavedPlaceMarkers({ ownPlaces = [], groupPlaces = [], vi
       if (place.lat == null || place.lng == null || isNaN(place.lat) || isNaN(place.lng)) return;
       const id = `group-saved-${place.id}`;
       seen.add(id);
-      const latLng = new g.maps.LatLng(Number(place.lat), Number(place.lng));
       let m = markers.get(id);
       if (!m) {
-        m = new g.maps.Marker({
-          position: latLng, map,
-          icon: { url: GROUP_ICON, scaledSize: new g.maps.Size(28, 36), anchor: new g.maps.Point(14, 36) },
-          zIndex: 2000,
-        });
-        m.addListener('click', () => groupCbRef.current?.(place));
+        const el = document.createElement('div');
+        el.style.cssText = 'width:28px;height:36px;pointer-events:auto;cursor:pointer;';
+        const img = document.createElement('img');
+        img.src = GROUP_ICON;
+        img.style.cssText = 'width:28px;height:36px;';
+        img.draggable = false;
+        el.appendChild(img);
+        el.addEventListener('click', () => groupCbRef.current?.(place));
+        m = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([Number(place.lng), Number(place.lat)])
+          .addTo(map);
         markers.set(id, m);
       } else {
-        m.setPosition(latLng);
+        m.setLngLat([Number(place.lng), Number(place.lat)]);
       }
     });
 
     for (const [id, m] of markers) {
-      if (!seen.has(id)) { m.setMap(null); markers.delete(id); }
+      if (!seen.has(id)) { m.remove(); markers.delete(id); }
     }
   }, [map, ownPlaces, groupPlaces, visible]);
 
   useEffect(() => () => {
-    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current.forEach((m) => m.remove());
     markersRef.current.clear();
   }, []);
 

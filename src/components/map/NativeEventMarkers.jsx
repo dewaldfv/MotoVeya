@@ -1,30 +1,25 @@
-/* global google */
 import { useEffect, useRef, useMemo } from 'react';
-import { useGoogleMap } from '@react-google-maps/api';
+import maplibregl from 'maplibre-gl';
+import { useMapInstance } from '@/lib/maplibreContext';
 import { getEventMarkerUrl } from '@/lib/eventMarkers';
 
 /**
- * NativeEventMarkers — renders event pins as native google.maps.Marker instances.
- * Events are static (positions never change), but using native markers keeps them
- * outside React's reconciliation tree for consistency and reduced overlay overhead.
- * Click triggers the same popup callback the React overlay used.
+ * NativeEventMarkers — renders event pins as MapLibre Marker instances.
+ * Events are static; positions never change. Includes spiderfying for
+ * events at the same location so they remain individually tappable.
  */
 export default function NativeEventMarkers({ events = [], favoriteEventIds = [], onEventClick }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   const markersRef = useRef(new Map());
   const cbRef = useRef(onEventClick);
   cbRef.current = onEventClick;
   const favSet = useMemo(() => new Set(favoriteEventIds || []), [favoriteEventIds]);
 
   useEffect(() => {
-    if (!map || !window.google) return;
-    const g = window.google;
+    if (!map) return;
     const markers = markersRef.current;
     const seen = new Set();
 
-    // Group events that are effectively at the same physical location, then
-    // "spiderfy" only those markers so they remain individually tappable.
-    // The stored event coordinates are never changed — this is visual only.
     const validEvents = events.filter((ev) =>
       ev.lat != null && ev.lng != null && !isNaN(ev.lat) && !isNaN(ev.lng)
     );
@@ -42,65 +37,62 @@ export default function NativeEventMarkers({ events = [], favoriteEventIds = [],
     const groups = [];
     validEvents.forEach((ev) => {
       let group = groups.find((g) => metersBetween(ev, g[0]) <= GROUP_RADIUS_METERS);
-      if (!group) {
-        group = [];
-        groups.push(group);
-      }
+      if (!group) { group = []; groups.push(group); }
       group.push(ev);
     });
 
     groups.forEach((group) => {
       const count = group.length;
       group.forEach((ev, index) => {
-      const id = `event-${ev.id}`;
-      seen.add(id);
+        const id = `event-${ev.id}`;
+        seen.add(id);
 
-      let markerLat = Number(ev.lat);
-      let markerLng = Number(ev.lng);
-      if (count > 1) {
-        // Keep the offsets small (roughly 28m radius) and arrange them around
-        // the real location. This prevents same-location event pins from
-        // covering one another while keeping the cluster visually obvious.
-        const angle = (index / count) * Math.PI * 2 - Math.PI / 2;
-        const radiusMeters = count <= 4 ? 28 : 34;
-        const metersPerDegreeLat = 111320;
-        const metersPerDegreeLng = 111320 * Math.cos(markerLat * Math.PI / 180);
-        markerLat += (Math.sin(angle) * radiusMeters) / metersPerDegreeLat;
-        markerLng += (Math.cos(angle) * radiusMeters) / metersPerDegreeLng;
-      }
+        let markerLat = Number(ev.lat);
+        let markerLng = Number(ev.lng);
+        if (count > 1) {
+          const angle = (index / count) * Math.PI * 2 - Math.PI / 2;
+          const radiusMeters = count <= 4 ? 28 : 34;
+          const metersPerDegreeLat = 111320;
+          const metersPerDegreeLng = 111320 * Math.cos(markerLat * Math.PI / 180);
+          markerLat += (Math.sin(angle) * radiusMeters) / metersPerDegreeLat;
+          markerLng += (Math.cos(angle) * radiusMeters) / metersPerDegreeLng;
+        }
 
-      const latLng = new g.maps.LatLng(markerLat, markerLng);
-      const isFav = favSet.has(ev.id);
-      const icon = {
-        url: ev.markerIcon || getEventMarkerUrl(ev.category),
-        scaledSize: new g.maps.Size(44, 44),
-        anchor: new g.maps.Point(22, 22),
-        labelOrigin: isFav ? new g.maps.Point(-14, -14) : null,
-      };
-      let m = markers.get(id);
-      if (!m) {
-        m = new g.maps.Marker({ position: latLng, map, icon, zIndex: 3000 });
-        m.addListener('click', () => cbRef.current?.(ev));
-        markers.set(id, m);
-      } else {
-        m.setPosition(latLng);
-        m.setIcon(icon);
-      }
-      if (isFav) {
-        m.setLabel({ text: '♥', color: '#ef4444', fontSize: '16px', fontWeight: 'bold' });
-      } else {
-        m.setLabel(null);
-      }
+        const iconUrl = ev.markerIcon || getEventMarkerUrl(ev.category);
+        const isFav = favSet.has(ev.id);
+        let m = markers.get(id);
+        if (!m) {
+          const el = document.createElement('div');
+          el.style.cssText = 'width:44px;height:44px;pointer-events:auto;cursor:pointer;position:relative;';
+          const img = document.createElement('img');
+          img.src = iconUrl;
+          img.style.cssText = 'width:44px;height:44px;';
+          img.draggable = false;
+          el.appendChild(img);
+          if (isFav) {
+            const heart = document.createElement('div');
+            heart.textContent = '\u2665';
+            heart.style.cssText = 'position:absolute;top:-8px;left:-8px;color:#ef4444;font-size:16px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.4);';
+            el.appendChild(heart);
+          }
+          el.addEventListener('click', () => cbRef.current?.(ev));
+          m = new maplibregl.Marker({ element: el, anchor: 'center' })
+            .setLngLat([markerLng, markerLat])
+            .addTo(map);
+          markers.set(id, m);
+        } else {
+          m.setLngLat([markerLng, markerLat]);
+        }
       });
     });
 
     for (const [id, m] of markers) {
-      if (!seen.has(id)) { m.setMap(null); markers.delete(id); }
+      if (!seen.has(id)) { m.remove(); markers.delete(id); }
     }
   }, [map, events, favSet]);
 
   useEffect(() => () => {
-    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current.forEach((m) => m.remove());
     markersRef.current.clear();
   }, []);
 

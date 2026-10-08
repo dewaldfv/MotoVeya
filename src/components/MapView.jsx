@@ -1,33 +1,35 @@
-/* global google */
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { GoogleMap, Polyline, Circle, InfoWindow, useGoogleMap } from '@react-google-maps/api';
-import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
-import { MAP_LAYERS, getLayerStyles, getLayerBackground, getMapOptions } from '@/lib/mapLayers';
+import maplibregl from 'maplibre-gl';
+import MapLibreContainer from './MapLibreContainer';
+import MapLibreLine from './MapLibreLine';
+import MapLibreCircle from './MapLibreCircle';
+import MapLibrePopup from './MapLibrePopup';
+import { useMapInstance } from '@/lib/maplibreContext';
+import { useMapLibreCamera } from '@/hooks/useMapLibreCamera';
+import { getLayerBackground } from '@/lib/mapLayers';
 import CustomMapMarker from './CustomMapMarker';
 import ServiceMarkers from './ServiceMarkers';
 import FuelStationMarkers from './FuelStationMarkers';
 import LiveMarkers from './map/LiveMarkers';
 import NativeEventMarkers from './map/NativeEventMarkers';
-import NativePoiMarkers from './map/NativePoiMarkers';
 import SavedPlaceMarkers from './map/SavedPlaceMarkers';
 import MapPopupContent from './MapPopupContent';
-import { useMapCamera } from '@/hooks/useMapCamera';
 
 const SA_CENTER = [-26.2041, 28.0473];
 
 const CATEGORY_CONFIG = {
-  fuel: { color: '#22c55e', emoji: '⛽' },
-  food: { color: '#f59e0b', emoji: '🍽️' },
-  pub: { color: '#a855f7', emoji: '🍺' },
-  workshop: { color: '#3b82f6', emoji: '🔧' },
-  dealership: { color: '#06b6d4', emoji: '🏍️' },
-  emergency: { color: '#ef4444', emoji: '⚕️' },
-  rest_stop: { color: '#94a3b8', emoji: '🅿️' },
-  scenic: { color: '#10b981', emoji: '🏔️' },
-  accommodation: { color: '#8b5cf6', emoji: '🛏️' },
-  atm: { color: '#facc15', emoji: '💳' },
-  event: { color: '#FF6F00', emoji: '🏁' },
-  distress: { color: '#ef4444', emoji: '🆘' },
+  fuel: { color: '#22c55e', emoji: '\u26fd' },
+  food: { color: '#f59e0b', emoji: '\ud83c\udf7d\ufe0f' },
+  pub: { color: '#a855f7', emoji: '\ud83c\udf7a' },
+  workshop: { color: '#3b82f6', emoji: '\ud83d\udd27' },
+  dealership: { color: '#06b6d4', emoji: '\ud83c\udfcd\ufe0f' },
+  emergency: { color: '#ef4444', emoji: '\u2695\ufe0f' },
+  rest_stop: { color: '#94a3b8', emoji: '\ud83c\udd7f\ufe0f' },
+  scenic: { color: '#10b981', emoji: '\ud83c\udfd6\ufe0f' },
+  accommodation: { color: '#8b5cf6', emoji: '\ud83d\udecf\ufe0f' },
+  atm: { color: '#facc15', emoji: '\ud83d\udcb3' },
+  event: { color: '#FF6F00', emoji: '\ud83c\udfc1' },
+  distress: { color: '#ef4444', emoji: '\ud83c\udd98' },
 };
 
 function PoiVisual({ category }) {
@@ -39,126 +41,53 @@ function PoiVisual({ category }) {
   );
 }
 
-function LayerController({ layer }) {
-  const map = useGoogleMap();
-  useEffect(() => {
-    if (!map) return;
-    const config = MAP_LAYERS.find((l) => l.key === layer) || MAP_LAYERS[0];
-    map.setMapTypeId(config.mapTypeId);
-    map.setOptions({ styles: getLayerStyles(layer) });
-  }, [map, layer]);
-  return null;
-}
-
-function MapResizer() {
-  const map = useGoogleMap();
-  useEffect(() => {
-    if (!map) return;
-    const resize = () => google.maps.event.trigger(map, 'resize');
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(map.getDiv());
-    window.addEventListener('resize', resize);
-    const onOrient = () => setTimeout(resize, 300);
-    window.addEventListener('orientationchange', onOrient);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', resize);
-      window.removeEventListener('orientationchange', onOrient);
-    };
-  }, [map]);
-  return null;
-}
-
-// Tracks the map's live zoom level so static marker layers can be gated by zoom
-// (services are only shown once the user zooms in close enough to avoid clutter).
 function LongPressHandler({ onLongPress, disabled }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   const timerRef = useRef(null);
   const startRef = useRef(null);
-  const projectionRef = useRef(null);
   const onLongPressRef = useRef(onLongPress);
-
-  useEffect(() => {
-    onLongPressRef.current = onLongPress;
-  }, [onLongPress]);
+  useEffect(() => { onLongPressRef.current = onLongPress; }, [onLongPress]);
 
   useEffect(() => {
     if (!map || disabled || !onLongPress) return;
-
-    // OverlayView gives us a reliable map projection so a finger long-press
-    // can be converted from screen coordinates to the exact map coordinate.
-    const overlay = new google.maps.OverlayView();
-    overlay.onAdd = () => {
-      projectionRef.current = overlay.getProjection();
-    };
-    overlay.draw = () => {
-      projectionRef.current = overlay.getProjection();
-    };
-    overlay.onRemove = () => {
-      projectionRef.current = null;
-    };
-    overlay.setMap(map);
-
-    const target = map.getDiv();
+    const container = map.getContainer();
     const clear = () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
       startRef.current = null;
     };
-
     const start = (clientX, clientY) => {
       clear();
       startRef.current = { clientX, clientY };
       timerRef.current = setTimeout(() => {
         const startPoint = startRef.current;
-        const projection = projectionRef.current;
-        if (!startPoint || !projection) return;
-
-        const rect = target.getBoundingClientRect();
-        const pixel = new google.maps.Point(
-          startPoint.clientX - rect.left,
-          startPoint.clientY - rect.top
-        );
-        const latLng = projection.fromContainerPixelToLatLng(pixel);
-        if (latLng) {
-          if (onLongPressRef.current) onLongPressRef.current({ lat: latLng.lat(), lng: latLng.lng() });
-        }
+        if (!startPoint) return;
+        const rect = container.getBoundingClientRect();
+        const point = map.unproject({ x: startPoint.clientX - rect.left, y: startPoint.clientY - rect.top });
+        if (point) onLongPressRef.current?.({ lat: point.lat, lng: point.lng });
         clear();
       }, 650);
     };
-
     const onTouchStart = (e) => {
       if (e.touches.length !== 1) return clear();
       const t = e.touches[0];
       start(t.clientX, t.clientY);
     };
     const onTouchMove = (e) => {
-      const startPoint = startRef.current;
-      if (!startPoint || !e.touches[0]) return;
+      const sp = startRef.current;
+      if (!sp || !e.touches[0]) return;
       const t = e.touches[0];
-      const dx = t.clientX - startPoint.clientX;
-      const dy = t.clientY - startPoint.clientY;
-      if (Math.hypot(dx, dy) > 12) clear();
+      if (Math.hypot(t.clientX - sp.clientX, t.clientY - sp.clientY) > 12) clear();
     };
-    const onTouchEnd = clear;
-    const onTouchCancel = clear;
-
-    target.addEventListener('touchstart', onTouchStart, { passive: true });
-    target.addEventListener('touchmove', onTouchMove, { passive: true });
-    target.addEventListener('touchend', onTouchEnd, { passive: true });
-    target.addEventListener('touchcancel', onTouchCancel, { passive: true });
-
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
+    container.addEventListener('touchend', clear, { passive: true });
+    container.addEventListener('touchcancel', clear, { passive: true });
     return () => {
       clear();
-      target.removeEventListener('touchstart', onTouchStart);
-      target.removeEventListener('touchmove', onTouchMove);
-      target.removeEventListener('touchend', onTouchEnd);
-      target.removeEventListener('touchcancel', onTouchCancel);
-      overlay.setMap(null);
-      projectionRef.current = null;
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', clear);
+      container.removeEventListener('touchcancel', clear);
     };
   }, [map, disabled]);
 
@@ -166,36 +95,43 @@ function LongPressHandler({ onLongPress, disabled }) {
 }
 
 function ZoomTracker({ onZoom }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   useEffect(() => {
     if (!map) return;
     const emit = () => onZoom(map.getZoom());
     emit();
-    const listener = map.addListener('zoom_changed', emit);
-    return () => google.maps.event.removeListener(listener);
+    map.on('zoom', emit);
+    return () => map.off('zoom', emit);
   }, [map, onZoom]);
   return null;
 }
 
 function LocationLock({ center, locked, zoom }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   const previousCenterRef = useRef(null);
 
   useEffect(() => {
     if (!map) return;
-    map.setOptions({
-      draggable: !locked,
-      scrollwheel: !locked,
-      disableDoubleClickZoom: locked,
-      gestureHandling: locked ? 'none' : 'auto',
-    });
+    if (locked) {
+      map.dragPan.disable();
+      map.scrollZoom.disable();
+      map.doubleClickZoom.disable();
+      map.dragRotate.disable();
+      map.touchZoomRotate.disable();
+    } else {
+      map.dragPan.enable();
+      map.scrollZoom.enable();
+      map.doubleClickZoom.enable();
+      map.dragRotate.enable();
+      map.touchZoomRotate.enable();
+    }
   }, [map, locked]);
 
   useEffect(() => {
     if (!map || !locked || !center) return;
-    const pos = { lat: center[0], lng: center[1] };
+    const pos = [Number(center[1]), Number(center[0])];
     const previous = previousCenterRef.current;
-    const changed = !previous || previous.lat !== pos.lat || previous.lng !== pos.lng;
+    const changed = !previous || previous[0] !== pos[0] || previous[1] !== pos[1];
     if (changed) {
       map.panTo(pos);
       if (zoom != null && !previous) map.setZoom(zoom);
@@ -203,41 +139,30 @@ function LocationLock({ center, locked, zoom }) {
     previousCenterRef.current = pos;
   }, [map, locked, center?.[0], center?.[1], zoom]);
 
-  useEffect(() => {
-    if (!map || !locked || !center) return;
-    map.panTo({ lat: center[0], lng: center[1] });
-  }, [map, locked]);
-
   return null;
 }
 
 function CompassReset({ signal }) {
-  const map = useGoogleMap();
-
+  const map = useMapInstance();
   useEffect(() => {
     if (!map || signal <= 0) return;
-    // Reset the Google Maps camera to true north without changing the map center
-    // or zoom level. This is intentionally independent from rider location.
-    map.setHeading?.(0);
-    map.setTilt?.(0);
+    map.setBearing(0);
+    map.setPitch(0);
   }, [map, signal]);
-
   return null;
 }
 
 function Recenter({ center, zoom, signal }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   const firstRef = useRef(true);
-
   useEffect(() => {
     if (!map || !center) return;
-    const pos = { lat: center[0], lng: center[1] };
+    const pos = [Number(center[1]), Number(center[0])];
     if (firstRef.current) {
       map.setCenter(pos);
       if (zoom != null) map.setZoom(zoom);
       firstRef.current = false;
     } else if (signal > 0) {
-      // Manual "My Location" — snap immediately.
       map.panTo(pos);
     }
   }, [center?.[0], center?.[1], signal, map, zoom]);
@@ -245,29 +170,24 @@ function Recenter({ center, zoom, signal }) {
 }
 
 function FitRoute({ route, signal }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   useEffect(() => {
     if (!map || signal <= 0 || !route || route.length < 2) return;
-    const bounds = new google.maps.LatLngBounds();
-    route.forEach(([lat, lng]) => bounds.extend({ lat, lng }));
-    map.fitBounds(bounds, 60);
+    const bounds = new maplibregl.LngLatBounds();
+    route.forEach(([lat, lng]) => bounds.extend([Number(lng), Number(lat)]));
+    map.fitBounds(bounds, { padding: 60 });
   }, [signal, map, route]);
   return null;
 }
 
 function NavCamera({ userPos, heading, speed, nextManeuverDistance, recenterToken, headingUp, onFollowingChange }) {
-  const map = useGoogleMap();
-  useMapCamera({ map, userPos, heading, headingUp, speed, nextManeuverDistance, recenterToken, onFollowingChange });
+  useMapLibreCamera({ userPos, heading, headingUp, speed, nextManeuverDistance, recenterToken, onFollowingChange });
   return null;
 }
 
 const isValid = (lat, lng) =>
   lat != null && lng != null && !isNaN(lat) && !isNaN(lng) &&
   Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
-
-function toLatLngPath(coords) {
-  return (coords || []).map(([lat, lng]) => ({ lat, lng }));
-}
 
 export default function MapView({
   center = SA_CENTER,
@@ -312,35 +232,16 @@ export default function MapView({
   favoriteEventIds = null,
   onFollowingChange,
 }) {
-  const isLoaded = useGoogleMapsLoaded();
   const [popupItem, setPopupItem] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(zoom);
   const bgColor = getLayerBackground(layer);
-  // Services and Food & Drink should be visible at normal city-level zoom.
-  // ServiceMarkers applies its own proximity filtering and clustering.
   const SERVICE_MIN_ZOOM = 13;
-  // Heading-up is controlled by Google Maps' camera bearing in NavCamera.
-  // There is deliberately no CSS rotation here: rotating the DOM rotates the
-  // entire rendered map layer instead of the geographic camera.
 
-  const initialCenterRef = useRef(null);
-  if (!initialCenterRef.current) {
-    initialCenterRef.current = { lat: center[0], lng: center[1] };
-  }
-
-  // Coarsen the user position to ~1.1km buckets so the service proximity filter only
-  // recomputes when the rider actually crosses a bucket boundary — not on every GPS tick.
   const coarseUserPos = useMemo(() => {
     if (!userPos) return null;
     return [Math.round(userPos[0] * 100) / 100, Math.round(userPos[1] * 100) / 100];
   }, [userPos?.[0], userPos?.[1]]);
 
-  // POIs use native Google Maps markers so they receive real map click events.
-  // The previous OverlayView implementation placed them in overlayLayer, which is
-  // intentionally non-interactive in Google Maps and made the pins look tappable
-  // while swallowing the click. Native markers also match the Event marker behavior.
-  // POIs are intentionally managed exclusively through the Admin Portal.
-  // The map does not render the POI dataset until an admin explicitly adds them.
   const poiMarkers = null;
   const distressMarkers = useMemo(
     () => distressAlerts.filter((d) => isValid(d.lat, d.lng)).map((d) => (
@@ -353,14 +254,11 @@ export default function MapView({
   const warningMarkers = useMemo(
     () => routeWarnings.filter((w) => isValid(w.lat, w.lng)).map((w) => (
       <CustomMapMarker key={`warning-${w.id}`} position={[w.lat, w.lng]} onClick={() => setPopupItem({ ...w, category: 'warning', name: w.title, description: w.message })}>
-        <div style={{ width: 38, height: 38, background: '#f59e0b', borderRadius: '50%', border: '3px solid white', boxShadow: '0 3px 12px rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>⚠️</div>
+        <div style={{ width: 38, height: 38, background: '#f59e0b', borderRadius: '50%', border: '3px solid white', boxShadow: '0 3px 12px rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{'\u26a0\ufe0f'}</div>
       </CustomMapMarker>
     )),
     [routeWarnings]
   );
-  // POI markers are intentionally hidden at broad map zooms to keep the Home map clean.
-  // In Ride Mode they are always visible; otherwise they appear only once the rider
-  // zooms past level 12 (13+). Safety warnings/distress remain independent of this gate.
   const poiMarkersVisible = navActive || zoomLevel > 12;
   const servicesVisible = showServices && poiMarkersVisible;
   const serviceMarkers = useMemo(
@@ -370,128 +268,127 @@ export default function MapView({
     [servicesVisible, services, coarseUserPos, onServiceClick]
   );
 
-  if (!isLoaded) {
-    return <div className={`absolute inset-0 ${className}`} style={{ background: bgColor }} />;
-  }
-
   return (
-    <div
-      className={`absolute inset-0 z-0 ${className}`}
-      style={{ background: bgColor }}
+    <MapLibreContainer
+      center={center}
+      zoom={zoom}
+      layer={layer}
+      className={className}
+      onContextMenu={onLongPress && !navActive ? onLongPress : undefined}
     >
-      <GoogleMap
-        mapContainerClassName="absolute inset-0 h-full w-full"
-        center={initialCenterRef.current}
-        zoom={zoom}
-        options={getMapOptions(layer)}
-        onRightClick={(event) => {
-          if (!onLongPress || navActive || !event?.latLng) return;
-          onLongPress({ lat: event.latLng.lat(), lng: event.latLng.lng() });
-        }}
-      >
-        <LayerController layer={layer} />
-        <MapResizer />
-        <ZoomTracker onZoom={setZoomLevel} />
-        <LongPressHandler onLongPress={onLongPress} disabled={navActive} />
-        <CompassReset signal={compassResetSignal} />
+      <ZoomTracker onZoom={setZoomLevel} />
+      <LongPressHandler onLongPress={onLongPress} disabled={navActive} />
+      <CompassReset signal={compassResetSignal} />
 
-        {navActive ? (
-          <NavCamera
-            userPos={userPos || center}
-            heading={heading}
-            speed={speed}
-            nextManeuverDistance={nextManeuverDistance}
-            recenterToken={recenterSignal}
-            headingUp={headingUp}
-            onFollowingChange={onFollowingChange}
-          />
-        ) : (
-          <>
-            <LocationLock center={center} locked={locationLocked} zoom={zoom} />
-            {!locationLocked && <Recenter center={center} zoom={zoom} signal={recenterSignal} />}
-            <FitRoute route={route} signal={fitRouteSignal} />
-          </>
-        )}
-
-        {navActive && completedRoute && completedRoute.length > 1 && (
-          <>
-            <Polyline path={toLatLngPath(completedRoute)} options={{ strokeColor: '#ffffff', strokeWeight: 11, strokeOpacity: 0.9 }} />
-            <Polyline path={toLatLngPath(completedRoute)} options={{ strokeColor: '#9aa0a6', strokeWeight: 7, strokeOpacity: 0.7 }} />
-          </>
-        )}
-        {navActive && remainingRoute && remainingRoute.length > 1 && (
-          <>
-            <Polyline path={toLatLngPath(remainingRoute)} options={{ strokeColor: '#ffffff', strokeWeight: 11, strokeOpacity: 1 }} />
-            <Polyline path={toLatLngPath(remainingRoute)} options={{ strokeColor: '#2D7FF9', strokeWeight: 7, strokeOpacity: 1 }} />
-          </>
-        )}
-        {!navActive && route && route.length > 1 && (
-          <Polyline path={toLatLngPath(route)} options={{ strokeColor: '#FF6F00', strokeWeight: 5, strokeOpacity: 0.85 }} />
-        )}
-
-        {showSavedPlaces && savedPlaces.map((place) => isValid(place.lat, place.lng) && (
-          <Circle
-            key={`saved-place-${place.id}`}
-            center={{ lat: Number(place.lat), lng: Number(place.lng) }}
-            radius={Number(place.radius_m || 1000)}
-            options={{ strokeColor: '#FF6F00', strokeOpacity: 0.85, strokeWeight: 2, fillColor: '#FF6F00', fillOpacity: 0.10, clickable: false }}
-          />
-        ))}
-        {showSavedPlaces && groupSavedPlaces.map((place) => isValid(place.lat, place.lng) && (
-          <Circle
-            key={`group-saved-place-${place.id}`}
-            center={{ lat: Number(place.lat), lng: Number(place.lng) }}
-            radius={Number(place.radius_m || 1000)}
-            options={{ strokeColor: '#64748b', strokeOpacity: 0.4, strokeWeight: 1, fillColor: '#64748b', fillOpacity: 0.05, clickable: false }}
-          />
-        ))}
-
-        <SavedPlaceMarkers
-          ownPlaces={showSavedPlaces ? savedPlaces : []}
-          groupPlaces={showSavedPlaces ? groupSavedPlaces : []}
-          onOwnClick={onSavedPlaceClick}
-          onGroupClick={onGroupPlaceClick}
+      {navActive ? (
+        <NavCamera
+          userPos={userPos || center}
+          heading={heading}
+          speed={speed}
+          nextManeuverDistance={nextManeuverDistance}
+          recenterToken={recenterSignal}
+          headingUp={headingUp}
+          onFollowingChange={onFollowingChange}
         />
+      ) : (
+        <>
+          <LocationLock center={center} locked={locationLocked} zoom={zoom} />
+          {!locationLocked && <Recenter center={center} zoom={zoom} signal={recenterSignal} />}
+          <FitRoute route={route} signal={fitRouteSignal} />
+        </>
+      )}
 
-        {destination && (
-          <CustomMapMarker position={[destination.lat, destination.lng]} anchor="bottom">
-            <div style={{ width: 28, height: 28, background: '#4285F4', borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }} />
-          </CustomMapMarker>
-        )}
+      {navActive && completedRoute && completedRoute.length > 1 && (
+        <>
+          <MapLibreLine id="completed-casing" coordinates={completedRoute} color="#ffffff" width={11} opacity={0.9} />
+          <MapLibreLine id="completed" coordinates={completedRoute} color="#9aa0a6" width={7} opacity={0.7} />
+        </>
+      )}
+      {navActive && remainingRoute && remainingRoute.length > 1 && (
+        <>
+          <MapLibreLine id="remaining-casing" coordinates={remainingRoute} color="#ffffff" width={11} opacity={1} />
+          <MapLibreLine id="remaining" coordinates={remainingRoute} color="#2D7FF9" width={7} opacity={1} />
+        </>
+      )}
+      {!navActive && route && route.length > 1 && (
+        <MapLibreLine id="route" coordinates={route} color="#FF6F00" width={5} opacity={0.85} />
+      )}
 
-        {poiMarkersVisible && poiMarkers}
-
-        <NativeEventMarkers
-          events={events}
-          favoriteEventIds={favoriteEventIds}
-          onEventClick={setPopupItem}
+      {showSavedPlaces && savedPlaces.map((place) => isValid(place.lat, place.lng) && (
+        <MapLibreCircle
+          key={`saved-place-${place.id}`}
+          id={`saved-place-${place.id}`}
+          center={[Number(place.lat), Number(place.lng)]}
+          radius={Number(place.radius_m || 1000)}
+          strokeColor="#FF6F00"
+          strokeOpacity={0.85}
+          strokeWeight={2}
+          fillColor="#FF6F00"
+          fillOpacity={0.10}
         />
-
-        {distressMarkers}
-        {warningMarkers}
-
-        {serviceMarkers}
-        <FuelStationMarkers stations={fuelStations} onMarkerClick={(station) => setPopupItem({ ...station, category: 'fuel' })} />
-
-        <LiveMarkers
-          rider={riders[0] || null}
-          friends={friends}
-          groupRiders={groupRiders}
-          onFriendClick={onFriendClick}
-          headingUp={navActive && headingUp}
+      ))}
+      {showSavedPlaces && groupSavedPlaces.map((place) => isValid(place.lat, place.lng) && (
+        <MapLibreCircle
+          key={`group-saved-place-${place.id}`}
+          id={`group-saved-place-${place.id}`}
+          center={[Number(place.lat), Number(place.lng)]}
+          radius={Number(place.radius_m || 1000)}
+          strokeColor="#64748b"
+          strokeOpacity={0.4}
+          strokeWeight={1}
+          fillColor="#64748b"
+          fillOpacity={0.05}
         />
+      ))}
 
-        {popupItem && (
-          <InfoWindow position={{ lat: popupItem.lat, lng: popupItem.lng }} onCloseClick={() => setPopupItem(null)} zIndex={99999} options={{ zIndex: 99999 }}>
-            <MapPopupContent
-              item={popupItem}
-              onMoreInfo={() => { onMarkerClick?.(popupItem); setPopupItem(null); }}
-              onSave={() => { onSavePin?.(popupItem); setPopupItem(null); }}
-              onNavigate={() => { onNavigatePin?.(popupItem); setPopupItem(null); }}
-            />
-          </InfoWindow>
-        )}
-      </GoogleMap>
-    </div>
+      <SavedPlaceMarkers
+        ownPlaces={showSavedPlaces ? savedPlaces : []}
+        groupPlaces={showSavedPlaces ? groupSavedPlaces : []}
+        onOwnClick={onSavedPlaceClick}
+        onGroupClick={onGroupPlaceClick}
+      />
+
+      {destination && (
+        <CustomMapMarker position={[destination.lat, destination.lng]} anchor="bottom">
+          <div style={{ width: 28, height: 28, background: '#4285F4', borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }} />
+        </CustomMapMarker>
+      )}
+
+      {poiMarkersVisible && poiMarkers}
+
+      <NativeEventMarkers
+        events={events}
+        favoriteEventIds={favoriteEventIds}
+        onEventClick={setPopupItem}
+      />
+
+      {distressMarkers}
+      {warningMarkers}
+
+      {serviceMarkers}
+      <FuelStationMarkers stations={fuelStations} onMarkerClick={(station) => setPopupItem({ ...station, category: 'fuel' })} />
+
+      <LiveMarkers
+        rider={riders[0] || null}
+        friends={friends}
+        groupRiders={groupRiders}
+        onFriendClick={onFriendClick}
+        headingUp={navActive && headingUp}
+      />
+
+      {popupItem && (
+        <MapLibrePopup
+          position={{ lat: popupItem.lat, lng: popupItem.lng }}
+          onClose={() => setPopupItem(null)}
+        >
+          <MapPopupContent
+            item={popupItem}
+            onMoreInfo={() => { onMarkerClick?.(popupItem); setPopupItem(null); }}
+            onSave={() => { onSavePin?.(popupItem); setPopupItem(null); }}
+            onNavigate={() => { onNavigatePin?.(popupItem); setPopupItem(null); }}
+          />
+        </MapLibrePopup>
+      )}
+    </MapLibreContainer>
   );
 }

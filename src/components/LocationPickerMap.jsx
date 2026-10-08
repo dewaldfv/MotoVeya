@@ -1,9 +1,7 @@
-/* global google */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GoogleMap, useGoogleMap } from '@react-google-maps/api';
-import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
-import { MAP_LAYERS, getLayerStyles, getMapOptions } from '@/lib/mapLayers';
+import MapLibreContainer from './MapLibreContainer';
 import CustomMapMarker from './CustomMapMarker';
+import { useMapInstance } from '@/lib/maplibreContext';
 import ImportFromGoogleMapsButton from '@/components/ImportFromGoogleMapsButton';
 import LocationInfoCard from '@/components/LocationInfoCard';
 import { Plus, Minus, LocateFixed, Maximize2, Minimize2, Crosshair } from 'lucide-react';
@@ -22,31 +20,21 @@ function eventPinVisual() {
   );
 }
 
-function LayerController({ layer }) {
-  const map = useGoogleMap();
-  useEffect(() => {
-    if (!map) return;
-    const config = MAP_LAYERS.find((l) => l.key === layer) || MAP_LAYERS[0];
-    map.setMapTypeId(config.mapTypeId);
-    map.setOptions({ styles: getLayerStyles(layer) });
-  }, [map, layer]);
-  return null;
-}
-
 function ClickHandler({ onPick }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   useEffect(() => {
     if (!map) return;
-    const id = map.addListener('click', (e) => {
-      onPick(e.latLng.lat(), e.latLng.lng());
-    });
-    return () => google.maps.event.removeListener(id);
+    const handler = (e) => {
+      if (e.lngLat) onPick(e.lngLat.lat, e.lngLat.lng);
+    };
+    map.on('click', handler);
+    return () => map.off('click', handler);
   }, [map, onPick]);
   return null;
 }
 
 function MapController({ mapRef, value, importZoomRef }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   useEffect(() => {
     if (map) mapRef.current = map;
   }, [map, mapRef]);
@@ -54,7 +42,7 @@ function MapController({ mapRef, value, importZoomRef }) {
   useEffect(() => {
     if (!map || !value) return;
     const targetZoom = importZoomRef.current || Math.max(map.getZoom(), 12);
-    map.panTo({ lat: value.lat, lng: value.lng });
+    map.panTo([value.lng, value.lat]);
     map.setZoom(targetZoom);
     importZoomRef.current = 0;
   }, [value?.lat, value?.lng, map, importZoomRef]);
@@ -62,8 +50,19 @@ function MapController({ mapRef, value, importZoomRef }) {
   return null;
 }
 
+function ZoomTracker({ onZoom }) {
+  const map = useMapInstance();
+  useEffect(() => {
+    if (!map) return;
+    const emit = () => onZoom(map.getZoom());
+    emit();
+    map.on('zoom', emit);
+    return () => map.off('zoom', emit);
+  }, [map, onZoom]);
+  return null;
+}
+
 export default function LocationPickerMap({ value, onChange, onImportInfo }) {
-  const isLoaded = useGoogleMapsLoaded();
   const [layer, setLayer] = useState('standard');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [geoInfo, setGeoInfo] = useState(null);
@@ -74,8 +73,6 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
   const [zoom, setZoom] = useState(12);
 
   const center = value ? { lat: value.lat, lng: value.lng } : { lat: DEFAULT_CENTER[0], lng: DEFAULT_CENTER[1] };
-  const initialCenterRef = useRef(null);
-  if (!initialCenterRef.current) initialCenterRef.current = center;
 
   const handleImport = useCallback((res) => {
     importZoomRef.current = 16;
@@ -96,7 +93,7 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
           road: a.road || a.pedestrian || a.path || a.cycleway,
           town: a.town || a.city || a.village || a.suburb || a.hamlet || a.county,
         });
-      } catch (e) { setGeoInfo(null); }
+      } catch { setGeoInfo(null); }
       finally { setLoadingGeo(false); }
     }, 500);
     return () => clearTimeout(timer);
@@ -112,7 +109,7 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
         setLandmarks((data.elements || []).map((el) => ({
           id: el.id, lat: el.lat, lng: el.lon, name: el.tags?.name, type: el.tags?.tourism || el.tags?.amenity,
         })).filter((l) => l.name));
-      } catch (e) { /* nearby landmarks unavailable */ }
+      } catch { /* nearby landmarks unavailable */ }
     }, 800);
     return () => clearTimeout(timer);
   }, [value?.lat, value?.lng, zoom]);
@@ -122,7 +119,7 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const m = mapRef.current;
-        if (m) { m.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude }); m.setZoom(16); }
+        if (m) { m.panTo([pos.coords.longitude, pos.coords.latitude]); m.setZoom(16); }
       },
       () => toast.error('Could not get your location'),
       { enableHighAccuracy: true, timeout: 10000 }
@@ -131,20 +128,8 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
 
   const handleRecenter = () => {
     const m = mapRef.current;
-    if (m && value) { m.panTo({ lat: value.lat, lng: value.lng }); m.setZoom(Math.max(zoom, 16)); }
+    if (m && value) { m.panTo([value.lng, value.lat]); m.setZoom(Math.max(zoom, 16)); }
   };
-
-  const handleZoomChange = useCallback(() => {
-    const m = mapRef.current;
-    if (m) setZoom(m.getZoom());
-  }, []);
-
-  if (!isLoaded) {
-    return <div className={isFullscreen ? 'fixed inset-0 z-[100] bg-background p-3' : 'relative'}>
-      <div className="mb-2"><ImportFromGoogleMapsButton onImport={handleImport} /></div>
-      <div className="relative h-56 w-full overflow-hidden rounded-xl border border-border bg-muted" />
-    </div>;
-  }
 
   return (
     <div className={isFullscreen ? 'fixed inset-0 z-[100] flex flex-col bg-background p-3' : 'relative'}>
@@ -153,16 +138,14 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
       </div>
 
       <div className={`relative w-full overflow-hidden rounded-xl border border-border ${isFullscreen ? 'flex-1' : 'h-56 landscape:h-64'}`}>
-        <GoogleMap
-          mapContainerClassName="absolute inset-0 h-full w-full"
-          center={initialCenterRef.current}
+        <MapLibreContainer
+          center={[center.lat, center.lng]}
           zoom={12}
-          options={{ ...getMapOptions(layer), draggable: true, scrollwheel: true, gestureHandling: 'auto' }}
-          onZoomChanged={handleZoomChange}
+          layer={layer}
         >
-          <LayerController layer={layer} />
           <ClickHandler onPick={onChange} />
           <MapController mapRef={mapRef} value={value} importZoomRef={importZoomRef} />
+          <ZoomTracker onZoom={setZoom} />
 
           {value && (
             <CustomMapMarker position={[value.lat, value.lng]} anchor="bottom">
@@ -175,7 +158,7 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
               <div className="motogo-landmark-dot" />
             </CustomMapMarker>
           ))}
-        </GoogleMap>
+        </MapLibreContainer>
 
         <div className="absolute bottom-2 left-2 z-[1000] flex gap-1 rounded-lg bg-card/95 p-1 shadow-lg backdrop-blur">
           {['standard', 'satellite', 'terrain'].map((l) => (
@@ -184,8 +167,8 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
         </div>
 
         <div className="absolute right-2 top-2 z-[1000] flex flex-col gap-1.5">
-          <button type="button" onClick={() => mapRef.current?.setZoom(mapRef.current.getZoom() + 1)} className="glove-target flex h-10 w-10 items-center justify-center rounded-lg bg-card/95 shadow-lg backdrop-blur" aria-label="Zoom in"><Plus size={18} /></button>
-          <button type="button" onClick={() => mapRef.current?.setZoom(mapRef.current.getZoom() - 1)} className="glove-target flex h-10 w-10 items-center justify-center rounded-lg bg-card/95 shadow-lg backdrop-blur" aria-label="Zoom out"><Minus size={18} /></button>
+          <button type="button" onClick={() => { const m = mapRef.current; if (m) m.setZoom(m.getZoom() + 1); }} className="glove-target flex h-10 w-10 items-center justify-center rounded-lg bg-card/95 shadow-lg backdrop-blur" aria-label="Zoom in"><Plus size={18} /></button>
+          <button type="button" onClick={() => { const m = mapRef.current; if (m) m.setZoom(m.getZoom() - 1); }} className="glove-target flex h-10 w-10 items-center justify-center rounded-lg bg-card/95 shadow-lg backdrop-blur" aria-label="Zoom out"><Minus size={18} /></button>
         </div>
 
         <div className="absolute bottom-2 right-2 z-[1000] flex flex-col gap-1.5">

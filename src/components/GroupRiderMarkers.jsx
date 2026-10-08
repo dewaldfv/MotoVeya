@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { InfoWindow } from '@react-google-maps/api';
+import MapLibrePopup from './MapLibrePopup';
 import CustomMapMarker from './CustomMapMarker';
 
 const ROLE_COLORS = {
@@ -30,7 +30,7 @@ export default function GroupRiderMarkers({ participants = [] }) {
       const isEmergency = p.riding_status === 'emergency';
       const color = isEmergency ? EMERGENCY_COLOR : (ROLE_COLORS[p.role] || ROLE_COLORS.member);
       const speedTxt = p.speed_kmh != null ? `${Math.round(p.speed_kmh)} km/h` : '';
-      const roleBadge = p.role === 'leader' ? ' 👑' : p.role === 'sweep' ? ' 🛡️' : '';
+      const roleBadge = p.role === 'leader' ? ' \ud83d\udc51' : p.role === 'sweep' ? ' \ud83d\udee1\ufe0f' : '';
       const ring = isEmergency ? '<div class="friend-distress-ring"></div>' : '';
       const z = isEmergency ? 1100 : 1050;
       return (
@@ -53,22 +53,21 @@ export default function GroupRiderMarkers({ participants = [] }) {
       participants
         .filter((p) => p.lat != null && p.lng != null && p.user_id === openId)
         .map((p) => {
-          const isEmergency = p.riding_status === 'emergency';
           const speedTxt = p.speed_kmh != null ? `${Math.round(p.speed_kmh)} km/h` : '';
-          const roleBadge = p.role === 'leader' ? ' 👑' : p.role === 'sweep' ? ' 🛡️' : '';
+          const roleBadge = p.role === 'leader' ? ' \ud83d\udc51' : p.role === 'sweep' ? ' \ud83d\udee1\ufe0f' : '';
           return (
-            <InfoWindow
+            <MapLibrePopup
               key={`grp-info-${p.user_id}`}
               position={{ lat: p.lat, lng: p.lng }}
-              onCloseClick={() => setOpenId(null)}
+              onClose={() => setOpenId(null)}
             >
               <div className="text-xs">
                 <p className="font-bold">{p.user_name}{roleBadge}</p>
                 <p className="text-muted-foreground">
-                  {ROLE_LABELS[p.role] || 'Rider'}{speedTxt ? ` · ${speedTxt}` : ''}
+                  {ROLE_LABELS[p.role] || 'Rider'}{speedTxt ? ` \u00b7 ${speedTxt}` : ''}
                 </p>
               </div>
-            </InfoWindow>
+            </MapLibrePopup>
           );
         })
     );

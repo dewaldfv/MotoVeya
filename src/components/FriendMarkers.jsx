@@ -1,6 +1,5 @@
-/* global google */
 import { useEffect, useState } from 'react';
-import { useGoogleMap } from '@react-google-maps/api';
+import { useMapInstance } from '@/lib/maplibreContext';
 import CustomMapMarker from './CustomMapMarker';
 
 const STATUS_COLORS = {
@@ -77,15 +76,15 @@ function clusterFriends(friends, zoom) {
 }
 
 export default function FriendMarkers({ friends = [], onSelect }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   const [zoom, setZoom] = useState(map?.getZoom() || 12);
   const [, setTick] = useState(0);
 
   useEffect(() => {
     if (!map) return;
     const onZoom = () => setZoom(map.getZoom());
-    const id = map.addListener('zoom_changed', onZoom);
-    return () => google.maps.event.removeListener(id);
+    map.on('zoom', onZoom);
+    return () => map.off('zoom', onZoom);
   }, [map]);
 
   useEffect(() => {
@@ -106,8 +105,10 @@ export default function FriendMarkers({ friends = [], onSelect }) {
           lng={item.lng}
           zIndex={900}
           onClick={() => {
-            if (map) map.setZoom(Math.max(zoom + 2, 14));
-            if (map) map.panTo({ lat: item.lat, lng: item.lng });
+            if (map) {
+              map.setZoom(Math.max(zoom + 2, 14));
+              map.panTo([item.lng, item.lat]);
+            }
           }}
         />
       );

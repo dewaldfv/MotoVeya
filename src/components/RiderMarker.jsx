@@ -1,4 +1,4 @@
-import { Circle, useGoogleMap } from '@react-google-maps/api';
+import MapLibreCircle from './MapLibreCircle';
 import CustomMapMarker from './CustomMapMarker';
 
 const MOTORCYCLE_SVG = `
@@ -10,7 +10,6 @@ const MOTORCYCLE_SVG = `
 </svg>`;
 
 export default function RiderMarker({ position, heading = null, accuracy = null, zIndex = 1200 }) {
-  const map = useGoogleMap();
   if (!position) return null;
   const rotation = heading != null
     ? `transform:rotate(${Math.round(heading / 5) * 5}deg);transition:transform 0.3s ease;transform-origin:center center;`
@@ -18,18 +17,16 @@ export default function RiderMarker({ position, heading = null, accuracy = null,
 
   return (
     <>
-      {accuracy != null && accuracy > 0 && map && (
-        <Circle
-          center={{ lat: position[0], lng: position[1] }}
+      {accuracy != null && accuracy > 0 && (
+        <MapLibreCircle
+          id="rider-accuracy"
+          center={position}
           radius={accuracy}
-          options={{
-            fillColor: '#3b82f6',
-            fillOpacity: 0.15,
-            strokeColor: '#3b82f6',
-            strokeOpacity: 0.4,
-            strokeWeight: 1,
-            clickable: false,
-          }}
+          strokeColor="#3b82f6"
+          strokeOpacity={0.4}
+          strokeWeight={1}
+          fillColor="#3b82f6"
+          fillOpacity={0.15}
         />
       )}
       <CustomMapMarker position={position} zIndex={zIndex}>

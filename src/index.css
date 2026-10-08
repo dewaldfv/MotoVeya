@@ -125,6 +125,30 @@
   }
 }
 
+/* MapLibre GL JS overrides — popup styling to match the app's card aesthetic */
+.maplibregl-popup-content {
+  padding: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+.maplibregl-popup-close-button {
+  font-size: 18px;
+  padding: 4px 8px;
+  color: hsl(var(--muted-foreground));
+}
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  background: hsl(0 0% 4% / 0.7) !important;
+}
+.maplibregl-ctrl-attrib a {
+  color: hsl(0 0% 60%) !important;
+}
+.maplibregl-canvas {
+  outline: none;
+}
+
+/* Legacy Leaflet styles retained for backward compatibility */
 .leaflet-container {
   background: hsl(0 0% 4%);
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;

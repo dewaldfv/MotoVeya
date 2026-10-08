@@ -1,35 +1,25 @@
-/* global google */
 import { useEffect, useRef } from 'react';
-import { GoogleMap, Marker, Polyline, useGoogleMap } from '@react-google-maps/api';
-import { useGoogleMapsLoaded } from '@/lib/googleMapsLoader';
-import { getMapOptions, getLayerStyles } from '@/lib/mapLayers';
+import maplibregl from 'maplibre-gl';
+import MapLibreContainer from '@/components/MapLibreContainer';
+import MapLibreLine from '@/components/MapLibreLine';
 import CustomMapMarker from '@/components/CustomMapMarker';
+import { useMapInstance } from '@/lib/maplibreContext';
 
 const SA_CENTER = [-26.2041, 28.0473];
 
-function LayerController() {
-  const map = useGoogleMap();
-  useEffect(() => {
-    if (!map) return;
-    map.setMapTypeId('roadmap');
-    map.setOptions({ styles: getLayerStyles('standard') });
-  }, [map]);
-  return null;
-}
-
 function FitWaypoints({ waypoints }) {
-  const map = useGoogleMap();
+  const map = useMapInstance();
   const done = useRef(false);
   useEffect(() => {
-    if (!map || waypoints.length === 0) return;
+    if (!map || waypoints.length === 0 || done.current) return;
     if (waypoints.length === 1) {
-      map.setCenter({ lat: waypoints[0].lat, lng: waypoints[0].lng });
+      map.setCenter([waypoints[0].lng, waypoints[0].lat]);
       map.setZoom(13);
       return;
     }
-    const bounds = new google.maps.LatLngBounds();
-    waypoints.forEach((w) => bounds.extend({ lat: w.lat, lng: w.lng }));
-    map.fitBounds(bounds, 80);
+    const bounds = new maplibregl.LngLatBounds();
+    waypoints.forEach((w) => bounds.extend([w.lng, w.lat]));
+    map.fitBounds(bounds, { padding: 80 });
     done.current = true;
   }, [map, waypoints.length]);
   return null;
@@ -41,68 +31,74 @@ function wpColor(i, total) {
   return '#FF6F00';
 }
 
-const STOP_ICON = { fuel: '⛽', food: '🍻' };
+const STOP_ICON = { fuel: '\u26fd', food: '\ud83c\udf7b' };
 
-function wpIcon(color, number) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34"><circle cx="17" cy="17" r="14" fill="${color}" stroke="white" stroke-width="3"/><text x="17" y="22" font-size="14" font-weight="800" fill="white" text-anchor="middle" font-family="Inter,Arial,sans-serif">${number}</text></svg>`;
-  return {
-    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(34, 34),
-    anchor: new google.maps.Point(17, 17),
-  };
+function DraggableWaypointMarker({ waypoint, index, total, onDragEnd }) {
+  const map = useMapInstance();
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    if (!map) return;
+    const color = wpColor(index, total);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34"><circle cx="17" cy="17" r="14" fill="${color}" stroke="white" stroke-width="3"/><text x="17" y="22" font-size="14" font-weight="800" fill="white" text-anchor="middle" font-family="Inter,Arial,sans-serif">${index + 1}</text></svg>`;
+    const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+
+    const el = document.createElement('div');
+    el.style.cssText = 'width:34px;height:34px;pointer-events:auto;cursor:grab;';
+    const img = document.createElement('img');
+    img.src = iconUrl;
+    img.style.cssText = 'width:34px;height:34px;';
+    img.draggable = false;
+    el.appendChild(img);
+
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center', draggable: true })
+      .setLngLat([waypoint.lng, waypoint.lat])
+      .addTo(map);
+    marker.on('dragend', () => {
+      const ll = marker.getLngLat();
+      onDragEnd?.(index, { lat: ll.lat, lng: ll.lng });
+    });
+    markerRef.current = marker;
+
+    return () => { marker.remove(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+
+  // Update position when waypoint changes (but not from drag)
+  useEffect(() => {
+    if (markerRef.current && waypoint) {
+      markerRef.current.setLngLat([waypoint.lng, waypoint.lat]);
+    }
+  }, [waypoint.lat, waypoint.lng]);
+
+  return null;
 }
 
 export default function RidePlannerMap({ waypoints = [], routeData = null, routeLoading = false, suggestedStops = [], onWaypointDrag }) {
-  const isLoaded = useGoogleMapsLoaded();
   const center = waypoints[0] ? [waypoints[0].lat, waypoints[0].lng] : SA_CENTER;
-  const initialCenterRef = useRef(null);
-  if (!initialCenterRef.current) initialCenterRef.current = { lat: center[0], lng: center[1] };
-
-  if (!isLoaded) {
-    return <div className="h-72 w-full rounded-2xl bg-muted" />;
-  }
-
-  const path = (routeData?.coordinates?.length ? routeData.coordinates : waypoints.map((w) => [w.lat, w.lng]))
-    .map(([lat, lng]) => ({ lat, lng }));
+  const path = routeData?.coordinates?.length ? routeData.coordinates : waypoints.map((w) => [w.lat, w.lng]);
 
   return (
     <div className="relative h-72 w-full overflow-hidden rounded-2xl border border-border bg-card">
-      <GoogleMap
-        mapContainerClassName="absolute inset-0 h-full w-full"
-        center={initialCenterRef.current}
-        zoom={6}
-        options={{ ...getMapOptions('standard'), gestureHandling: 'auto', draggable: true, scrollwheel: true }}
-      >
-        <LayerController />
+      <MapLibreContainer center={center} zoom={6} layer="standard">
         <FitWaypoints waypoints={waypoints} />
         {path.length > 1 && (
           <>
-            <Polyline path={path} options={{ strokeColor: '#ffffff', strokeWeight: 8, strokeOpacity: 0.9 }} />
-            <Polyline path={path} options={{ strokeColor: '#FF6F00', strokeWeight: 5, strokeOpacity: 1 }} />
+            <MapLibreLine id="planner-casing" coordinates={path} color="#ffffff" width={8} opacity={0.9} />
+            <MapLibreLine id="planner-route" coordinates={path} color="#FF6F00" width={5} opacity={1} />
           </>
         )}
-        {routeLoading && (
-          <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white">
-            Calculating route…
-          </div>
-        )}
         {waypoints.map((w, i) => (
-          <Marker
+          <DraggableWaypointMarker
             key={`wp-${i}`}
-            position={{ lat: w.lat, lng: w.lng }}
-            draggable
-            icon={wpIcon(wpColor(i, waypoints.length), i + 1)}
-            zIndex={100 + i}
-            onDragEnd={(e) => onWaypointDrag?.(i, { lat: e.latLng.lat(), lng: e.latLng.lng() })}
+            waypoint={w}
+            index={i}
+            total={waypoints.length}
+            onDragEnd={onWaypointDrag}
           />
         ))}
         {suggestedStops.map((s) => (
-          <CustomMapMarker
-            key={`sug-${s.key}`}
-            position={[s.lat, s.lng]}
-            anchor="center"
-            zIndex={50}
-          >
+          <CustomMapMarker key={`sug-${s.key}`} position={[s.lat, s.lng]} zIndex={50}>
             <div style={{
               width: 34, height: 34, borderRadius: '50%',
               background: s.type === 'fuel' ? '#f59e0b' : '#8b5cf6',
@@ -113,11 +109,16 @@ export default function RidePlannerMap({ waypoints = [], routeData = null, route
               fontSize: 16,
               opacity: 0.92,
             }} title={`Suggested ${s.type === 'fuel' ? 'fuel stop' : 'pub / food stop'}`}>
-              {STOP_ICON[s.type] || '📍'}
+              {STOP_ICON[s.type] || '\ud83d\udccd'}
             </div>
           </CustomMapMarker>
         ))}
-      </GoogleMap>
+      </MapLibreContainer>
+      {routeLoading && (
+        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white">
+          Calculating route{'\u2026'}
+        </div>
+      )}
     </div>
   );
 }
