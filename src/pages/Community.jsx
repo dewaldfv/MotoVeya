@@ -142,7 +142,10 @@ export default function Community() {
       if (!grp) throw new Error('Group creation failed');
       setCreateOpen(false); setNewGroupName('');
       await queryClient.invalidateQueries({ queryKey: ['community'] });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      const msg = e?.response?.data?.error || e?.data?.error || e?.message;
+      toast.error(msg || 'Could not create group');
+    }
   };
 
   const joinGroupByCode = async (rawCode) => {
@@ -274,7 +277,7 @@ export default function Community() {
                 <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => setJoinOpen(true)}><Ticket size={18} className="mr-2" /> Join</Button>
                 <Button variant="secondary" className="min-h-[48px] flex-1" onClick={() => { setScannerMode('group'); setScannerOpen(true); }}><QrIcon size={18} className="mr-2" /> Scan</Button>
               </div>
-            {!isPremium && <p className="text-xs text-muted-foreground">Free tier: max 2 riders per group. Premium groups with all-Premium members can hold up to 64 riders.</p>}
+            <p className="text-xs text-muted-foreground">{isPremium ? 'Premium: up to 5 groups, 64 riders when all members are Premium.' : 'Free tier: up to 2 groups, max 2 riders each. Premium: up to 5 groups and 64-rider capacity.'}</p>
             {myGroups.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-16 text-center">
                 <Users size={48} className="text-muted-foreground" />

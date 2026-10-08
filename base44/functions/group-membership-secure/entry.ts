@@ -4,6 +4,8 @@ import { resolveEntitlement } from '../../shared/entitlement.ts';
 const FREE_LIMIT = 2;
 const PREMIUM_LIMIT = 32;
 const ALL_PREMIUM_LIMIT = 64;
+const FREE_GROUP_LIMIT = 2;
+const PREMIUM_GROUP_LIMIT = 5;
 
 export default async function(req) {
   try {
@@ -27,6 +29,14 @@ export default async function(req) {
     if (action === 'create') {
       const name = String(body.name || '').trim();
       if (!name) return Response.json({ error: 'Group name required' }, { status: 400 });
+      const myActiveGroups = await svc.entities.GroupMember.filter({ user_id: me.id, status: 'active' });
+      const groupLimit = premium ? PREMIUM_GROUP_LIMIT : FREE_GROUP_LIMIT;
+      if ((myActiveGroups || []).length >= groupLimit) {
+        const msg = premium
+          ? 'You have reached the 5-group Premium limit. Leave a group to create another.'
+          : 'Free riders can be in up to 2 groups. Upgrade to Premium for up to 5.';
+        return Response.json({ error: msg, group_limit: groupLimit }, { status: 409 });
+      }
       // Creator is the sole member at creation; if Premium the group starts
       // all-Premium and qualifies for the 64-rider capacity.
       const maxMembers = premium ? ALL_PREMIUM_LIMIT : FREE_LIMIT;
@@ -63,6 +73,15 @@ export default async function(req) {
     }
 
     if (mine?.status === 'active') return Response.json({ success: true, already_member: true });
+
+    const myActiveGroups = await svc.entities.GroupMember.filter({ user_id: me.id, status: 'active' });
+    const groupLimit = premium ? PREMIUM_GROUP_LIMIT : FREE_GROUP_LIMIT;
+    if ((myActiveGroups || []).length >= groupLimit) {
+      const msg = premium
+        ? 'You have reached the 5-group Premium limit. Leave a group to join another.'
+        : 'Free riders can be in up to 2 groups. Upgrade to Premium for up to 5.';
+      return Response.json({ error: msg, group_limit: groupLimit }, { status: 409 });
+    }
 
     const activeMembers = await svc.entities.GroupMember.filter({ group_id: groupId, status: 'active' });
 
