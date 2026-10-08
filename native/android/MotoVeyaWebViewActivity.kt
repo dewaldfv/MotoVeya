@@ -2,6 +2,8 @@ package com.motoveya.app.nativebridge
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -20,6 +22,10 @@ class MotoVeyaWebViewActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Restore the saved orientation before the WebView loads so the screen
+        // is already correct on cold start (no orientation flash).
+        restoreOrientation()
 
         webView = WebView(this)
         setContentView(webView)
@@ -40,6 +46,21 @@ class MotoVeyaWebViewActivity : Activity() {
 
         // Use the deployed MotoVeya URL in the production wrapper.
         webView.loadUrl("https://motoveya.base44.app")
+    }
+
+    /**
+     * Restore the rider's saved screen orientation preference before the web
+     * app loads, so Auto-Rotate / Portrait-Locked / Landscape-Locked is in
+     * effect immediately on cold start.
+     */
+    private fun restoreOrientation() {
+        val prefs = getSharedPreferences(MotoVeyaNativeBridge.PREFS_NAME, Context.MODE_PRIVATE)
+        val pref = prefs.getString(MotoVeyaNativeBridge.PREF_ORIENTATION, "auto")
+        requestedOrientation = when (pref) {
+            "portrait" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            "landscape" -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            else -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        }
     }
 
     override fun onRequestPermissionsResult(

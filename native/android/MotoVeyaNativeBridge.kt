@@ -2,6 +2,8 @@ package com.motoveya.app.nativebridge
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -15,6 +17,9 @@ class MotoVeyaNativeBridge(
 ) {
     companion object {
         const val LOCATION_PERMISSION_REQUEST = 7402
+        const val BACKGROUND_LOCATION_REQUEST = 7403
+        const val PREFS_NAME = "motoveya_prefs"
+        const val PREF_ORIENTATION = "screen_orientation"
     }
 
     private var pendingLocationCallback: String? = null
@@ -104,4 +109,32 @@ class MotoVeyaNativeBridge(
 
     @JavascriptInterface
     fun isNativeLocationTrackingAvailable(): Boolean = true
+
+    /**
+     * Applies the user's screen orientation preference to the Activity and
+     * persists it to SharedPreferences so it survives app restarts. The web
+     * layer calls this from the Preferences tab; the Activity also restores
+     * the saved value on cold start via restoreOrientation().
+     */
+    @JavascriptInterface
+    fun setScreenOrientation(preference: String): Boolean {
+        activity.runOnUiThread {
+            activity.requestedOrientation = when (preference) {
+                "portrait" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                "landscape" -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                else -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+            }
+        }
+        activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(PREF_ORIENTATION, preference)
+            .apply()
+        return true
+    }
+
+    @JavascriptInterface
+    fun isBackgroundLocationGranted(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return true
+        return ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+    }
 }
