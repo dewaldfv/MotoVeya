@@ -652,8 +652,9 @@ export default function Home() {
       <>
           <button
           onClick={() => setControlOpen(true)}
-          className="glove-target absolute hud-right hud-top-1 z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))]"
-          aria-label="Map controls">
+          className="glove-target absolute z-20 flex h-14 w-14 items-center justify-center rounded-full shadow-lg backdrop-blur-lg bg-[hsl(var(--background))]"
+          aria-label="Map controls"
+          style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))', right: 'calc(1rem + env(safe-area-inset-right))' }}>
 
             <Layers size={22} className="text-[hsl(var(--primary))]" />
           </button>
