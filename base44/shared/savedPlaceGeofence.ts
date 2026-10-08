@@ -29,31 +29,36 @@ export async function runGeofenceCheck(
     await svc.entities.SavedPlace.update(p.id, { last_inside: inside });
     transitions.push({ place_id: p.id, event: inside ? 'enter' : 'exit', name: p.name });
 
-    const groupIds = Array.isArray(p.group_ids) ? p.group_ids : [];
     const shouldNotify = (inside && p.notify_enter !== false) || (!inside && p.notify_exit !== false);
-    if (!groupIds.length || !shouldNotify) continue;
+    if (!shouldNotify) continue;
+
+    const riderName = userObj?.nickname || userObj?.full_name || 'A rider';
+    const groupIds = Array.isArray(p.group_ids) ? p.group_ids : [];
+    const dataPayload = JSON.stringify({ type: 'saved_place_geofence', place_id: p.id, event: inside ? 'enter' : 'exit', lat: Number(lat), lng: Number(lng) });
+
+    const notifications: any[] = [{
+      type: 'group_update',
+      title: inside ? '📍 Entered saved zone' : '📍 Left saved zone',
+      body: inside ? `You have entered ${p.name}.` : `You have left ${p.name}.`,
+      recipient_id: userId,
+      data: dataPayload,
+    }];
 
     const recipients = new Set<string>();
     for (const gid of groupIds) {
       const members = await svc.entities.GroupMember.filter({ group_id: gid, status: 'active' });
       for (const m of (members || [])) if (m.user_id !== userId) recipients.add(m.user_id);
     }
-    if (!recipients.size) continue;
-
-    const riderName = userObj?.nickname || userObj?.full_name || 'A rider';
-    const title = inside ? '📍 Rider Arrival' : '📍 Rider Departure';
-    const bodyText = inside
-      ? `${riderName} has entered ${p.name}.`
-      : `${riderName} has left ${p.name}.`;
-    await svc.entities.Notification.bulkCreate(
-      Array.from(recipients).map((recipient_id) => ({
+    for (const recipient_id of recipients) {
+      notifications.push({
         type: 'group_update',
-        title,
-        body: bodyText,
+        title: inside ? '📍 Rider Arrival' : '📍 Rider Departure',
+        body: inside ? `${riderName} has entered ${p.name}.` : `${riderName} has left ${p.name}.`,
         recipient_id,
-        data: JSON.stringify({ type: 'saved_place_geofence', place_id: p.id, event: inside ? 'enter' : 'exit', lat: Number(lat), lng: Number(lng) }),
-      }))
-    );
+        data: dataPayload,
+      });
+    }
+    await svc.entities.Notification.bulkCreate(notifications);
   }
   return transitions;
 }

@@ -319,11 +319,11 @@ export default function MapView({
           key={`saved-place-${place.id}`}
           id={`saved-place-${place.id}`}
           center={[Number(place.lat), Number(place.lng)]}
-          radius={Number(place.radius_m || 1000)}
-          strokeColor="#FF6F00"
+          radius={Number(place.radius_m || 50)}
+          strokeColor="#3B82F6"
           strokeOpacity={0.85}
           strokeWeight={2}
-          fillColor="#FF6F00"
+          fillColor="#3B82F6"
           fillOpacity={0.10}
         />
       ))}
@@ -332,11 +332,11 @@ export default function MapView({
           key={`group-saved-place-${place.id}`}
           id={`group-saved-place-${place.id}`}
           center={[Number(place.lat), Number(place.lng)]}
-          radius={Number(place.radius_m || 1000)}
-          strokeColor="#64748b"
+          radius={Number(place.radius_m || 50)}
+          strokeColor="#3B82F6"
           strokeOpacity={0.4}
           strokeWeight={1}
-          fillColor="#64748b"
+          fillColor="#3B82F6"
           fillOpacity={0.05}
         />
       ))}

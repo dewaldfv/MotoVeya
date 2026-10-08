@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     if(action==='create'){
       if(!place?.name || place.lat==null || place.lng==null) return Response.json({error:'Missing place fields'},{status:400});
       const existing=await svc.entities.SavedPlace.filter({created_by_id:me.id,active:true});
-      const limit=isPremium?16:2;
+      const limit=isPremium?64:2;
       if((existing||[]).length>=limit) return Response.json({error:'GEofence_LIMIT',limit},{status:409});
       const groupIds=Array.isArray(place.group_ids)?place.group_ids:[];
       if(groupIds.length){
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       }
       const created=await svc.entities.SavedPlace.create({
         name:String(place.name).trim(),lat:Number(place.lat),lng:Number(place.lng),
-        radius_m:Math.max(100,Math.min(Number(place.radius_m)||1000,50000)),
+        radius_m:Math.max(5,Math.min(Number(place.radius_m)||50,100)),
         notify_enter:place.notify_enter!==false,notify_exit:place.notify_exit!==false,
         group_ids:groupIds,active:true,last_inside:false
       });
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
       }
       const updated=await svc.entities.SavedPlace.update(place_id,{
         ...(place||{}),lat:Number(place?.lat??current.lat),lng:Number(place?.lng??current.lng),
-        radius_m:Math.max(100,Math.min(Number(place?.radius_m??current.radius_m),50000)),group_ids:groupIds
+        radius_m:Math.max(5,Math.min(Number(place?.radius_m??current.radius_m),100)),group_ids:groupIds
       });
       return Response.json({place:updated});
     }

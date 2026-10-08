@@ -13,7 +13,7 @@
     },
     "radius_m": {
       "type": "number",
-      "default": 1000
+      "default": 50
     },
     "notify_enter": {
       "type": "boolean",

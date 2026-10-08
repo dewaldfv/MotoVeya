@@ -7,13 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 
-const RADII = [250, 500, 1000, 2000, 5000, 10000];
+const RADII = [5, 10, 25, 50, 75, 100];
 
 export default function SavedPlaceDialog({ position, user, onClose, onSaved, editPlace }) {
   const navigate = useNavigate();
   const isEdit = !!editPlace;
   const [name, setName] = useState(editPlace?.name || '');
-  const [radius, setRadius] = useState(editPlace?.radius_m || 1000);
+  const [radius, setRadius] = useState(editPlace?.radius_m || 50);
   const [enter, setEnter] = useState(editPlace?.notify_enter !== false);
   const [exit, setExit] = useState(editPlace?.notify_exit !== false);
   const [active, setActive] = useState(editPlace?.active !== false);
@@ -22,7 +22,7 @@ export default function SavedPlaceDialog({ position, user, onClose, onSaved, edi
   const [saving, setSaving] = useState(false);
   const [limitHit, setLimitHit] = useState(false);
   const [premium, setPremium] = useState(false);
-  const limit = premium ? 16 : 2;
+  const limit = premium ? 64 : 2;
 
   useEffect(() => {
     if (!user?.id) return;
@@ -83,7 +83,7 @@ export default function SavedPlaceDialog({ position, user, onClose, onSaved, edi
         <div className="text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10"><Crown className="text-primary" size={28} /></div>
           <h2 className="text-lg font-bold">You've reached the Free limit</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Free riders can save up to 2 Saved Places. Upgrade to Premium for up to 16 and unlock group geofence alerts at scale.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Free riders can save up to 2 saved zones. Upgrade to Premium for up to 64 and unlock group geofence alerts at scale.</p>
           <Button className="mt-4 w-full" onClick={() => { onClose(); navigate('/premium'); }}>
             <Crown size={16} className="mr-2" /> Go Premium
           </Button>
@@ -98,7 +98,7 @@ export default function SavedPlaceDialog({ position, user, onClose, onSaved, edi
           </div>
           <Input value={name} onChange={e=>setName(e.target.value)} placeholder="Place name (e.g. Clubhouse)" autoFocus />
           <div className="mt-4"><div className="mb-2 text-sm font-medium">Geofence radius</div>
-            <div className="grid grid-cols-3 gap-2">{RADII.map(r=><Button key={r} type="button" variant={radius===r?'default':'outline'} size="sm" onClick={()=>setRadius(r)}>{r<1000?`${r} m`:`${r/1000} km`}</Button>)}</div>
+            <div className="grid grid-cols-3 gap-2">{RADII.map(r=><Button key={r} type="button" variant={radius===r?'default':'outline'} size="sm" onClick={()=>setRadius(r)}>{`${r} m`}</Button>)}</div>
           </div>
           <div className="mt-4 space-y-3">
             <div className="flex items-center justify-between"><div className="flex items-center gap-2"><Bell size={17}/><span className="text-sm">Notify group on entry</span></div><Switch checked={enter} onCheckedChange={setEnter}/></div>
@@ -110,7 +110,7 @@ export default function SavedPlaceDialog({ position, user, onClose, onSaved, edi
             {groups.length===0?<p className="mt-2 text-xs text-muted-foreground">Join a group to send arrival/departure notifications.</p>:
             <div className="mt-2 space-y-2 max-h-32 overflow-auto">{groups.map(g=><label key={g.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selectedGroups.includes(g.id)} onChange={()=>toggleGroup(g.id)}/><span>{g.name}</span></label>)}</div>}
           </div>
-          <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground"><span>{limit} active Saved Places allowed</span>{!premium&&<span className="flex items-center gap-1"><Crown size={13}/> Premium: 16</span>}</div>
+          <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground"><span>{limit} active Saved Places allowed</span>{!premium&&<span className="flex items-center gap-1"><Crown size={13}/> Premium: 64</span>}</div>
           <Button className="mt-4 w-full" onClick={save} disabled={saving}><Save size={16} className="mr-2"/>{saving ? 'Saving…' : (isEdit ? 'Update Place' : 'Save Place')}</Button>
         </>
       )}

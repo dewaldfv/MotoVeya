@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 
-const RADII=[250,500,1000,2000,5000,10000];
+const RADII=[5,10,25,50,75,100];
 
 export default function SavedPlaces() {
   const navigate=useNavigate();
@@ -35,7 +35,7 @@ export default function SavedPlaces() {
   });
 
   const premium=user?.subscription_tier==='premium';
-  const limit=premium?16:2;
+  const limit=premium?64:2;
   const activeCount=places.filter(p=>p.active!==false).length;
 
   const startEdit=(p)=>{setEditing(p.id);setForm({...p,group_ids:p.group_ids||[]});};
@@ -93,7 +93,7 @@ export default function SavedPlaces() {
        places.map(p=>editing===p.id&&form ? <div key={p.id} className="rounded-2xl border border-primary/30 bg-card p-4 space-y-4">
          <div className="flex items-center justify-between"><h2 className="font-bold">Edit Saved Place</h2><Button variant="ghost" size="icon" onClick={cancel}><X/></Button></div>
          <Input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})}/>
-         <div><p className="mb-2 text-sm font-medium">Radius</p><div className="grid grid-cols-3 gap-2">{RADII.map(r=><Button key={r} variant={Number(form.radius_m)===r?'default':'outline'} size="sm" onClick={()=>setForm({...form,radius_m:r})}>{r<1000?r+' m':r/1000+' km'}</Button>)}</div></div>
+         <div><p className="mb-2 text-sm font-medium">Radius</p><div className="grid grid-cols-3 gap-2">{RADII.map(r=><Button key={r} variant={Number(form.radius_m)===r?'default':'outline'} size="sm" onClick={()=>setForm({...form,radius_m:r})}>{r+' m'}</Button>)}</div></div>
          <div className="flex items-center justify-between"><span className="text-sm">Entry notification</span><Switch checked={!!form.notify_enter} onCheckedChange={v=>setForm({...form,notify_enter:v})}/></div>
          <div className="flex items-center justify-between"><span className="text-sm">Exit notification</span><Switch checked={!!form.notify_exit} onCheckedChange={v=>setForm({...form,notify_exit:v})}/></div>
          <div><p className="mb-2 text-sm font-medium">Groups</p>{groups.length?groups.map(g=><label key={g.id} className="flex items-center gap-2 py-1 text-sm"><input type="checkbox" checked={(form.group_ids||[]).includes(g.id)} onChange={()=>toggleGroup(g.id)}/>{g.name}</label>):<p className="text-xs text-muted-foreground">No active groups.</p>}</div>
@@ -101,7 +101,7 @@ export default function SavedPlaces() {
          <Button className="w-full" onClick={save} disabled={busy}><Save size={16} className="mr-2"/>Save Changes</Button>
        </div> :
        <div key={p.id} className={`rounded-2xl border bg-card p-4 ${p.active===false?'opacity-60':''}`}>
-         <div className="flex items-start gap-3"><div className="rounded-xl bg-primary/10 p-2"><MapPin className="text-primary"/></div><div className="min-w-0 flex-1"><p className="font-semibold truncate">{p.name}</p><p className="text-xs text-muted-foreground">{Number(p.radius_m||1000)>=1000?Number(p.radius_m)/1000+' km':p.radius_m+' m'} radius · {p.active===false?'Disabled':'Active'}</p><div className="mt-2 flex flex-wrap gap-2 text-[11px]">{p.notify_enter&&<span className="rounded-full bg-secondary px-2 py-1"><Bell size={11} className="mr-1 inline"/>Entry</span>}{p.notify_exit&&<span className="rounded-full bg-secondary px-2 py-1"><BellOff size={11} className="mr-1 inline"/>Exit</span>}{(p.group_ids||[]).length>0&&<span className="rounded-full bg-secondary px-2 py-1"><Users size={11} className="mr-1 inline"/>{p.group_ids.length} group{p.group_ids.length===1?'':'s'}</span>}</div></div></div>
+         <div className="flex items-start gap-3"><div className="rounded-xl bg-primary/10 p-2"><MapPin className="text-primary"/></div><div className="min-w-0 flex-1"><p className="font-semibold truncate">{p.name}</p><p className="text-xs text-muted-foreground">{p.radius_m} m radius · {p.active===false?'Disabled':'Active'}</p><div className="mt-2 flex flex-wrap gap-2 text-[11px]">{p.notify_enter&&<span className="rounded-full bg-secondary px-2 py-1"><Bell size={11} className="mr-1 inline"/>Entry</span>}{p.notify_exit&&<span className="rounded-full bg-secondary px-2 py-1"><BellOff size={11} className="mr-1 inline"/>Exit</span>}{(p.group_ids||[]).length>0&&<span className="rounded-full bg-secondary px-2 py-1"><Users size={11} className="mr-1 inline"/>{p.group_ids.length} group{p.group_ids.length===1?'':'s'}</span>}</div></div></div>
          <div className="mt-3 flex gap-2"><Button variant="outline" className="flex-1" onClick={()=>startEdit(p)}><Pencil size={15} className="mr-2"/>Edit</Button><Button variant="outline" size="icon" onClick={()=>toggleActive(p)} disabled={busy} title={p.active===false?'Enable':'Disable'}><Power size={16}/></Button><Button variant="outline" size="icon" className="text-destructive" onClick={()=>remove(p)} disabled={busy}><Trash2 size={16}/></Button></div>
        </div>)}
     </div>
