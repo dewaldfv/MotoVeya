@@ -144,8 +144,15 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
 }
 
 function resolveTargetZoom(speed, nextManeuverDistance) {
-  if (nextManeuverDistance != null && nextManeuverDistance < 200) return 17;
-  if (speed > 80) return 14;
-  if (speed > 40) return 16;
-  return 16;
+  const s = Math.max(0, Number(speed) || 0);
+  // Continuous speed-driven zoom: close at low speed, progressively wider at speed.
+  const speedZoom = Math.min(17.8, Math.max(14.4, 17.8 - (s * 0.02125)));
+  const d = Number(nextManeuverDistance);
+  let maneuverBoost = 0;
+  if (Number.isFinite(d)) {
+    if (d < 120) maneuverBoost = 0.65;
+    else if (d < 250) maneuverBoost = 0.35;
+    else if (d < 500) maneuverBoost = 0.15;
+  }
+  return Math.min(18, speedZoom + maneuverBoost);
 }
