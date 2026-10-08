@@ -123,7 +123,7 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
                     stopTracking()
                     stopSelf()
                 }
-                return START_NOT_STICKY
+                return if (pendingCrashPayload != null) START_STICKY else START_NOT_STICKY
             }
             ACTION_SET_CRASH_DETECTION -> {
                 crashDetectionEnabled = intent.getBooleanExtra(EXTRA_CRASH_DETECTION_ENABLED, true)
