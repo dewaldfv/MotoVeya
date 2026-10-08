@@ -53,6 +53,7 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
   const infoWindowsRef = useRef(new Map());
   const dataRef = useRef(new Map());
   const accuracyRef = useRef(null);
+  const riderAnimationRef = useRef(null);
   const cbRef = useRef(onFriendClick);
   cbRef.current = onFriendClick;
   // The rider marker follows each validated GPS fix directly.
@@ -83,9 +84,26 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
         markers.set(id, m);
       } else {
         m.setIcon(icon);
-        // Apply the newest GPS fix immediately. Camera smoothing is independent
-        // of the rider marker, so the marker never trails the actual GPS position.
-        m.setPosition(latLng);
+        // Interpolate between GPS fixes instead of jumping directly to each fix.
+        // This removes visible marker jitter while keeping the target position
+        // authoritative.
+        if (riderAnimationRef.current) cancelAnimationFrame(riderAnimationRef.current);
+        const start = m.getPosition();
+        const startLat = start?.lat?.() ?? rider.lat;
+        const startLng = start?.lng?.() ?? rider.lng;
+        const startTime = performance.now();
+        const duration = 220;
+        const animate = (now) => {
+          const t = Math.min(1, (now - startTime) / duration);
+          const eased = t * (2 - t);
+          m.setPosition(new g.maps.LatLng(
+            startLat + (rider.lat - startLat) * eased,
+            startLng + (rider.lng - startLng) * eased
+          ));
+          if (t < 1) riderAnimationRef.current = requestAnimationFrame(animate);
+          else riderAnimationRef.current = null;
+        };
+        riderAnimationRef.current = requestAnimationFrame(animate);
       }
       if (rider.accuracy && rider.accuracy > 0) {
         if (!accuracyRef.current) {
@@ -175,6 +193,8 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
   useEffect(() => () => {
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current.clear();
+    if (riderAnimationRef.current) cancelAnimationFrame(riderAnimationRef.current);
+    riderAnimationRef.current = null;
     infoWindowsRef.current.forEach((w) => w.close());
     infoWindowsRef.current.clear();
     dataRef.current.clear();
