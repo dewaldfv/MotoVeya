@@ -162,10 +162,11 @@ export function useCrashDetection({ enabled, speed, onCrashDetected }) {
 }
 
 export async function requestMotionPermission() {
-  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+  if (typeof DeviceMotionEvent === 'undefined') return false;
+  if (typeof DeviceMotionEvent.requestPermission === 'function') {
     try {
       return (await DeviceMotionEvent.requestPermission()) === 'granted';
-    } catch (e) {
+    } catch {
       return false;
     }
   }
