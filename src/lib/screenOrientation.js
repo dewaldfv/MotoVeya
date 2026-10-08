@@ -25,18 +25,20 @@ export async function applyScreenOrientation(preference = getScreenOrientationPr
     }
   } catch (_) {}
 
-  // Web/PWA: Android browsers generally require fullscreen/installed-app
-  // context before they will honor Screen Orientation API locks.
+  // Web/PWA: screen.orientation.lock() requires a fullscreen/installed-app
+  // context on mobile browsers. Auto-Rotate must NOT enter fullscreen —
+  // entering fullscreen on some mobile browsers locks the orientation to the
+  // current device orientation, which would defeat the purpose of Auto-Rotate.
   try {
     const orientation = window.screen && window.screen.orientation;
     if (!orientation) return false;
 
     if (preference === 'auto') {
-      if (document.fullscreenElement && document.exitFullscreen) {
-        try { await document.exitFullscreen(); } catch (_) {}
-      }
+      // Release any previously applied orientation lock so the sensor
+      // controls rotation freely. Do NOT exit fullscreen here — exiting
+      // can cause the browser to snap to a default orientation.
       if (typeof orientation.unlock === 'function') {
-        try { orientation.unlock(); } catch (_) {}
+        try { await orientation.unlock(); } catch (_) {}
       }
       return true;
     }
@@ -78,32 +80,18 @@ export function initScreenOrientation() {
     return preference;
   }
 
-  // Web/PWA: browsers block fullscreen and orientation locks until the user
-  // interacts with the page. Register a one-time first-gesture listener that
-  // enters fullscreen immediately and applies the saved orientation lock —
-  // regardless of whether auto, portrait, or landscape is saved — so opening
-  // the app always results in a fullscreen experience with the lock in place.
-  if (typeof window !== 'undefined') {
+  // Web/PWA: browsers block orientation locks until the user interacts with
+  // the page. Register a one-time first-gesture listener that applies the
+  // saved orientation lock — but ONLY for portrait/landscape. For Auto-
+  // Rotate, no listener is needed: the sensor controls orientation freely
+  // and entering fullscreen (which can lock to the current orientation on
+  // some mobile browsers) must be avoided.
+  if (typeof window !== 'undefined' && preference !== 'auto') {
     let applied = false;
     const applyOnce = () => {
       if (applied) return;
       applied = true;
-      // Request fullscreen first; orientation locks require this context.
-      const enterFullscreen = async () => {
-        try {
-          if (!document.fullscreenElement && document.documentElement?.requestFullscreen) {
-            await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-          }
-        } catch (_) {
-          // Installed PWAs/native wrappers may already be in fullscreen context.
-        }
-        // Apply the orientation lock only for portrait/landscape; auto leaves
-        // the screen to follow the sensor while staying fullscreen.
-        if (preference !== 'auto') {
-          applyScreenOrientation(preference);
-        }
-      };
-      enterFullscreen();
+      applyScreenOrientation(preference);
       ['touchstart', 'click', 'keydown'].forEach((evt) =>
         window.removeEventListener(evt, applyOnce)
       );
