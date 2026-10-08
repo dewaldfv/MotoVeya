@@ -127,12 +127,24 @@ export async function startNativeLocationTracking() {
   if (!token) return { started: false, native: false };
   const bridge = getNativeBridge();
   if (!bridge?.startNativeLocationTracking) return { started: false, native: false };
+  const crashDetectionEnabled = (() => {
+    try { return localStorage.getItem('motogo_crash_detection_enabled') !== 'false'; } catch { return true; }
+  })();
   try {
-    const started = !!bridge.startNativeLocationTracking(token);
-    return { started, native: true };
+    const startWithOptions = bridge.startNativeLocationTrackingWithCrashDetection;
+    const started = typeof startWithOptions === 'function'
+      ? !!startWithOptions.call(bridge, token, crashDetectionEnabled)
+      : !!bridge.startNativeLocationTracking(token);
+    return { started, native: true, crashDetectionEnabled };
   } catch {
-    return { started: false, native: true };
+    return { started: false, native: true, crashDetectionEnabled };
   }
+}
+
+export function setNativeCrashDetectionEnabled(enabled) {
+  const bridge = getNativeBridge();
+  if (!bridge?.setNativeCrashDetectionEnabled) return false;
+  try { return !!bridge.setNativeCrashDetectionEnabled(!!enabled); } catch { return false; }
 }
 
 export function stopNativeLocationTracking() {
