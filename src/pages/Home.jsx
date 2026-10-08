@@ -65,6 +65,7 @@ export default function Home() {
   const [layer, setLayer, rawLayer] = useMapLayer();
   const { overlays, toggle: toggleOverlay } = useMapOverlays();
   const [headingUp, setHeadingUp] = useState(true);
+  const [rideCameraFollowing, setRideCameraFollowing] = useState(true);
   const [notifyFriends, setNotifyFriends] = useState(true);
   const [savedPlacePosition, setSavedPlacePosition] = useState(null);
   const [deferMapData, setDeferMapData] = useState(false);
@@ -640,6 +641,7 @@ export default function Home() {
         remainingRoute={remainingRoute}
         route={previewRoute}
         destination={session.destination}
+        onFollowingChange={setRideCameraFollowing}
         className="absolute inset-0 z-0 h-full w-full" />
       
 
@@ -681,6 +683,18 @@ export default function Home() {
             </button>
         }
         </>
+      }
+
+      {isActive && !rideCameraFollowing &&
+      <button
+        onClick={handleMyLocation}
+        className="glove-target absolute z-30 flex h-14 items-center gap-2 rounded-full bg-primary px-4 font-bold text-primary-foreground shadow-xl backdrop-blur-lg"
+        style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)' }}
+        aria-label="Return to Ride"
+        title="Return to Ride">
+        <LocateFixed size={21} />
+        <span className="text-xs">RETURN TO RIDE</span>
+      </button>
       }
 
       {isActive && !session.rideMode &&
