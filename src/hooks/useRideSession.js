@@ -282,6 +282,20 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     },
   });
 
+  useEffect(() => {
+    const handleCrashPreferenceChange = () => {
+      let enabled = true;
+      try { enabled = localStorage.getItem('motogo_crash_detection_enabled') !== 'false'; } catch {}
+      if (!enabled) {
+        setCrashCountdown(null);
+        setCrashPhase((phase) => phase === 'countdown' ? null : phase);
+        setCrashIndicators(null);
+      }
+    };
+    window.addEventListener('motoveya:crash-detection-changed', handleCrashPreferenceChange);
+    return () => window.removeEventListener('motoveya:crash-detection-changed', handleCrashPreferenceChange);
+  }, []);
+
   // Auto ride stop
   useAutoRideStop({
     enabled: autoDetectEnabled,
