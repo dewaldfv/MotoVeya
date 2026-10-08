@@ -42,14 +42,22 @@ class MotoVeyaNativeBridge(
     fun requestLocationPermissions(callbackName: String): Boolean {
         val fine = ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarse = ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (fine || coarse) {
+        val notificationsGranted = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if ((fine || coarse) && notificationsGranted) {
             invokeLocationCallback(callbackName, true)
             return true
         }
         pendingLocationCallback = callbackName.replace(Regex("[^A-Za-z0-9_\\$]"), "")
+        val permissions = mutableListOf<String>()
+        if (!fine && !coarse) {
+            permissions += Manifest.permission.ACCESS_FINE_LOCATION
+            permissions += Manifest.permission.ACCESS_COARSE_LOCATION
+        }
+        if (!notificationsGranted) permissions += Manifest.permission.POST_NOTIFICATIONS
         ActivityCompat.requestPermissions(
             activity,
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+            permissions.toTypedArray(),
             LOCATION_PERMISSION_REQUEST
         )
         return false
@@ -57,8 +65,10 @@ class MotoVeyaNativeBridge(
 
     fun onRequestPermissionsResult(requestCode: Int, grantResults: IntArray) {
         if (requestCode != LOCATION_PERMISSION_REQUEST) return
-        val granted = grantResults.any { it == PackageManager.PERMISSION_GRANTED }
-        pendingLocationCallback?.let { invokeLocationCallback(it, granted) }
+        val locationGranted =
+            ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        pendingLocationCallback?.let { invokeLocationCallback(it, locationGranted) }
         pendingLocationCallback = null
     }
 
