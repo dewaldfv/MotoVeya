@@ -136,6 +136,7 @@
   font-size: 18px;
   padding: 4px 8px;
   color: hsl(var(--muted-foreground));
+  z-index: 20 !important;
 }
 .maplibregl-ctrl-attrib {
   font-size: 10px;
