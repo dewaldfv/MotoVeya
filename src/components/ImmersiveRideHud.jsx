@@ -24,10 +24,25 @@ export default function ImmersiveRideHud({
   const moving = speed >= 20;
   const NavIcon = nextStep ? getManeuverIcon(nextStep.maneuver) : null;
   const NextIcon = followingStep ? getManeuverIcon(followingStep.maneuver) : null;
+  const freeRide = !nextStep && !destinationName;
   const streetName = nextStep?.name || destinationName || (nextStep?.maneuver?.type === 'arrive' ? 'Destination' : 'Continue');
   const nextStreet = followingStep?.name || (followingStep?.maneuver?.type === 'arrive' ? 'Destination' : '');
   const eta = new Date(Date.now() + (remainingDuration || 0) * 1000);
   const etaStr = eta.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+
+  if (freeRide) {
+    return (
+      <div className="pointer-events-auto">
+        <div className="flex items-center gap-2 rounded-full bg-black/80 px-4 py-2.5 text-white shadow-xl backdrop-blur-xl ring-1 ring-white/10">
+          <Gauge size={17} className={overLimit ? 'text-red-400' : 'text-white/70'} />
+          <span className={`text-xl font-black tabular-nums leading-none ${overLimit ? 'text-red-400' : 'text-white'}`}>
+            {Math.round(Math.max(0, Number(speed) || 0))}
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">km/h</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pointer-events-auto w-[calc(100vw-1.5rem)] max-w-[560px]">
