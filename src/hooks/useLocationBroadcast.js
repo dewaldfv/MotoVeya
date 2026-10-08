@@ -127,11 +127,11 @@ export function useLocationBroadcast() {
       } catch (e) { /* retry next tick */ }
     };
 
-    const onPos = (pos) => {
-      const c = pos.coords;
-      const speed = c.speed != null && !Number.isNaN(c.speed) ? c.speed * 3.6 : lastSpeedRef.current;
-      const heading = c.heading != null && !Number.isNaN(c.heading) ? c.heading : null;
-      latestPosRef.current = { lat: c.latitude, lng: c.longitude, speed, heading };
+    const onPos = (ev) => {
+      // Ride Mode dispatches CustomEvent('motoveya:ride-location', { detail: {...} })
+      const d = ev.detail || {};
+      const speed = d.speed != null ? d.speed : lastSpeedRef.current;
+      latestPosRef.current = { lat: d.lat, lng: d.lng, speed, heading: d.heading ?? null };
     };
     const onPosError = (err) => {
       if (err && err.code === err.PERMISSION_DENIED && trackingRef.current) endSession();
