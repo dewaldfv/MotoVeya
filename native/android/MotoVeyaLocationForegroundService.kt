@@ -24,7 +24,10 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
     companion object {
         const val ACTION_START = "com.motoveya.app.START_NATIVE_TRACKING"
         const val ACTION_STOP = "com.motoveya.app.STOP_NATIVE_TRACKING"
+        const val ACTION_SET_CRASH_DETECTION = "com.motoveya.app.SET_CRASH_DETECTION"
         const val EXTRA_DEVICE_TOKEN = "device_token"
+        const val EXTRA_CRASH_DETECTION_ENABLED = "crash_detection_enabled"
+        private const val CRASH_DETECTION_KEY = "crash_detection_enabled"
         private const val CHANNEL_ID = "motoveya_ride_tracking"
         private const val NOTIFICATION_ID = 4401
         private const val LOCATION_INTERVAL_MS = 3000L
@@ -32,14 +35,27 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
         private const val PREFS = "motoveya_tracking"
         private const val TOKEN_KEY = "device_token"
 
-        fun start(context: android.content.Context, token: String) {
+        fun start(context: android.content.Context, token: String, crashDetectionEnabled: Boolean = true) {
             context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit()
-                .putString(TOKEN_KEY, token).apply()
+                .putString(TOKEN_KEY, token)
+                .putBoolean(CRASH_DETECTION_KEY, crashDetectionEnabled)
+                .apply()
             val intent = Intent(context, MotoVeyaLocationForegroundService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_DEVICE_TOKEN, token)
+                putExtra(EXTRA_CRASH_DETECTION_ENABLED, crashDetectionEnabled)
             }
             ContextCompat.startForegroundService(context, intent)
+        }
+
+        fun setCrashDetectionEnabled(context: android.content.Context, enabled: Boolean) {
+            context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit()
+                .putBoolean(CRASH_DETECTION_KEY, enabled)
+                .apply()
+            context.startService(Intent(context, MotoVeyaLocationForegroundService::class.java).apply {
+                action = ACTION_SET_CRASH_DETECTION
+                putExtra(EXTRA_CRASH_DETECTION_ENABLED, enabled)
+            })
         }
 
         fun stop(context: android.content.Context) {
@@ -55,6 +71,8 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
     @Volatile private var latestUnsentLocation: Location? = null
     @Volatile private var lastKnownLocation: Location? = null
     @Volatile private var postInFlight = false
+    @Volatile private var crashDetectionEnabled = true
+    private var crashSensorsRegistered = false
     private var locationCallback: LocationCallback? = null
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null
@@ -75,6 +93,7 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         networkExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
         deviceToken = getSharedPreferences(PREFS, MODE_PRIVATE).getString(TOKEN_KEY, null)
+        crashDetectionEnabled = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(CRASH_DETECTION_KEY, true)
         restorePendingLocation()
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -88,18 +107,34 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
                 stopSelf()
                 return START_NOT_STICKY
             }
+            ACTION_SET_CRASH_DETECTION -> {
+                crashDetectionEnabled = intent.getBooleanExtra(EXTRA_CRASH_DETECTION_ENABLED, true)
+                if (locationCallback != null) {
+                    if (crashDetectionEnabled) startCrashDetection() else stopCrashDetection()
+                } else {
+                    stopSelf()
+                }
+                return START_NOT_STICKY
+            }
             ACTION_START -> {
                 intent.getStringExtra(EXTRA_DEVICE_TOKEN)?.takeIf { it.length >= 32 }?.let {
                     deviceToken = it
-                    getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(TOKEN_KEY, it).apply()
+                    getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                        .putString(TOKEN_KEY, it)
+                        .putBoolean(CRASH_DETECTION_KEY, intent.getBooleanExtra(EXTRA_CRASH_DETECTION_ENABLED, true))
+                        .apply()
                 }
+                crashDetectionEnabled = intent.getBooleanExtra(
+                    EXTRA_CRASH_DETECTION_ENABLED,
+                    getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(CRASH_DETECTION_KEY, true)
+                )
                 if (deviceToken.isNullOrBlank()) {
                     stopSelf()
                     return START_NOT_STICKY
                 }
                 startForeground(NOTIFICATION_ID, buildNotification("Ride tracking active"))
                 startTracking()
-                startCrashDetection()
+                if (crashDetectionEnabled) startCrashDetection() else stopCrashDetection()
             }
             null -> {
                 // Android can recreate a START_STICKY service with a null Intent.
@@ -109,7 +144,7 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
                 }
                 startForeground(NOTIFICATION_ID, buildNotification("Ride tracking resumed"))
                 startTracking()
-                startCrashDetection()
+                if (crashDetectionEnabled) startCrashDetection() else stopCrashDetection()
                 postLocationIfPossible()
             }
         }
@@ -222,12 +257,15 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
     }
 
     private fun startCrashDetection() {
+        if (!crashDetectionEnabled || crashSensorsRegistered) return
         accelerometer?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
         rotationSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        crashSensorsRegistered = true
     }
 
     private fun stopCrashDetection() {
         if (::sensorManager.isInitialized) sensorManager.unregisterListener(this)
+        crashSensorsRegistered = false
         highGAt = 0L
         highRotationAt = 0L
         suddenDecelAt = 0L
