@@ -68,7 +68,7 @@ export default async function(req) {
     // Email confirmation.
     try {
       if (me.email) {
-        await base44.integrations.Core.SendEmail({
+        await svc.integrations.Core.SendEmail({
           to: me.email,
           subject: 'MotoVeya Premium — Subscription Cancelled',
           body: `Hi ${me.full_name || 'Rider'},\n\nYour MotoVeya Premium subscription has been cancelled. You'll keep Premium access until ${expiryStr}, after which it will revert to the Free plan.\n\nYou can re-subscribe anytime from the app.\n\n— The MotoVeya Team`,

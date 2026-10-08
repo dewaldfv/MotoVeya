@@ -297,7 +297,7 @@ Deno.serve(async (req) => {
       try {
         const org = await svc.entities.User.get(organizerId).catch(() => null);
         if (org?.email) {
-          await base44.integrations.Core.SendEmail({
+          await svc.integrations.Core.SendEmail({
             to: org.email,
             subject: title,
             body: `${notifBody}\n\nView it in MotoVeya under the Events tab.\n\n— The MotoVeya Team`,
@@ -347,7 +347,7 @@ Deno.serve(async (req) => {
       try {
         const sub = await svc.entities.User.get(submitterId).catch(() => null);
         if (sub?.email) {
-          await base44.integrations.Core.SendEmail({
+          await svc.integrations.Core.SendEmail({
             to: sub.email,
             subject: title,
             body: `${notifBody}\n\nView it in MotoVeya under Community → Services.\n\n— The MotoVeya Team`,

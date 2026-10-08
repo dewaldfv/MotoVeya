@@ -70,7 +70,7 @@ export async function runEmergencyResponse(base44, user, body) {
   let contactMessaged = false;
   if (user.emergency_contact_email) {
     try {
-      await base44.integrations.Core.SendEmail({
+      await svc.integrations.Core.SendEmail({
         to: user.emergency_contact_email,
         subject: `RIDER DOWN: MotoVeya alert — ${riderName}`,
         body: `RIDER DOWN ALERT — MotoVeya
