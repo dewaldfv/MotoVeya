@@ -274,7 +274,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       setCrashIndicators(data.indicators);
       setSeverity(data.severity);
       if (data.severity === 'high') {
-        handleCrashConfirmed(data.severity);
+        handleCrashConfirmed(data.severity, data.indicators);
       } else {
         setCrashCountdown(data.severity === 'medium' ? 15 : 30);
         setCrashPhase('countdown');
@@ -688,7 +688,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     setCrashIndicators(null);
   };
 
-  const handleCrashConfirmed = async (overrideSeverity) => {
+  const handleCrashConfirmed = async (overrideSeverity, overrideIndicators) => {
     const sev = overrideSeverity || severity;
     setCrashCountdown(null);
     setCrashPhase('active');
@@ -702,7 +702,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       lat: pos[0], lng: pos[1],
       rider_name: user?.nickname || user?.full_name || 'Rider',
       is_premium: user?.subscription_tier === 'premium',
-      indicators: crashIndicators,
+      indicators: overrideIndicators ?? crashIndicators,
       severity: sev,
       speed_at_impact: speed,
       heading_at_impact: heading,
