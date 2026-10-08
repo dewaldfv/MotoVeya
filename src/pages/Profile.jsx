@@ -163,7 +163,7 @@ export default function Profile() {
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!user) return <LoginPrompt />;
 
-  const crashDetectionOn = localStorage.getItem('motogo_auto_ride_detection') !== 'false';
+  const crashDetectionOn = localStorage.getItem('motogo_crash_detection_enabled') !== 'false';
   const emergencyContacts = user.emergency_contact_name ? 1 : 0;
 
   return (
