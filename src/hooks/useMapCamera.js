@@ -23,6 +23,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   const suppressCameraEventsRef = useRef(false);
   const programmaticZoomRef = useRef(null);
   const programmaticHeadingRef = useRef(null);
+  const manualOverrideTimerRef = useRef(null);
   const filteredSpeedRef = useRef(0);
   const setFollowing = (value) => {
     if (followingRef.current === value) return;
@@ -31,15 +32,27 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   };
   const filteredHeadingRef = useRef(null);
 
-  // Ride Mode remains fully interactive. Manual pan/zoom disengages camera
-  // following; GPS tracking itself continues uninterrupted.
+  // Ride Mode remains fully interactive. Manual pan/zoom/rotation temporarily
+  // disengages camera following for 5 seconds. Every new user gesture restarts
+  // the timer. GPS tracking itself continues uninterrupted.
   useEffect(() => {
     if (!map) return;
+    const MANUAL_OVERRIDE_MS = 5000;
     map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'greedy' });
-    const onManualInteraction = () => {
+
+    const restartManualOverride = () => {
       if (suppressCameraEventsRef.current) return;
       setFollowing(false);
+      if (manualOverrideTimerRef.current) clearTimeout(manualOverrideTimerRef.current);
+      manualOverrideTimerRef.current = setTimeout(() => {
+        manualOverrideTimerRef.current = null;
+        // Re-enable following only after the rider has been idle for the full
+        // 5 seconds. The RAF loop then eases the camera back to the live target.
+        if (targetRef.current) setFollowing(true);
+      }, MANUAL_OVERRIDE_MS);
     };
+
+    const onManualInteraction = () => restartManualOverride();
     const onZoomChanged = () => {
       const actualZoom = map.getZoom();
       if (actualZoom == null) return;
@@ -48,7 +61,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
         programmaticZoomRef.current = null;
         return;
       }
-      setFollowing(false);
+      restartManualOverride();
     };
     const onHeadingChanged = () => {
       const actual = Number(map.getHeading?.() ?? 0);
@@ -56,7 +69,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
         programmaticHeadingRef.current = null;
         return;
       }
-      setFollowing(false);
+      restartManualOverride();
     };
     const dragStart = map.addListener('dragstart', onManualInteraction);
     const zoomChanged = map.addListener('zoom_changed', onZoomChanged);
@@ -65,6 +78,8 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
       dragStart?.remove?.();
       zoomChanged?.remove?.();
       headingChanged?.remove?.();
+      if (manualOverrideTimerRef.current) clearTimeout(manualOverrideTimerRef.current);
+      manualOverrideTimerRef.current = null;
     };
   }, [map]);
 
@@ -106,6 +121,8 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   // Manual recenter token (the "My Location" button) — snap immediately.
   useEffect(() => {
     if (!map || !recenterToken || !targetRef.current) return;
+    if (manualOverrideTimerRef.current) clearTimeout(manualOverrideTimerRef.current);
+    manualOverrideTimerRef.current = null;
     setFollowing(true);
     currentCenterRef.current = { lat: targetRef.current.lat, lng: targetRef.current.lng };
     currentZoomRef.current = targetRef.current.zoom;
