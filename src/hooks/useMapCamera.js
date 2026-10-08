@@ -13,7 +13,7 @@ import { useEffect, useRef } from 'react';
  * never CSS-rotated, which keeps map tiles, controls, markers and overlays in
  * the same geographic coordinate system.
  */
-export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistance, recenterToken, headingUp = true }) {
+export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistance, recenterToken, headingUp = true, onFollowingChange }) {
   const rafRef = useRef(null);
   const currentCenterRef = useRef(null);
   const currentZoomRef = useRef(null);
@@ -24,6 +24,11 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   const programmaticZoomRef = useRef(null);
   const programmaticHeadingRef = useRef(null);
   const filteredSpeedRef = useRef(0);
+  const setFollowing = (value) => {
+    if (followingRef.current === value) return;
+    followingRef.current = value;
+    onFollowingChange?.(value);
+  };
   const filteredHeadingRef = useRef(null);
 
   // Ride Mode remains fully interactive. Manual pan/zoom disengages camera
@@ -33,7 +38,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
     map.setOptions({ draggable: true, scrollwheel: true, disableDoubleClickZoom: false, gestureHandling: 'greedy' });
     const onManualInteraction = () => {
       if (suppressCameraEventsRef.current) return;
-      followingRef.current = false;
+      setFollowing(false);
     };
     const onZoomChanged = () => {
       const actualZoom = map.getZoom();
@@ -43,7 +48,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
         programmaticZoomRef.current = null;
         return;
       }
-      followingRef.current = false;
+      setFollowing(false);
     };
     const onHeadingChanged = () => {
       const actual = Number(map.getHeading?.() ?? 0);
@@ -51,7 +56,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
         programmaticHeadingRef.current = null;
         return;
       }
-      followingRef.current = false;
+      setFollowing(false);
     };
     const dragStart = map.addListener('dragstart', onManualInteraction);
     const zoomChanged = map.addListener('zoom_changed', onZoomChanged);
@@ -101,7 +106,7 @@ export function useMapCamera({ map, userPos, heading, speed, nextManeuverDistanc
   // Manual recenter token (the "My Location" button) — snap immediately.
   useEffect(() => {
     if (!map || !recenterToken || !targetRef.current) return;
-    followingRef.current = true;
+    setFollowing(true);
     currentCenterRef.current = { lat: targetRef.current.lat, lng: targetRef.current.lng };
     currentZoomRef.current = targetRef.current.zoom;
     currentBearingRef.current = targetRef.current.bearing ?? 0;
