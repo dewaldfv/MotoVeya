@@ -83,7 +83,11 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       const target = riderTargetRef.current;
       if (m && target) {
         const now = performance.now();
-        const elapsed = Math.min(2.5, (now - (target.t || now)) / 1000);
+        // Only project forward when genuinely moving. When stationary, GPS
+        // jitter produces tiny velocity vectors that keep nudging the marker
+        // in random directions, so we anchor to the last reported fix.
+        const moving = (target.velLat || 0) !== 0 || (target.velLng || 0) !== 0;
+        const elapsed = moving ? Math.min(1.0, (now - (target.t || now)) / 1000) : 0;
         const predLat = target.lat + (target.velLat || 0) * elapsed;
         const predLng = target.lng + (target.velLng || 0) * elapsed;
         const ll = m.getLngLat();
@@ -137,8 +141,18 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
         if (prev && prev.lat != null) {
           const dt = (performance.now() - (prev.t || 0)) / 1000;
           if (dt > 0.1 && dt < 5) {
-            velLat = Math.max(-0.0008, Math.min(0.0008, (rider.lat - prev.lat) / dt));
-            velLng = Math.max(-0.0008, Math.min(0.0008, (rider.lng - prev.lng) / dt));
+            // Reject movement that falls within GPS noise: if the displacement
+            // is smaller than the reported accuracy (or a 5 m floor), treat
+            // the phone as stationary and carry zero velocity forward so the
+            // marker stays put instead of drifting with the jitter.
+            const dLat = rider.lat - prev.lat;
+            const dLng = rider.lng - prev.lng;
+            const meters = Math.hypot(dLat * 111000, dLng * 111000 * Math.cos((rider.lat * Math.PI) / 180));
+            const noiseFloor = Math.max(5, rider.accuracy || prev.accuracy || 0);
+            if (meters >= noiseFloor) {
+              velLat = Math.max(-0.0008, Math.min(0.0008, dLat / dt));
+              velLng = Math.max(-0.0008, Math.min(0.0008, dLng / dt));
+            }
           }
         }
         riderTargetRef.current = { lat: rider.lat, lng: rider.lng, accuracy: rider.accuracy || 0, velLat, velLng, t: performance.now() };
