@@ -79,9 +79,9 @@ export default function SavedPlaceDialog({ position, user, onClose, onSaved, edi
   };
 
   return <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 sm:items-center">
-    <div className="w-full max-w-md rounded-3xl border bg-background p-5 shadow-2xl">
+    <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-3xl border bg-background shadow-2xl">
       {limitHit ? (
-        <div className="text-center">
+        <div className="p-5 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10"><Crown className="text-primary" size={28} /></div>
           <h2 className="text-lg font-bold">You've reached the Free limit</h2>
           <p className="mt-1 text-sm text-muted-foreground">Free riders can save up to 2 saved zones. Upgrade to Premium for up to 64 and unlock group geofence alerts at scale.</p>
@@ -92,11 +92,12 @@ export default function SavedPlaceDialog({ position, user, onClose, onSaved, edi
         </div>
       ) : (
         <>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center justify-between p-5 pb-2">
             <div><h2 className="text-lg font-bold flex items-center gap-2"><MapPin className="text-primary" size={20}/> {isEdit ? 'Edit Saved Place' : 'Save this Place'}</h2>
             <p className="text-xs text-muted-foreground mt-1">{(isEdit ? editPlace.lat : position.lat).toFixed(5)}, {(isEdit ? editPlace.lng : position.lng).toFixed(5)}</p></div>
             <Button variant="ghost" size="icon" onClick={onClose}><X size={20}/></Button>
           </div>
+          <div className="flex-1 overflow-y-auto px-5 pb-5">
           <Input value={name} onChange={e=>setName(e.target.value)} placeholder="Place name (e.g. Clubhouse)" autoFocus />
           <div className="mt-4"><div className="mb-2 text-sm font-medium">Geofence radius</div>
             <div className="grid grid-cols-3 gap-2">{RADII.map(r=><Button key={r} type="button" variant={radius===r?'default':'outline'} size="sm" onClick={()=>setRadius(r)}>{`${r} m`}</Button>)}</div>
@@ -113,7 +114,8 @@ export default function SavedPlaceDialog({ position, user, onClose, onSaved, edi
           </div>
           <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground"><span>{limit} active Saved Places allowed</span>{!premium&&<span className="flex items-center gap-1"><Crown size={13}/> Premium: 64</span>}</div>
           <GeofencePreview name={name} radius={radius} enter={enter} exit={exit} active={active} groupNames={groups.filter(g=>selectedGroups.includes(g.id)).map(g=>g.name)} />
-          <Button className="mt-4 w-full" onClick={save} disabled={saving}><Save size={16} className="mr-2"/>{saving ? 'Saving…' : (isEdit ? 'Update Place' : 'Save Place')}</Button>
+          </div>
+          <div className="border-t p-5 pt-3"><Button className="w-full" onClick={save} disabled={saving}><Save size={16} className="mr-2"/>{saving ? 'Saving…' : (isEdit ? 'Update Place' : 'Save Place')}</Button></div>
         </>
       )}
     </div>
