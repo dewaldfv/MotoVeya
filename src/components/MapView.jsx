@@ -12,7 +12,6 @@ import ServiceMarkers from './ServiceMarkers';
 import FuelStationMarkers from './FuelStationMarkers';
 import LiveMarkers from './map/LiveMarkers';
 import NativeEventMarkers from './map/NativeEventMarkers';
-import SavedPlaceMarkers from './map/SavedPlaceMarkers';
 import MapPopupContent from './MapPopupContent';
 
 const SA_CENTER = [-26.2041, 28.0473];
@@ -340,13 +339,6 @@ export default function MapView({
           fillOpacity={0.05}
         />
       ))}
-
-      <SavedPlaceMarkers
-        ownPlaces={showSavedPlaces ? savedPlaces : []}
-        groupPlaces={showSavedPlaces ? groupSavedPlaces : []}
-        onOwnClick={onSavedPlaceClick}
-        onGroupClick={onGroupPlaceClick}
-      />
 
       {destination && (
         <CustomMapMarker position={[destination.lat, destination.lng]} anchor="bottom">
