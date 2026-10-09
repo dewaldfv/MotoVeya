@@ -89,13 +89,13 @@ export function useMapLibreCamera({ userPos, heading, speed, nextManeuverDistanc
     if (!map || !userPos) return;
 
     const rawSpeed = Math.max(0, Number(speed) || 0);
-    filteredSpeedRef.current = lerp(filteredSpeedRef.current, rawSpeed, 0.18);
+    filteredSpeedRef.current = lerp(filteredSpeedRef.current, rawSpeed, 0.4);
 
     const rawHeading = Number.isFinite(Number(heading)) ? normalizeAngle(Number(heading)) : null;
     if (rawHeading != null) {
       filteredHeadingRef.current = filteredHeadingRef.current == null
         ? rawHeading
-        : moveAngle(filteredHeadingRef.current, rawHeading, 0.16);
+        : moveAngle(filteredHeadingRef.current, rawHeading, 0.5);
     }
 
     const effectiveHeading = filteredHeadingRef.current;
@@ -146,7 +146,7 @@ export function useMapLibreCamera({ userPos, heading, speed, nextManeuverDistanc
   // Continuous catch-up loop — eases toward the target every frame
   useEffect(() => {
     if (!map) return;
-    const SMOOTH = 0.18;
+    const SMOOTH = 0.22;
     const tick = () => {
       const target = targetRef.current;
       const cur = currentCenterRef.current;
@@ -156,8 +156,8 @@ export function useMapLibreCamera({ userPos, heading, speed, nextManeuverDistanc
         cur.lat += dLat * SMOOTH;
         cur.lng += dLng * SMOOTH;
 
-        currentZoomRef.current = lerp(currentZoomRef.current ?? target.zoom, target.zoom, 0.07);
-        currentBearingRef.current = moveAngle(currentBearingRef.current ?? target.bearing, target.bearing, 0.12);
+        currentZoomRef.current = lerp(currentZoomRef.current ?? target.zoom, target.zoom, 0.12);
+        currentBearingRef.current = moveAngle(currentBearingRef.current ?? target.bearing, target.bearing, 0.25);
         currentPitchRef.current = lerp(currentPitchRef.current ?? target.pitch, target.pitch, 0.12);
 
         programmaticBearingRef.current = currentBearingRef.current;

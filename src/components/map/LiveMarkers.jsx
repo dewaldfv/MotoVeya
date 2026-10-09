@@ -72,18 +72,25 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
     };
   }, [map, styleVersion]);
 
-  // Continuous smooth-interpolation loop for the rider marker
+  // Continuous smooth-interpolation loop for the rider marker.
+  // Uses velocity-based prediction: between GPS fixes the target keeps
+  // moving along the last computed velocity vector, so the marker glides
+  // instead of stop-and-go jumping on each fix.
   useEffect(() => {
     if (!map) return;
     const animate = () => {
       const m = markersRef.current.get('rider-self');
       const target = riderTargetRef.current;
       if (m && target) {
+        const now = performance.now();
+        const elapsed = Math.min(2.5, (now - (target.t || now)) / 1000);
+        const predLat = target.lat + (target.velLat || 0) * elapsed;
+        const predLng = target.lng + (target.velLng || 0) * elapsed;
         const ll = m.getLngLat();
-        const curLat = ll?.lat ?? target.lat;
-        const curLng = ll?.lng ?? target.lng;
-        const newLat = curLat + (target.lat - curLat) * 0.15;
-        const newLng = curLng + (target.lng - curLng) * 0.15;
+        const curLat = ll?.lat ?? predLat;
+        const curLng = ll?.lng ?? predLng;
+        const newLat = curLat + (predLat - curLat) * 0.22;
+        const newLng = curLng + (predLng - curLng) * 0.22;
         m.setLngLat([newLng, newLat]);
         if (accuracyReadyRef.current && target.accuracy > 0) {
           const src = map.getSource(ACC_SRC);
@@ -122,10 +129,19 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
           .setLngLat([rider.lng, rider.lat])
           .addTo(map);
         markers.set(id, m);
-        riderTargetRef.current = { lat: rider.lat, lng: rider.lng, accuracy: rider.accuracy || 0 };
+        riderTargetRef.current = { lat: rider.lat, lng: rider.lng, accuracy: rider.accuracy || 0, velLat: 0, velLng: 0, t: performance.now() };
       } else {
         m.getElement().innerHTML = riderSvg(screenHeading, isCrashRecovery);
-        riderTargetRef.current = { lat: rider.lat, lng: rider.lng, accuracy: rider.accuracy || 0 };
+        const prev = riderTargetRef.current;
+        let velLat = 0, velLng = 0;
+        if (prev && prev.lat != null) {
+          const dt = (performance.now() - (prev.t || 0)) / 1000;
+          if (dt > 0.1 && dt < 5) {
+            velLat = Math.max(-0.0008, Math.min(0.0008, (rider.lat - prev.lat) / dt));
+            velLng = Math.max(-0.0008, Math.min(0.0008, (rider.lng - prev.lng) / dt));
+          }
+        }
+        riderTargetRef.current = { lat: rider.lat, lng: rider.lng, accuracy: rider.accuracy || 0, velLat, velLng, t: performance.now() };
       }
     } else {
       const m = markers.get('rider-self');

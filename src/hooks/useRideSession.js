@@ -324,11 +324,11 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
       setHeading((prev) => {
         if (prev != null) {
           const delta = ((compass - prev + 540) % 360) - 180;
-          if (Math.abs(delta) < 2) return prev;
+          if (Math.abs(delta) < 1) return prev;
         }
         return compass;
       });
-    }, 500);
+    }, 200);
     return () => clearInterval(interval);
   }, [rideStatus]);
 
