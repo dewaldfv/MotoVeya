@@ -68,9 +68,13 @@ export default function BroadcastCard() {
           {result ? (
             <div className="space-y-2 py-2 text-sm">
               <p className="text-muted-foreground">Total users: {result.total_users}</p>
+              <p className="text-muted-foreground">Web push delivered: {result.web_push_sent ?? 0}</p>
+              <p className="text-muted-foreground">Native push: {result.native_push_sent ?? 0}{result.push_failed ? ` (${result.push_failed} not deliverable)` : ''}</p>
+              <p className="text-muted-foreground">In-app notifications: {result.in_app_notified ?? 0}</p>
               <p className="text-muted-foreground">Emails sent: {result.emails_sent}{result.email_failed ? ` (${result.email_failed} failed)` : ''}</p>
-              <p className="text-muted-foreground">Push sent: {result.push_sent}{result.push_failed ? ` (${result.push_failed} failed)` : ''}</p>
-              <p className="text-xs text-muted-foreground">Push delivery requires the native mobile build with push credentials configured.</p>
+              {result.web_push_sent === 0 && result.native_push_sent === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">No push subscriptions found. Users must enable notifications in Settings to receive pushes.</p>
+              )}
             </div>
           ) : (
             <div className="space-y-4 py-2">
