@@ -130,13 +130,13 @@ export default function Home() {
   });
 
   const { data: eventData = null } = useQuery({
-    queryKey: ['events'],
+    queryKey: ['home-events'],
     queryFn: async () => {
-      const data = (await base44.entities.Event.list('event_date', 100)) || [];
-      saveMapDataCache('events', data);
+      const data = (await base44.entities.Event.filter({ status: 'approved' }, 'event_date', 100)) || [];
+      saveMapDataCache('home-events', data);
       return data;
     },
-    initialData: () => getMapDataCache('events') || undefined,
+    initialData: () => getMapDataCache('home-events') || undefined,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     enabled: deferMapData,
