@@ -32,47 +32,63 @@ Deno.serve(async (req) => {
     ]);
     const friendRecords = [...(asReq || []), ...(asRec || [])];
 
-    // Bulk-fetch active distress and crash alerts to flag friends in distress.
-    const distressMap = new Map();
-    try {
-      const [activeDistress, activeCrashes] = await Promise.all([
-        svc.entities.DistressAlert.filter({ status: 'active' }, '-created_date', 100),
-        svc.entities.CrashAlert.filter({ status: 'active' }, '-created_date', 100),
-      ]);
-      for (const d of [...(activeDistress || []), ...(activeCrashes || [])]) {
-        if (d.rider_id && !distressMap.has(d.rider_id)) distressMap.set(d.rider_id, d);
-      }
-    } catch (e) { console.error('distress fetch error', e); }
-
-    // Determine which active group rides the current user is in (for location_group_rides_only).
-    const myParts = (await svc.entities.RideParticipant.filter({ user_id: me.id }, '-last_updated', 50)) || [];
-    const activeRideIds = [];
-    for (const p of myParts) {
-      try {
-        const r = await svc.entities.GroupRide.get(p.group_ride_id);
-        if (ACTIVE_RIDE_STATES.includes(r.status)) activeRideIds.push(p.group_ride_id);
-      } catch (e) { /* ride may have been deleted */ }
-    }
-
-    const friends = [];
+    // De-duplicate bidirectional friendships and collect friend user IDs.
+    const friendUserIds = [];
     const seenUserIds = new Set();
+    const friendMeta = []; // { friendUid, friendName, isFavorite, friendId }
     for (const f of friendRecords) {
       const isRequester = f.requester_id === me.id;
       const friendUid = isRequester ? f.recipient_id : f.requester_id;
-      if (seenUserIds.has(friendUid)) continue; // deduplicate bidirectional friendships
+      if (seenUserIds.has(friendUid)) continue;
       seenUserIds.add(friendUid);
+      friendUserIds.push(friendUid);
       const friendName = isRequester ? f.recipient_name : f.requester_name;
+      friendMeta.push({ friendUid, friendName, isFavorite: f.is_favorite || false, friendId: f.id });
+    }
 
-      // Load the friend's public profile.
-      let profile = null;
-      try { profile = await svc.entities.User.get(friendUid); } catch (e) { /* private user */ }
+    if (friendUserIds.length === 0) return Response.json({ friends: [] });
+
+    // Batch-fetch all friend profiles, privacy settings, distress/crash alerts,
+    // and my ride participations in a single parallel batch — no per-friend loops.
+    const [profiles, privSettings, activeDistress, activeCrashes, myParts] = await Promise.all([
+      svc.entities.User.filter({ id: { $in: friendUserIds } }, '-created_date', 200),
+      svc.entities.PrivacySetting.filter({ created_by_id: { $in: friendUserIds } }, '-created_date', 200),
+      svc.entities.DistressAlert.filter({ status: 'active' }, '-created_date', 100),
+      svc.entities.CrashAlert.filter({ status: 'active' }, '-created_date', 100),
+      svc.entities.RideParticipant.filter({ user_id: me.id }, '-last_updated', 50),
+    ]);
+
+    // Index profiles and privacy by user id for O(1) lookup.
+    const profileMap = new Map();
+    for (const p of (profiles || [])) profileMap.set(p.id, p);
+    const privacyMap = new Map();
+    for (const ps of (privSettings || [])) {
+      if (!privacyMap.has(ps.created_by_id)) privacyMap.set(ps.created_by_id, ps);
+    }
+
+    // Distress/crash map by rider_id.
+    const distressMap = new Map();
+    for (const d of [...(activeDistress || []), ...(activeCrashes || [])]) {
+      if (d.rider_id && !distressMap.has(d.rider_id)) distressMap.set(d.rider_id, d);
+    }
+
+    // Determine active group ride IDs (batch fetch rides instead of per-participant).
+    const rideIds = [...new Set((myParts || []).map((p) => p.group_ride_id).filter(Boolean))];
+    const activeRideIds = new Set();
+    if (rideIds.length > 0) {
+      const rides = await svc.entities.GroupRide.filter({ id: { $in: rideIds } }, '-created_date', 50);
+      for (const r of (rides || [])) {
+        if (ACTIVE_RIDE_STATES.includes(r.status)) activeRideIds.add(r.id);
+      }
+    }
+
+    const friends = [];
+    for (const { friendUid, friendName, isFavorite, friendId } of friendMeta) {
+      const profile = profileMap.get(friendUid) || null;
 
       // Load the friend's privacy settings (their choices about what to share).
-      let privacy = { ...DEFAULT_PRIVACY };
-      try {
-        const ps = await svc.entities.PrivacySetting.filter({ created_by_id: friendUid }, '-created_date', 1);
-        if (ps && ps[0]) privacy = { ...privacy, ...ps[0] };
-      } catch (e) { /* no settings = defaults */ }
+      const ps = privacyMap.get(friendUid);
+      const privacy = { ...DEFAULT_PRIVACY, ...(ps || {}) };
 
       // Live location — read from the friend's own User profile, gated by their audience choice.
       const fLat = profile?.last_lat;
@@ -87,12 +103,11 @@ Deno.serve(async (req) => {
       if (locFresh && audience !== 'nobody' && fLat != null && fLng != null) {
         let reveal = false;
         if (audience === 'friends' || audience === 'group_rides') {
-          // Friends can see each other permanently — no group-ride requirement.
           reveal = true;
         } else if (audience === 'favorite_friends') {
-          reveal = !!f.is_favorite;
+          reveal = isFavorite;
         } else if (audience === 'emergency_contacts') {
-          reveal = false; // not exposed on the friends map
+          reveal = false;
         }
         if (reveal) { lat = fLat; lng = fLng; location_shared = true; }
       }
@@ -101,7 +116,7 @@ Deno.serve(async (req) => {
       const lastSeenAt = profile?.last_seen_at || null;
       const online = !!(lastSeenAt && Date.now() - new Date(lastSeenAt).getTime() < 3 * 60 * 1000);
       friends.push({
-        friend_id: f.id,
+        friend_id: friendId,
         user_id: friendUid,
         name: profile?.nickname || profile?.full_name || friendName || 'Rider',
         nickname: profile?.nickname || null,
@@ -113,7 +128,7 @@ Deno.serve(async (req) => {
         heading: location_shared ? (profile?.last_heading ?? null) : null,
         battery_level: location_shared ? (profile?.battery_level ?? null) : null,
         last_updated: location_shared ? fUpdated : null,
-        is_favorite: f.is_favorite || false,
+        is_favorite: isFavorite,
         distress: hasDistress,
         phone: hasDistress ? (profile?.phone || null) : null,
         share_live_location: privacy.share_live_location,

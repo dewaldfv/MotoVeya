@@ -44,6 +44,8 @@ export function useLocationBroadcast() {
   const wakeLockRef = useRef(null);
   const trackingRef = useRef(false);
   const notifiedRef = useRef(false);
+  const ownWatchIdRef = useRef(null);
+  const lastRideEventRef = useRef(0);
 
   useEffect(() => {
     let intervalId = null;
@@ -132,6 +134,35 @@ export function useLocationBroadcast() {
       const d = ev.detail || {};
       const speed = d.speed != null ? d.speed : lastSpeedRef.current;
       latestPosRef.current = { lat: d.lat, lng: d.lng, speed, heading: d.heading ?? null };
+      lastRideEventRef.current = Date.now();
+      // Ride Mode is active — stop our own watch to avoid competing GPS updates.
+      stopOwnWatch();
+    };
+    // Lightweight fallback watch: when no ride is active but consent is on,
+    // share the user's location so friends can see them even off-ride.
+    const startOwnWatch = () => {
+      if (ownWatchIdRef.current || !('geolocation' in navigator)) return;
+      ownWatchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          // Don't compete with Ride Mode — if it started, let it own GPS.
+          if (Date.now() - lastRideEventRef.current < 10000) return;
+          const coords = pos.coords;
+          latestPosRef.current = {
+            lat: coords.latitude,
+            lng: coords.longitude,
+            speed: coords.speed != null && !isNaN(coords.speed) ? coords.speed * 3.6 : lastSpeedRef.current,
+            heading: coords.heading != null && !isNaN(coords.heading) ? coords.heading : null,
+          };
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+      );
+    };
+    const stopOwnWatch = () => {
+      if (ownWatchIdRef.current) {
+        navigator.geolocation.clearWatch(ownWatchIdRef.current);
+        ownWatchIdRef.current = null;
+      }
     };
     const onPosError = (err) => {
       if (err && err.code === err.PERMISSION_DENIED && trackingRef.current) endSession();
@@ -167,11 +198,16 @@ export function useLocationBroadcast() {
       await updateBattery();
       settingsPollId = setInterval(loadSettings, SETTINGS_POLL_MS);
       batteryPollId = setInterval(updateBattery, 30000);
-      // Ride Mode owns the authoritative GPS watch. Live sharing consumes the
-      // same fixes through a lightweight in-app event instead of opening a
-      // second watchPosition() that can compete for Android/WebView GPS updates.
+      // Ride Mode owns the authoritative GPS watch during rides. Live sharing
+      // consumes the same fixes through a lightweight in-app event. When no
+      // ride is active, a fallback geolocation watch keeps sharing the user's
+      // location so friends can see them even off-ride.
       window.addEventListener('motoveya:ride-location', onPos);
-      intervalId = setInterval(broadcast, TICK_MS);
+      intervalId = setInterval(() => {
+        const rideActive = Date.now() - lastRideEventRef.current < 10000;
+        if (!rideActive && !ownWatchIdRef.current) startOwnWatch();
+        broadcast();
+      }, TICK_MS);
       document.addEventListener('visibilitychange', onVis);
       broadcast();
     };
@@ -184,6 +220,7 @@ export function useLocationBroadcast() {
       if (settingsPollId) clearInterval(settingsPollId);
       if (batteryPollId) clearInterval(batteryPollId);
       document.removeEventListener('visibilitychange', onVis);
+      stopOwnWatch();
       releaseWakeLock();
       if (trackingRef.current) {
         try { base44.functions.invoke('update-my-location', { end_session: true }); } catch (e) {}
