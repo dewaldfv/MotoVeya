@@ -91,6 +91,8 @@ Deno.serve(async (req) => {
       const privacy = { ...DEFAULT_PRIVACY, ...(ps || {}) };
 
       // Live location — read from the friend's own User profile, gated by their audience choice.
+      // The last known position is returned even when stale so offline friends
+      // remain visible on the map; is_online distinguishes fresh vs stale fixes.
       const fLat = profile?.last_lat;
       const fLng = profile?.last_lng;
       const fUpdated = profile?.last_location_updated;
@@ -100,16 +102,20 @@ Deno.serve(async (req) => {
       let lat = null;
       let lng = null;
       let location_shared = false;
-      if (locFresh && audience !== 'nobody' && fLat != null && fLng != null) {
+      let is_online = false;
+      if (audience !== 'nobody' && fLat != null && fLng != null) {
         let reveal = false;
         if (audience === 'friends' || audience === 'group_rides') {
           reveal = true;
         } else if (audience === 'favorite_friends') {
           reveal = isFavorite;
-        } else if (audience === 'emergency_contacts') {
-          reveal = false;
         }
-        if (reveal) { lat = fLat; lng = fLng; location_shared = true; }
+        if (reveal) {
+          lat = fLat;
+          lng = fLng;
+          location_shared = true;
+          is_online = !!locFresh;
+        }
       }
 
       const hasDistress = distressMap.has(friendUid);
@@ -124,6 +130,7 @@ Deno.serve(async (req) => {
         lat,
         lng,
         location_shared,
+        is_online,
         speed_kmh: location_shared ? (profile?.last_speed_kmh ?? 0) : 0,
         heading: location_shared ? (profile?.last_heading ?? null) : null,
         battery_level: location_shared ? (profile?.battery_level ?? null) : null,

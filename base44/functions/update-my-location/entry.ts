@@ -42,9 +42,10 @@ Deno.serve(async (req) => {
     };
 
     // Explicit end (ride ended, user revoked, permission lost).
+    // Keep the last known position so offline friends remain visible on the map;
+    // only consent revocation clears the stored coordinates.
     if (end_session) {
       await expireActiveSessions();
-      await svc.entities.User.update(me.id, { last_lat: null, last_lng: null, last_location_updated: null });
       return Response.json({ ok: true, sharing: false });
     }
 

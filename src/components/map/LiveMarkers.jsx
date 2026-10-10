@@ -9,10 +9,11 @@ import { circlePolygon } from '@/lib/maplibreUtils';
  * setLngLat(). A continuous requestAnimationFrame loop eases the rider
  * marker toward the latest GPS target, absorbing position noise.
  */
-const FRIEND_COLORS = { riding: '#22c55e', stopped: '#94a3b8', distress: '#ef4444' };
+const FRIEND_COLORS = { riding: '#22c55e', stopped: '#94a3b8', distress: '#ef4444', offline: '#64748b' };
 
 function friendColor(f) {
   if (f.is_distress) return FRIEND_COLORS.distress;
+  if (f.is_online === false) return FRIEND_COLORS.offline;
   return f.speed_kmh > 5 ? FRIEND_COLORS.riding : FRIEND_COLORS.stopped;
 }
 
@@ -174,9 +175,15 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       seen.add(id);
       data.set(id, f);
       const color = friendColor(f);
+      const isOffline = f.is_online === false;
       let m = markers.get(id);
       if (!m) {
-        const el = circleElement(color, 14);
+        const el = circleElement(color, isOffline ? 12 : 14);
+        if (isOffline) {
+          el.style.borderStyle = 'dashed';
+          el.style.opacity = '0.65';
+        }
+        el.title = isOffline ? `${f.name} — last seen ${f.last_updated ? new Date(f.last_updated).toLocaleTimeString() : 'earlier'}` : f.name;
         el.addEventListener('click', () => cbRef.current?.(data.get(id)));
         m = new maplibregl.Marker({ element: el })
           .setLngLat([f.lng, f.lat])
@@ -184,7 +191,10 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
         markers.set(id, m);
       } else {
         m.setLngLat([f.lng, f.lat]);
-        m.getElement().style.background = color;
+        const el = m.getElement();
+        el.style.background = color;
+        el.style.borderStyle = isOffline ? 'dashed' : 'solid';
+        el.style.opacity = isOffline ? '0.65' : '1';
       }
     });
 

@@ -172,7 +172,7 @@ export default function Home() {
           lat: f.lat, lng: f.lng,
           speed_kmh: f.speed_kmh, heading: f.heading, battery_level: f.battery_level,
           last_updated: f.last_updated, is_distress: f.distress, phone: f.phone,
-          avatar_url: f.avatar_url, is_favorite: f.is_favorite
+          avatar_url: f.avatar_url, is_favorite: f.is_favorite, is_online: f.is_online
         }));
       saveMapDataCache('friends:' + me?.id, data, 60 * 1000);
       return data;
