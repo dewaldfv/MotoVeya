@@ -16,6 +16,7 @@ import { useScreenOrientation } from '@/hooks/useScreenOrientation';
 import { useIdleMapUi } from '@/hooks/useIdleMapUi';
 import { usePresence } from '@/hooks/usePresence';
 import { useOverlayBackHandler } from '@/hooks/useOverlayBackHandler';
+import { useScreenWakeLock } from '@/hooks/useScreenWakeLock';
 
 const pageVariants = {
   initial: { opacity: 0, x: '100%' },
@@ -47,6 +48,7 @@ export default function AppLayout() {
   useMessageNotifications();
   usePushNotifications();
   useOverlayBackHandler();
+  useScreenWakeLock();
   const navigate = useNavigate();
   const { user, isLoadingAuth } = useAuth();
   usePresence(!!user && !isLoadingAuth);
