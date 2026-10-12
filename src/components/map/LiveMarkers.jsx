@@ -9,12 +9,20 @@ import { circlePolygon } from '@/lib/maplibreUtils';
  * setLngLat(). A continuous requestAnimationFrame loop eases the rider
  * marker toward the latest GPS target, absorbing position noise.
  */
-const FRIEND_COLORS = { riding: '#22c55e', stopped: '#94a3b8', distress: '#ef4444', offline: '#64748b' };
+const FRIEND_COLORS = { riding: '#22c55e', stopped: '#22c55e', distress: '#ef4444', offline: '#64748b' };
 
 function friendColor(f) {
   if (f.is_distress) return FRIEND_COLORS.distress;
   if (f.is_online === false) return FRIEND_COLORS.offline;
   return f.speed_kmh > 5 ? FRIEND_COLORS.riding : FRIEND_COLORS.stopped;
+}
+
+function friendIsRiding(f) {
+  return f.is_online !== false && !f.is_distress && f.speed_kmh > 5 && f.heading != null;
+}
+
+function friendArrowSvg(heading, color) {
+  return `<svg width="22" height="22" viewBox="0 0 24 24" fill="${color}" stroke="#fff" stroke-width="2" stroke-linejoin="round" style="transform:rotate(${heading || 0}deg);transition:transform 0.3s ease;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45))"><path d="M12 2 L20 20 L12 16 L4 20 Z"/></svg>`;
 }
 
 function groupColor(g) {
@@ -176,12 +184,21 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       data.set(id, f);
       const color = friendColor(f);
       const isOffline = f.is_online === false;
+      const riding = friendIsRiding(f);
       let m = markers.get(id);
       if (!m) {
-        const el = circleElement(color, isOffline ? 12 : 14);
-        if (isOffline) {
-          el.style.borderStyle = 'dashed';
-          el.style.opacity = '0.65';
+        const el = document.createElement('div');
+        el.style.pointerEvents = 'auto';
+        el.style.cursor = 'pointer';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        if (riding) {
+          el.innerHTML = friendArrowSvg(f.heading, color);
+        } else {
+          const dot = circleElement(color, isOffline ? 11 : 13);
+          if (isOffline) dot.style.opacity = '0.6';
+          el.appendChild(dot);
         }
         el.title = isOffline ? `${f.name} — last seen ${f.last_updated ? new Date(f.last_updated).toLocaleTimeString() : 'earlier'}` : f.name;
         el.addEventListener('click', () => cbRef.current?.(data.get(id)));
@@ -192,9 +209,22 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       } else {
         m.setLngLat([f.lng, f.lat]);
         const el = m.getElement();
-        el.style.background = color;
-        el.style.borderStyle = isOffline ? 'dashed' : 'solid';
-        el.style.opacity = isOffline ? '0.65' : '1';
+        if (riding) {
+          el.innerHTML = friendArrowSvg(f.heading, color);
+        } else {
+          const existing = el.querySelector('div');
+          if (existing) {
+            existing.style.background = color;
+            existing.style.opacity = isOffline ? '0.6' : '1';
+            existing.style.width = (isOffline ? 11 : 13) + 'px';
+            existing.style.height = (isOffline ? 11 : 13) + 'px';
+          } else {
+            const dot = circleElement(color, isOffline ? 11 : 13);
+            if (isOffline) dot.style.opacity = '0.6';
+            el.innerHTML = '';
+            el.appendChild(dot);
+          }
+        }
       }
     });
 
