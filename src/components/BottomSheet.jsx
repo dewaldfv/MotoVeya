@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { nextOverlayId, registerOverlay, unregisterOverlay } from '@/lib/overlayManager';
 
-export default function BottomSheet({ open, onClose, title, children, backgroundImage, immersive = false }) {
+export default function BottomSheet({ open, onClose, title, children, backgroundImage = undefined, immersive = false }) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
