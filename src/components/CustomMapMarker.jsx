@@ -8,11 +8,7 @@ import { useMapInstance } from '@/lib/maplibreContext';
  * Uses maplibregl.Marker which natively supports custom DOM elements — no
  * OverlayView required (unlike the Google Maps raster-only approach).
  *
- * @param {number[]|{lat:number,lng:number}} position - [lat, lng] or {lat, lng}
- * @param {React.ReactNode} children - marker visual content
- * @param {function} onClick - click handler
- * @param {string} anchor - 'center' (default) or 'bottom' (pin-style)
- * @param {number} zIndex - marker z-index
+ * @param {{ position: number[] | { lat: number, lng: number }, children?: import('react').ReactNode, onClick?: (event: MouseEvent) => void, anchor?: string, zIndex?: number }} props - marker props.
  */
 export default function CustomMapMarker({ position, children, onClick, zIndex = 0, anchor = 'center' }) {
   const map = useMapInstance();
