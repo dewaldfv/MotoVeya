@@ -66,7 +66,7 @@ function UserLocationCenterer({ active, onDone }) {
       { enableHighAccuracy: true, timeout: 8000 }
     );
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [active, map]);
   return null;
 }

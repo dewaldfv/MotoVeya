@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Navigation, Fuel, UtensilsCrossed, Beer, Clock, Route as RouteIcon, Compass } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import LocationSearchInput from './LocationSearchInput';
 import { savePendingNavigation } from '@/lib/rideCache';
 import { toast } from 'sonner';
 

@@ -63,7 +63,7 @@ export default function MapLibreCircle({
       removeSourceAndLayer(map, sourceId, layerId);
       removeSourceAndLayer(map, null, `${layerId}-outline`);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [map, styleVersion, sourceId, layerId]);
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, Route, Clock, Calendar, Fuel, Bike, Trophy, Camera, Lock } from 'lucide-react';
+import { ChevronLeft, Route, Clock, Calendar, Fuel, Bike, Trophy, Lock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import RiderAvatar from '@/components/community/RiderAvatar';
 import StatusBadge from '@/components/community/StatusBadge';
@@ -10,7 +10,7 @@ import MiniActivityChart from '@/components/community/MiniActivityChart';
 import RiderQuickActions from '@/components/community/RiderQuickActions';
 import FriendLocationSheet from '@/components/community/FriendLocationSheet';
 import LoginPrompt from '@/components/LoginPrompt';
-import { formatDistance, formatDuration, formatRelativeDate, onlineStatus, computeAchievements } from '@/lib/riderStats';
+import { formatDistance, formatDuration, onlineStatus, computeAchievements } from '@/lib/riderStats';
 import { inviteFriendToRide } from '@/lib/rideInvite';
 import { toast } from 'sonner';
 

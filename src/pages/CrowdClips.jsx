@@ -8,9 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Camera, Clapperboard, Heart, MessageCircle, MapPin, Plus, Send,
-  UserPlus, UserCheck, Upload, Video, X, LocateFixed, Share2, Bookmark,
-  MoreVertical, Volume2, VolumeX, Play, Pause
+  Camera, Clapperboard, Heart, MessageCircle, MapPin, Plus, Send, Upload, Video, X, LocateFixed, Share2, Bookmark, Volume2, VolumeX
 } from 'lucide-react';
 import { toast } from 'sonner';
 

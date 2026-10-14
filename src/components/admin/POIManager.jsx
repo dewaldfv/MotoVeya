@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { MapPin, Upload, Trash2, Pencil, Plus, Image as ImageIcon, FileUp } from 'lucide-react';
+import { MapPin, Upload, Trash2, Pencil, Plus, FileUp } from 'lucide-react';
 
 const CATEGORIES = ['maintenance_repair','tyres_wheels','batteries','oil_lubricants','spare_parts','dealerships','riding_gear','custom_paint','custom_builders','performance_tuning','electrical','suspension','chains_sprockets','detailing','transport','roadside_assist','training_schools','photography','food_restaurant','food_pub_bar','food_cafe','food_fast_food','food_breakfast','food_bakery','food_market'];
 const CATEGORY_LABELS = Object.fromEntries(CATEGORIES.map(c=>[c,c.replace(/_/g,' ')]));

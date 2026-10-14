@@ -1,4 +1,4 @@
-import { Eye, Clock, BadgeCheck, AlertCircle, Hourglass, CheckCircle2, XCircle } from 'lucide-react';
+import { Eye, BadgeCheck, AlertCircle, Hourglass, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getServiceCategory } from '@/lib/serviceCategories';
 

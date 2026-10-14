@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Repeat2, Plus, Trash2, ArrowUp, ArrowDown, Save, Share2, Navigation, Loader2, Calendar, CloudSun } from 'lucide-react';
+import { ChevronLeft, Repeat2, Trash2, ArrowUp, ArrowDown, Save, Share2, Navigation, Loader2, Calendar, CloudSun } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';

@@ -61,7 +61,7 @@ function DraggableWaypointMarker({ waypoint, index, total, onDragEnd }) {
     markerRef.current = marker;
 
     return () => { marker.remove(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [map]);
 
   // Update position when waypoint changes (but not from drag)

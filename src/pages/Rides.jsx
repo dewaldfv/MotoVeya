@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CloudSun, ChevronRight, Route, Gauge, Fuel, Bike as BikeIcon, Wrench } from 'lucide-react';
+import { CloudSun, ChevronRight, Route, Gauge, Fuel, Bike as BikeIcon } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import NavigationBanner from '@/components/rides/NavigationBanner';
 import RideHistoryBanner from '@/components/rides/RideHistoryBanner';

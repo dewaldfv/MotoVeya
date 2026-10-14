@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import maplibregl from 'maplibre-gl';
 import MapLibreContainer from '@/components/MapLibreContainer';
 import MapLibreLine from '@/components/MapLibreLine';

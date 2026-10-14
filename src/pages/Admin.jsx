@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Check, X, Users, Calendar, TrendingUp, AlertTriangle, Siren, Crown, Wrench, MapPin, Pencil, Eye } from 'lucide-react';
+import { Shield, Check, X, Users, Calendar, AlertTriangle, Siren, Crown, Wrench, MapPin, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

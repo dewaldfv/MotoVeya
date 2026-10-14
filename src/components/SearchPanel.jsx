@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, X, MapPin, Navigation, Fuel, UtensilsCrossed, Beer, Wrench, Bike, Mountain, Flag, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 
 const QUICK_FILTERS = [
   { label: 'Fuel', icon: Fuel, query: 'fuel station' },

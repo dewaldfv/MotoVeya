@@ -1,7 +1,6 @@
-import { Play, Pause, Square, Megaphone, Share2, MapPin, Crown, Shield, Trash2, ChevronDown } from 'lucide-react';
+import { Play, Pause, Square, Megaphone, Share2, MapPin, Crown, Shield, Trash2 } from 'lucide-react';
 import BottomSheet from '@/components/BottomSheet';
 import RiderAvatar from '@/components/community/RiderAvatar';
-import { Button } from '@/components/ui/button';
 
 export default function LeaderControls({ open, onClose, ride, participants, user, onStart, onPause, onEnd, onAssign, onBroadcast, onShareRoute, onEditStops, onRemove }) {
   const ended = ride?.status === 'finished';

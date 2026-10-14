@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Clock, Gauge, Fuel, TrendingUp, Calendar, MapPin, Bike as BikeIcon, Repeat2, Save } from 'lucide-react';
+import { ChevronLeft, Clock, Gauge, Fuel, TrendingUp, Calendar, MapPin, Repeat2, Save } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { savePendingNavigation } from '@/lib/rideCache';
 import MapView from '@/components/MapView';

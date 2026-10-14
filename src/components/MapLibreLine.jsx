@@ -49,7 +49,7 @@ export default function MapLibreLine({
       });
     }
     return () => removeSourceAndLayer(map, sourceId, layerId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [map, styleVersion, sourceId, layerId]);
 
   // Update data when coordinates change

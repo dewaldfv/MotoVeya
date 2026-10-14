@@ -55,7 +55,7 @@ export default function CustomMapMarker({ position, children, onClick, zIndex = 
         markerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [map, position?.[0] ?? position?.lat, position?.[1] ?? position?.lng, anchor]);
 
   // Keep click handler fresh

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, MapPin, Clock, Gauge, ShieldAlert, Bell, Power, Battery } from 'lucide-react';
+import { ChevronLeft, MapPin, Gauge, ShieldAlert, Bell, Power, Battery } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';

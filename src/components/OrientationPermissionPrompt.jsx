@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Smartphone, RotateCw, X } from 'lucide-react';
+import { Smartphone, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOrientationPermission } from '@/hooks/useOrientationPermission';
 

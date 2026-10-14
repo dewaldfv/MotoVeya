@@ -76,7 +76,7 @@ export default function MapLibreContainer({
       mapRef.current = null;
       setMap(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // Handle layer/style changes

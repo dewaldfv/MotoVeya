@@ -43,7 +43,7 @@ export default function MapLibrePopup({ position, onClose, children }) {
       popupRef.current?.remove();
       popupRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [map, position?.lat, position?.lng]);
 
   useEffect(() => {

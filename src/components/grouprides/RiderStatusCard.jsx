@@ -1,4 +1,4 @@
-import { Battery, Satellite, Crown, Shield, Gauge } from 'lucide-react';
+import { Battery, Satellite } from 'lucide-react';
 import RiderAvatar from '@/components/community/RiderAvatar';
 import { RIDING_STATUS } from '@/lib/groupRide';
 

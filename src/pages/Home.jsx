@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Navigation, Phone, MapPin, ExternalLink, LocateFixed, Layers, X, Compass, Search, Loader2 } from 'lucide-react';
+import { Navigation, Phone, MapPin, ExternalLink, LocateFixed, Layers, X, Compass, Search } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -288,7 +288,7 @@ export default function Home() {
         });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // Free OSM/Overpass POI seeding: once per device per day, import a local rider area

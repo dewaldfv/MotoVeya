@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, Crown, ChevronLeft, Loader2, RefreshCw } from 'lucide-react';
+import { Check, X, Crown, ChevronLeft, RefreshCw } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { PRICING, PREMIUM_FEATURES } from '@/lib/plans';

@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useVoiceChannel } from '@/hooks/useVoiceChannel';
 import { getVoiceChannelForRide, endVoiceChannel, playEmergencyTone, playBroadcastTone } from '@/lib/voiceChannel';

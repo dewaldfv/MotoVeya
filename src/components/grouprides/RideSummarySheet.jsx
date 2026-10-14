@@ -1,4 +1,4 @@
-import { Route, Clock, Gauge, Fuel, Camera, CloudRain, Trophy, Users } from 'lucide-react';
+import { Route, Clock, Gauge, Camera, CloudRain, Trophy, Users } from 'lucide-react';
 import BottomSheet from '@/components/BottomSheet';
 import RiderAvatar from '@/components/community/RiderAvatar';
 import { formatDuration } from '@/lib/groupRide';

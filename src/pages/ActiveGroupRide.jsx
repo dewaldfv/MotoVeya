@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Crown, Shield, ShieldOff, Megaphone, Settings2, Loader2, Mic } from 'lucide-react';
+import { ChevronLeft, ShieldOff, Settings2, Loader2, Mic } from 'lucide-react';
 import { useVoiceChannelContext } from '@/components/voice/VoiceChannelProvider';
 import { getOrCreateVoiceChannelForRide } from '@/lib/voiceChannel';
 import { base44 } from '@/api/base44Client';
@@ -9,7 +9,7 @@ import RiderStatusCard from '@/components/grouprides/RiderStatusCard';
 import CommButtons from '@/components/grouprides/CommButtons';
 import LeaderControls from '@/components/grouprides/LeaderControls';
 import RideSummarySheet from '@/components/grouprides/RideSummarySheet';
-import { RIDE_STATUS, COMM_SIGNALS, haversine, geocode, formatDuration } from '@/lib/groupRide';
+import { RIDE_STATUS, haversine, geocode, formatDuration } from '@/lib/groupRide';
 import { getWeather } from '@/lib/weather';
 import { toast } from 'sonner';
 

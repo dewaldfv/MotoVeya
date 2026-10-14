@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Wrench, Eye, Clock, BadgeCheck, Loader2, Store } from 'lucide-react';
+import { ChevronLeft, Wrench, Eye, Loader2, Store } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import LoginPrompt from '@/components/LoginPrompt';
 import ProviderListingCard from '@/components/provider/ProviderListingCard';
 import ProviderEditDialog from '@/components/provider/ProviderEditDialog';
-import { getServiceCategory } from '@/lib/serviceCategories';
 
 export default function ServiceProviderDashboard() {
   const navigate = useNavigate();

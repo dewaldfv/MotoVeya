@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, MapPin, Pencil, Trash2, Bell, BellOff, Users, Crown, Power, Save, X } from 'lucide-react';
+import { ChevronLeft, MapPin, Pencil, Trash2, Bell, BellOff, Users, Power, Save, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
