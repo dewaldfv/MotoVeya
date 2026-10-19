@@ -43,7 +43,7 @@ export default function NativeEventMarkers({ events = [], favoriteEventIds = [],
         if (isTextMarker) {
           el.style.cssText = 'pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center;';
           inner.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:center;';
-          img.style.cssText = 'height:42px;width:auto;max-width:230px;object-fit:contain;display:block;';
+          img.style.cssText = 'max-height:56px;max-width:260px;width:auto;height:auto;object-fit:contain;display:block;';
         } else {
           el.style.cssText = 'width:44px;height:44px;pointer-events:auto;cursor:pointer;';
           inner.style.cssText = 'position:relative;width:44px;height:44px;';

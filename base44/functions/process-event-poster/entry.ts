@@ -64,9 +64,28 @@ Deno.serve(async (req) => {
     const data = normalize(result || {});
 
     const markerSvg = buildTextMarkerSvg(data);
-    const marker_asset = markerSvg ? `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(markerSvg)}` : null;
-    const marker_text = markerSvg ? String(data.marker_text || '').trim() : '';
-    const marker_error = marker_asset ? null : 'We could not read a clear event name from this image. Please upload a clearer image.';
+    const marker_fallback = markerSvg ? `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(markerSvg)}` : null;
+    const marker_text = String(data.marker_text || '').trim();
+
+    // Preferred marker: lift the poster's own lettering artwork instead of
+    // re-typesetting it. Falls back to the generated text marker when the
+    // image model cannot isolate the lettering.
+    let marker_asset = null;
+    if (marker_text) {
+      try {
+        const emblem = await svc.integrations.Core.GenerateImage({
+          prompt: `Take this motorcycle event poster and return ONLY the event name lettering block, reproduced exactly as it appears on the poster: the same letterforms, textures, colours, outlines and line arrangement (the poster's title lettering reads "${marker_text}"). Completely remove the photographic background, riders, motorcycles, chains, icons, small print and every other poster element, leaving only that lettering on a fully transparent background, tightly cropped with no empty space around it. Do not re-typeset, redraw, translate or add any text. Output a PNG with a transparent background.`,
+          existing_image_urls: [image_url],
+        });
+        // Only keep the lifted artwork when it actually carries transparency —
+        // an opaque rectangle would sit as a block on the map, which reads worse
+        // than the transparent text marker.
+        marker_asset = emblem?.url && (await hasAlphaChannel(emblem.url)) ? emblem.url : null;
+      } catch (error) {
+        console.error('poster emblem generation failed', error);
+      }
+    }
+    const marker_error = (marker_asset || marker_fallback) ? null : 'We could not read a clear event name from this image. Please upload a clearer image or the event logo.';
 
     if ((data.lat == null || data.lng == null) && (data.address || data.venue_name || data.city)) {
       const geo = await geocodeLocation([data.venue_name, data.address, data.city, data.province, 'South Africa'].filter(Boolean).join(', '));
@@ -87,12 +106,28 @@ Deno.serve(async (req) => {
       error_message: needsReview ? 'Review the extracted details and confirm the event location before publishing.' : undefined,
     });
 
-    return Response.json({ success: true, submission_id: submission.id, status, data, marker_asset, marker_text, marker_error });
+    return Response.json({ success: true, submission_id: submission.id, status, data, marker_asset, marker_fallback, marker_text, marker_error });
   } catch (error) {
     console.error('process-event-poster error', error);
     return Response.json({ error: error?.message || 'Failed to process event poster.' }, { status: 500 });
   }
 });
+
+// A transparent marker needs an alpha channel. Anything else (JPEG, opaque PNG)
+// is rejected so the transparent text marker is used instead.
+async function hasAlphaChannel(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return false;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+    if (!isPng || bytes.length < 26) return false;
+    // IHDR colour type: 4 = grey + alpha, 6 = RGB + alpha
+    return bytes[25] === 4 || bytes[25] === 6;
+  } catch (_) {
+    return false;
+  }
+}
 
 async function geocodeLocation(query) {
   try {
