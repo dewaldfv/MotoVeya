@@ -18,6 +18,10 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
   const [uploading, setUploading] = useState(false);
   const [uploadingMarker, setUploadingMarker] = useState(false);
   const [customMarker, setCustomMarker] = useState(null);
+  const [extractedMarker, setExtractedMarker] = useState(null);
+  const [extractedText, setExtractedText] = useState('');
+  const [markerError, setMarkerError] = useState(null);
+  const [posterUploaded, setPosterUploaded] = useState(false);
   const [processingPoster, setProcessingPoster] = useState(false);
   const [posterConfidence, setPosterConfidence] = useState(null);
   const emptyForm = { title: '', description: '', event_date: '', end_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] };
@@ -31,9 +35,17 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
       const local = (v) => v ? new Date(v).toISOString().slice(0, 16) : '';
       setForm({ ...emptyForm, ...editEvent, event_date: local(editEvent.event_date), end_date: local(editEvent.end_date), lat: editEvent.lat != null ? String(editEvent.lat) : '', lng: editEvent.lng != null ? String(editEvent.lng) : '', entry_fee_zar: editEvent.entry_fee_zar != null ? String(editEvent.entry_fee_zar) : '', photo_urls: editEvent.photo_urls || [] });
       setCustomMarker(editEvent.markerIcon || null);
+      setExtractedMarker(editEvent.marker_asset || null);
+      setExtractedText(editEvent.marker_text || '');
+      setMarkerError(null);
+      setPosterUploaded(!!editEvent.marker_asset);
     } else {
       setForm(emptyForm);
       setCustomMarker(null);
+      setExtractedMarker(null);
+      setExtractedText('');
+      setMarkerError(null);
+      setPosterUploaded(false);
     }
   }, [open, editEvent]);
 
@@ -61,6 +73,8 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
     const file = e.target.files?.[0];
     if (!file) return;
     setProcessingPoster(true);
+    setMarkerError(null);
+    setPosterUploaded(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       const result = await base44.functions.invoke('process-event-poster', { image_url: file_url });
@@ -91,9 +105,13 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
         photo_urls: [file_url, ...(f.photo_urls || []).filter((u) => u !== file_url)],
       }));
       setPosterConfidence({ overall: extracted.confidence_score, location: extracted.location_confidence, status: data.status, missing: extracted.missing_fields || [] });
+      setExtractedMarker(data.marker_asset || null);
+      setExtractedText(data.marker_text || '');
+      setMarkerError(data.marker_asset ? null : (data.marker_error || 'We could not read a clear event name from this image. Please upload a clearer image.'));
       toast.success(data.status === 'ready' ? 'Event details extracted and location found.' : 'Event details extracted. Please review the highlighted information.');
     } catch (err) {
       console.error(err);
+      setMarkerError(err?.message || 'Could not read the event poster');
       toast.error(err?.message || 'Could not read the event poster');
     } finally {
       setProcessingPoster(false);
@@ -121,11 +139,14 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
     if (!form.title || !form.event_date || !form.venue_name) { toast.error('Please fill in all required fields'); return; }
     if (form.category === 'rally' && !form.end_date) { toast.error('Rallies span a weekend — please add an end date'); return; }
     if (form.category === 'rally' && form.end_date && new Date(form.end_date) <= new Date(form.event_date)) { toast.error('End date must be after the start date'); return; }
+    if (posterUploaded && !extractedMarker && !customMarker) { toast.error(markerError || 'Upload a clearer image so we can build the event marker.'); return; }
     setSaving(true);
     try {
       const payload = {
         ...form,
         markerIcon: customMarker || getEventPosterMarkerUrl(form.photo_urls?.[0], form.category) || getEventMarkerUrl(form.category),
+        marker_asset: customMarker || extractedMarker || undefined,
+        marker_text: extractedText || undefined,
         event_date: new Date(form.event_date).toISOString(),
         end_date: form.category === 'rally' && form.end_date ? new Date(form.end_date).toISOString() : undefined,
         lat: form.lat ? Number(form.lat) : undefined,
@@ -149,6 +170,10 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
       onEditClose?.();
       onSubmitted?.();
       setCustomMarker(null);
+      setExtractedMarker(null);
+      setExtractedText('');
+      setMarkerError(null);
+      setPosterUploaded(false);
       setForm({ title: '', description: '', event_date: '', end_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
     } catch (e) {
       console.error(e);
@@ -159,7 +184,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
   };
 
   const categoryLabel = EVENT_CATEGORIES.find((c) => c.value === form.category)?.label || 'Rally';
-  const activeMarkerUrl = customMarker || getEventPosterMarkerUrl(form.photo_urls?.[0], form.category) || getEventMarkerUrl(form.category);
+  const activeMarkerUrl = customMarker || extractedMarker || getEventPosterMarkerUrl(form.photo_urls?.[0], form.category) || getEventMarkerUrl(form.category);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -170,7 +195,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
             <div className="mb-2 flex items-center justify-between gap-3">
               <div>
                 <Label className="text-base">Upload Event Poster</Label>
-                <p className="mt-1 text-xs text-muted-foreground">MotoVeya will read the poster, fill the event details, identify the category and locate the venue.</p>
+                <p className="mt-1 text-xs text-muted-foreground">MotoVeya will read the poster, fill the event details, identify the category, locate the venue and build the map marker from the event name.</p>
               </div>
               <label className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground">
                 {processingPoster ? <><Loader2 size={16} className="animate-spin" /> Reading...</> : <><ImagePlus size={16} /> Upload Ad</>}
@@ -260,9 +285,9 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
           <div>
             <Label>Map Marker</Label>
             <div className="mt-2 flex items-center gap-3 rounded-md border border-input p-3">
-              <img src={activeMarkerUrl} alt="Marker" className="h-12 w-12 object-contain" />
+              <img src={activeMarkerUrl} alt="Marker" className="h-12 max-w-[150px] object-contain" />
               <div className="flex-1 text-xs text-muted-foreground">
-                {customMarker ? 'Custom marker uploaded' : `Default ${categoryLabel} marker`}
+                {customMarker ? 'Custom marker uploaded' : extractedMarker ? 'Event-name marker built from your image' : `Default ${categoryLabel} marker`}
               </div>
               {customMarker && (
                 <button type="button" onClick={() => setCustomMarker(null)} className="rounded-full bg-black/70 p-1 text-white">
@@ -274,6 +299,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
               {uploadingMarker ? <><Loader2 size={16} className="animate-spin" /> Uploading...</> : <><ImagePlus size={16} /> Upload Custom Marker (optional)</>}
               <input type="file" accept="image/*" className="hidden" onChange={handleMarkerUpload} disabled={uploadingMarker} />
             </label>
+            {markerError && <p className="mt-2 text-xs text-destructive">{markerError}</p>}
           </div>
           <p className="text-xs text-muted-foreground">{editEvent ? 'Changes to published events are submitted for admin approval. The currently approved version remains live until approved.' : 'Your event will be reviewed by an admin before appearing on the map.'}</p>
         </div>

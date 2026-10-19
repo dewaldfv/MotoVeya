@@ -7,7 +7,7 @@ export default function MapPopupContent({ item, onMoreInfo, onSave, onNavigate }
   const isDistress = item.category === 'distress' || !!item.rider_name;
   const isEvent = !!item.event_date || !!item.venue_name;
   const isPoi = !isEvent && !isDistress && (!!item.address || !!item.phone || !!item.website || !!item.opening_hours || !!item.brand || !!item.source);
-  const markerLogoUrl = isEvent ? (item.markerIcon || getEventMarkerUrl(item.category)) : null;
+  const markerLogoUrl = isEvent ? (item.marker_asset || item.markerIcon || getEventMarkerUrl(item.category)) : null;
   const phone = item.phone || item.contact_phone;
   const website = item.website || item.url;
   const openingHours = item.opening_hours || item.hours;

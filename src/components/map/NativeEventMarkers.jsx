@@ -31,18 +31,25 @@ export default function NativeEventMarkers({ events = [], favoriteEventIds = [],
       const markerLat = Number(ev.lat);
       const markerLng = Number(ev.lng);
 
-      const iconUrl = ev.markerIcon || getEventMarkerUrl(ev.category);
+      const isTextMarker = !!ev.marker_asset;
+      const iconUrl = ev.marker_asset || ev.markerIcon || getEventMarkerUrl(ev.category);
       const isFav = favSet.has(ev.id);
       let m = markers.get(id);
       if (!m) {
         const el = document.createElement('div');
-        el.style.cssText = 'width:44px;height:44px;pointer-events:auto;cursor:pointer;';
         const inner = document.createElement('div');
-        inner.style.cssText = 'position:relative;width:44px;height:44px;';
         const img = document.createElement('img');
-        img.src = iconUrl;
-        img.style.cssText = 'width:44px;height:44px;';
         img.draggable = false;
+        if (isTextMarker) {
+          el.style.cssText = 'pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+          inner.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:center;';
+          img.style.cssText = 'height:42px;width:auto;max-width:230px;object-fit:contain;display:block;';
+        } else {
+          el.style.cssText = 'width:44px;height:44px;pointer-events:auto;cursor:pointer;';
+          inner.style.cssText = 'position:relative;width:44px;height:44px;';
+          img.style.cssText = 'width:44px;height:44px;';
+        }
+        img.src = iconUrl;
         inner.appendChild(img);
         if (isFav) {
           const heart = document.createElement('div');
