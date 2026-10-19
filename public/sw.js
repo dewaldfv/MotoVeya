@@ -3,8 +3,8 @@
 // app is closed. Clicking the notification focuses/opens the app and
 // jumps to the relevant conversation.
 const APP_NAME = 'MotoVeya';
-const NOTIFICATION_ICON = 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/f859a5527_MotoVeya1.png';
-const NOTIFICATION_BADGE = '/icon.svg';
+const NOTIFICATION_ICON = '/icon-192.png';
+const NOTIFICATION_BADGE = '/icon-badge-96.png';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -12,6 +12,14 @@ self.addEventListener('install', () => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
+});
+
+// Pass-through fetch handler. Browsers only offer to install the app when a
+// service worker handles fetch events. Nothing is cached here, so requests
+// behave exactly as they did before.
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  event.respondWith(fetch(event.request));
 });
 
 self.addEventListener('push', (event) => {
