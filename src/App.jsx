@@ -53,12 +53,15 @@ import Achievements from '@/pages/Achievements';
 import ServiceProviderDashboard from '@/pages/ServiceProviderDashboard';
 import FriendRequest from '@/pages/FriendRequest';
 import BackgroundTracking from '@/pages/BackgroundTracking';
+import FirstLaunchPermissions from '@/components/permissions/FirstLaunchPermissions';
+import { hasCompletedPermissionSetup } from '@/lib/permissions';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
 
   const navigate = useNavigate();
   const [introDone, setIntroDone] = useState(false);
+  const [permissionsDone, setPermissionsDone] = useState(() => hasCompletedPermissionSetup());
   const [isFirstLaunch] = useState(() => localStorage.getItem('motogo_has_seen_intro') !== 'true');
 
   const loading = isLoadingAuth || isLoadingPublicSettings;
@@ -101,6 +104,15 @@ const AuthenticatedApp = () => {
         return null;
       }
     }
+  }
+
+  // First launch: ask for the device permissions the app needs, one at a time.
+  const permissionPath = window.location.pathname;
+  const isExternalPermissionFlow = permissionPath === '/oauth/consent'
+    || permissionPath === '/web-auth-bridge'
+    || permissionPath.startsWith('/friend/');
+  if (!permissionsDone && !isExternalPermissionFlow) {
+    return <FirstLaunchPermissions onComplete={() => setPermissionsDone(true)} />;
   }
 
   // Render the main app

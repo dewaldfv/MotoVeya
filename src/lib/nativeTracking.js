@@ -125,6 +125,36 @@ export function requestNativeLocationPermission() {
   });
 }
 
+export function isNativeCameraAndMicrophoneGranted() {
+  const bridge = getNativeBridge();
+  try { return !!bridge?.isCameraAndMicrophoneGranted?.(); } catch { return false; }
+}
+
+// Asks the native shell for camera + microphone. Android grants both in one
+// system dialog, so this resolves true immediately when they are already held.
+export function requestNativeCameraAndMicrophone() {
+  const bridge = getNativeBridge();
+  if (!bridge?.requestCameraAndMicrophonePermissions) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const callbackName = '__motoveyaMediaPermissionResult';
+    let settled = false;
+    const finish = (granted) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      try { delete window[callbackName]; } catch {}
+      resolve(!!granted);
+    };
+    const timeoutId = setTimeout(() => finish(false), 30000);
+    window[callbackName] = finish;
+    try {
+      bridge.requestCameraAndMicrophonePermissions(callbackName);
+    } catch {
+      finish(false);
+    }
+  });
+}
+
 export async function startNativeLocationTracking() {
   const permissionGranted = await requestNativeLocationPermission();
   if (permissionGranted === null) return { started: false, native: false };
