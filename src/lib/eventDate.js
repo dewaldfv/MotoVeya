@@ -13,6 +13,15 @@ export function formatEventDateRange(event, style = 'short') {
   return `${startStr} - ${fmt(event.end_date)}`;
 }
 
+// True once an event has finished (its end date, or its start date when no end
+// is set, is in the past). Used to keep finished events off the map.
+export function isPastEvent(event, now = Date.now()) {
+  const raw = event?.end_date || event?.event_date || event?.start_date;
+  if (!raw) return false;
+  const endsAt = new Date(raw).getTime();
+  return Number.isFinite(endsAt) && endsAt < now;
+}
+
 // True when the event spans multiple days (used to decide range vs single-date display).
 export function isMultiDayEvent(event) {
   if (!event?.end_date) return false;

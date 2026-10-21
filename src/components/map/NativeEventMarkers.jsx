@@ -2,6 +2,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import maplibregl from 'maplibre-gl';
 import { useMapInstance } from '@/lib/maplibreContext';
 import { getEventMarkerUrl } from '@/lib/eventMarkers';
+import { isPastEvent } from '@/lib/eventDate';
 
 /**
  * NativeEventMarkers — renders event pins as MapLibre Marker instances.
@@ -20,8 +21,9 @@ export default function NativeEventMarkers({ events = [], favoriteEventIds = [],
     const markers = markersRef.current;
     const seen = new Set();
 
+    // Finished events are left off the map so it stays uncluttered.
     const validEvents = events.filter((ev) =>
-      ev.lat != null && ev.lng != null && !isNaN(ev.lat) && !isNaN(ev.lng)
+      ev.lat != null && ev.lng != null && !isNaN(ev.lat) && !isNaN(ev.lng) && !isPastEvent(ev)
     );
 
     validEvents.forEach((ev) => {
