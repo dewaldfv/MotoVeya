@@ -129,6 +129,8 @@ export default function Home() {
     enabled: deferMapData,
   });
 
+  // Events load straight away (from cache when available) so their map markers
+  // appear as soon as the map opens, rather than waiting on the deferred feeds.
   const { data: eventData = null } = useQuery({
     queryKey: ['home-events'],
     queryFn: async () => {
@@ -139,13 +141,12 @@ export default function Home() {
     initialData: () => getMapDataCache('home-events') || undefined,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    enabled: deferMapData,
   });
 
   const { data: eventFavoriteIds = [] } = useQuery({
     queryKey: ['event-favorites'],
     queryFn: async () => (await base44.entities.EventFavorite.filter({})).map((f) => f.event_id),
-    enabled: !!me?.id && deferMapData
+    enabled: !!me?.id
   });
 
   const { data: visiblePlaces } = useQuery({
