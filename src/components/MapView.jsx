@@ -9,7 +9,6 @@ import { useMapLibreCamera } from '@/hooks/useMapLibreCamera';
 import { getLayerBackground } from '@/lib/mapLayers';
 import CustomMapMarker from './CustomMapMarker';
 import ServiceMarkers from './ServiceMarkers';
-import FuelStationMarkers from './FuelStationMarkers';
 import LiveMarkers from './map/LiveMarkers';
 import NativeEventMarkers from './map/NativeEventMarkers';
 import MapPopupContent from './MapPopupContent';
@@ -208,7 +207,6 @@ export default function MapView({
   services = [],
   showServices = false,
   onServiceClick,
-  fuelStations = [],
   friends = [],
   onFriendClick,
   onLongPress,
@@ -358,7 +356,6 @@ export default function MapView({
       {warningMarkers}
 
       {serviceMarkers}
-      <FuelStationMarkers stations={fuelStations} onMarkerClick={(station) => setPopupItem({ ...station, category: 'fuel' })} />
 
       <LiveMarkers
         rider={riders[0] || null}

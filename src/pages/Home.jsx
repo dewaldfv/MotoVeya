@@ -619,7 +619,6 @@ export default function Home() {
         routeWarnings={session.routeWarnings}
         services={servicesToShow}
         showServices={overlays.services || overlays.food}
-        fuelStations={overlays.fuel ? fuelStations : []}
         onServiceClick={setSelectedService}
         friends={friendsToShow}
         showFriends={overlays.friends}
