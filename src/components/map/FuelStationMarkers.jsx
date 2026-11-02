@@ -5,6 +5,9 @@ import { resolveFuelBrand } from '@/lib/fuelBrandLogos';
 
 const FUEL_MIN_ZOOM = 12;
 const CHIP_STYLE = 'width:36px;height:36px;border-radius:11px;background:#0b0b0b;border:2px solid rgba(255,255,255,0.92);box-shadow:0 3px 10px rgba(0,0,0,0.5);overflow:hidden;display:flex;align-items:center;justify-content:center;';
+const PLAIN_STYLE = 'width:36px;height:36px;display:flex;align-items:center;justify-content:center;';
+const CHIP_IMAGE_STYLE = 'width:100%;height:100%;object-fit:contain;display:block;';
+const PLAIN_IMAGE_STYLE = 'width:36px;height:36px;display:block;';
 
 function genericMarkerUrl() {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
@@ -16,8 +19,8 @@ function genericMarkerUrl() {
 
 /**
  * Renders fuel stations from OpenStreetMap as MapLibre markers. Stations whose
- * brand tag matches one of the supplied brand logos show that logo; every
- * other station keeps the generic fuel marker.
+ * brand tag, operator or name matches one of the supplied brand logos show that
+ * logo; every other station keeps the generic fuel marker.
  */
 export default function FuelStationMarkers({ stations = [], onMarkerClick }) {
   const map = useMapInstance();
@@ -46,38 +49,42 @@ export default function FuelStationMarkers({ stations = [], onMarkerClick }) {
       const brand = resolveFuelBrand(station);
       const logoUrl = brand?.url || null;
 
-      let marker = markers.get(id);
-      if (!marker) {
-        const el = document.createElement('div');
-        el.style.cssText = 'width:36px;height:36px;pointer-events:auto;cursor:pointer;';
-        el.title = station.name || brand?.label || 'Fuel Station';
-
-        const chip = document.createElement('div');
-        chip.style.cssText = brand
-          ? CHIP_STYLE
-          : 'width:36px;height:36px;display:flex;align-items:center;justify-content:center;';
-
-        const img = document.createElement('img');
-        img.src = logoUrl || genericUrl;
-        img.draggable = false;
-        img.style.cssText = brand
-          ? 'width:100%;height:100%;object-fit:contain;display:block;'
-          : 'width:36px;height:36px;display:block;';
-
-        chip.appendChild(img);
-        el.appendChild(chip);
-        el.addEventListener('click', () => callbackRef.current?.(station));
-        marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([station.lng, station.lat])
-          .addTo(map);
-        markers.set(id, marker);
-      } else {
-        marker.setLngLat([station.lng, station.lat]);
+      const existing = markers.get(id);
+      if (existing) {
+        existing.marker.setLngLat([station.lng, station.lat]);
+        // Brand data can arrive after a marker was created; refresh the artwork.
+        if (existing.logoUrl !== logoUrl) {
+          existing.logoUrl = logoUrl;
+          existing.img.src = logoUrl || genericUrl;
+          existing.chip.style.cssText = logoUrl ? CHIP_STYLE : PLAIN_STYLE;
+          existing.img.style.cssText = logoUrl ? CHIP_IMAGE_STYLE : PLAIN_IMAGE_STYLE;
+        }
+        return;
       }
+
+      const el = document.createElement('div');
+      el.style.cssText = 'width:36px;height:36px;pointer-events:auto;cursor:pointer;';
+      el.title = station.name || brand?.label || 'Fuel Station';
+
+      const chip = document.createElement('div');
+      chip.style.cssText = logoUrl ? CHIP_STYLE : PLAIN_STYLE;
+
+      const img = document.createElement('img');
+      img.src = logoUrl || genericUrl;
+      img.draggable = false;
+      img.style.cssText = logoUrl ? CHIP_IMAGE_STYLE : PLAIN_IMAGE_STYLE;
+
+      chip.appendChild(img);
+      el.appendChild(chip);
+      el.addEventListener('click', () => callbackRef.current?.(station));
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([station.lng, station.lat])
+        .addTo(map);
+      markers.set(id, { marker, img, chip, logoUrl });
     });
 
-    for (const [id, marker] of markers) {
-      if (!seen.has(id)) { marker.remove(); markers.delete(id); }
+    for (const [id, entry] of markers) {
+      if (!seen.has(id)) { entry.marker.remove(); markers.delete(id); }
     }
   }, [map, validStations, zoom, genericUrl]);
 
@@ -90,7 +97,7 @@ export default function FuelStationMarkers({ stations = [], onMarkerClick }) {
   }, [map]);
 
   useEffect(() => () => {
-    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current.forEach((entry) => entry.marker.remove());
     markersRef.current.clear();
   }, []);
 

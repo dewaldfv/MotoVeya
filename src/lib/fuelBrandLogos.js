@@ -45,6 +45,8 @@ const ALIASES = {
   'sasol oil': 'sasol',
 };
 
+const BRAND_KEYS = Object.keys(FUEL_BRAND_LOGOS).sort((a, b) => b.length - a.length);
+
 export function normalizeFuelBrand(value) {
   const key = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   if (!key) return null;
@@ -52,17 +54,33 @@ export function normalizeFuelBrand(value) {
 }
 
 /**
+ * Matches a whole brand tag first, then a brand name inside a longer station
+ * name ("Engen Roodepoort", "SHELL ULTRA CITY N1"), so loosely tagged
+ * OpenStreetMap stations still show their logo.
+ */
+function matchBrandKey(candidate) {
+  const key = normalizeFuelBrand(candidate);
+  if (!key) return null;
+  if (FUEL_BRAND_LOGOS[key]) return key;
+  return BRAND_KEYS.find((brandKey) =>
+    new RegExp(`(^|[^a-z])${brandKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z]|$)`).test(key)
+  ) || null;
+}
+
+/**
  * Resolves the supplied logo for a station. Station brand metadata is tried
- * first, then the operator tag, then the station name, so loosely tagged
- * OpenStreetMap entries still match their brand.
+ * first, then the operator tag, then the station name.
  */
 export function resolveFuelBrand(station) {
   const candidates = [station?.raw_brand, station?.brand, station?.operator, station?.name];
   for (const candidate of candidates) {
-    const key = normalizeFuelBrand(candidate);
-    if (!key) continue;
-    const brand = FUEL_BRAND_LOGOS[key];
-    if (brand) return { key, ...brand };
+    const key = matchBrandKey(candidate);
+    if (key) return { key, ...FUEL_BRAND_LOGOS[key] };
+  }
+  // Brand records maintained in the app can carry their own logo.
+  // Favicons are too coarse for a 36px map chip, so they are skipped.
+  if (station?.logo_url && !/favicon|\.ico($|\?)/i.test(station.logo_url)) {
+    return { key: 'custom', label: station.brand || 'Fuel', url: station.logo_url };
   }
   return null;
 }
