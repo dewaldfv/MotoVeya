@@ -35,8 +35,6 @@ const FOOD_CATEGORIES = [
   { key: 'food_cafe', label: 'Cafés', emoji: '☕' },
   { key: 'food_fast_food', label: 'Fast Food', emoji: '🍔' },
   { key: 'food_breakfast', label: 'Breakfast Spots', emoji: '🥓' },
-  { key: 'food_bakery', label: 'Bakeries', emoji: '🥐' },
-  { key: 'food_market', label: 'Food Markets', emoji: '🌮' },
 ];
 
 export default function POISubmitDialog({ open, onOpenChange, onSubmitted, foodOnly = false }) {

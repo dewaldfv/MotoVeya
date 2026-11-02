@@ -9,12 +9,8 @@ export const SERVICE_CATEGORIES = [
   { key: 'custom_paint', label: 'Custom Paint & Wraps', short: 'Paint', emoji: '🎨', color: '#ec4899' },
   { key: 'custom_builders', label: 'Custom Bike Builders', short: 'Builders', emoji: '🔥', color: '#ef4444' },
   { key: 'performance_tuning', label: 'Performance Tuning', short: 'Tuning', emoji: '💨', color: '#f97316' },
-  { key: 'electrical', label: 'Electrical Repairs', short: 'Electrical', emoji: '⚡', color: '#eab308' },
-  { key: 'suspension', label: 'Suspension Specialists', short: 'Suspension', emoji: '🛠', color: '#0ea5e9' },
-  { key: 'chains_sprockets', label: 'Chains & Sprockets', short: 'Chains', emoji: '⛓', color: '#71717a' },
   { key: 'detailing', label: 'Bike Detailing & Ceramic', short: 'Detailing', emoji: '🧽', color: '#14b8a6' },
   { key: 'transport', label: 'Motorcycle Transport', short: 'Transport', emoji: '🚚', color: '#6366f1' },
-  { key: 'roadside_assist', label: 'Roadside Assistance', short: 'Roadside', emoji: '🚨', color: '#dc2626' },
   { key: 'training_schools', label: 'Training Schools', short: 'Training', emoji: '🏍', color: '#059669' },
   { key: 'photography', label: 'Photography & Media', short: 'Media', emoji: '📷', color: '#a855f7' },
   { key: 'food_restaurant', label: 'Restaurants', short: 'Restaurants', emoji: '🍽️', color: '#ef4444' },
@@ -22,22 +18,33 @@ export const SERVICE_CATEGORIES = [
   { key: 'food_cafe', label: 'Cafés', short: 'Cafés', emoji: '☕', color: '#92400e' },
   { key: 'food_fast_food', label: 'Fast Food', short: 'Fast Food', emoji: '🍔', color: '#f97316' },
   { key: 'food_breakfast', label: 'Breakfast Spots', short: 'Breakfast', emoji: '🥓', color: '#eab308' },
+  { key: 'accommodation', label: 'Accommodation', short: 'Accommodation', emoji: '🛏️', color: '#8b5cf6' },
+  { key: 'fuel', label: 'Fuel Stations', short: 'Fuel', emoji: '⛽', color: '#22c55e' },
+  { key: 'food', label: 'Food', short: 'Food', emoji: '🍔', color: '#f59e0b' },
+  { key: 'pub', label: 'Pubs & Bars', short: 'Pubs', emoji: '🍺', color: '#a855f7' },
+  { key: 'dealership', label: 'Motorcycle Dealerships', short: 'Dealers', emoji: '🏍️', color: '#06b6d4' },
+];
+
+// Categories that are no longer offered in any menu, kept only so existing
+// listings that still use them keep their name, icon and colour.
+const LEGACY_CATEGORIES = [
+  { key: 'electrical', label: 'Electrical Repairs', short: 'Electrical', emoji: '⚡', color: '#eab308' },
+  { key: 'suspension', label: 'Suspension Specialists', short: 'Suspension', emoji: '🛠', color: '#0ea5e9' },
+  { key: 'chains_sprockets', label: 'Chains & Sprockets', short: 'Chains', emoji: '⛓', color: '#71717a' },
+  { key: 'roadside_assist', label: 'Roadside Assistance', short: 'Roadside', emoji: '🚨', color: '#dc2626' },
   { key: 'food_bakery', label: 'Bakeries', short: 'Bakeries', emoji: '🥐', color: '#d97706' },
   { key: 'food_market', label: 'Food Markets', short: 'Food Markets', emoji: '🌮', color: '#16a34a' },
-  { key: 'accommodation', label: 'Accommodation', short: 'Accommodation', emoji: '🛏️', color: '#8b5cf6' },
   { key: 'emergency', label: 'Hospitals', short: 'Hospitals', emoji: '⚕️', color: '#ef4444' },
   { key: 'hospital', label: 'Hospitals', short: 'Hospitals', emoji: '⚕️', color: '#ef4444' },
   { key: 'atm', label: 'ATMs', short: 'ATMs', emoji: '💳', color: '#facc15' },
   { key: 'scenic', label: 'Scenic Locations', short: 'Scenic', emoji: '🏔️', color: '#10b981' },
-  { key: 'fuel', label: 'Fuel Stations', short: 'Fuel', emoji: '⛽', color: '#22c55e' },
-  { key: 'food', label: 'Food', short: 'Food', emoji: '🍔', color: '#f59e0b' },
-  { key: 'pub', label: 'Pubs & Bars', short: 'Pubs', emoji: '🍺', color: '#a855f7' },
   { key: 'workshop', label: 'Motorcycle Mechanics', short: 'Mechanics', emoji: '🔧', color: '#3b82f6' },
-  { key: 'dealership', label: 'Motorcycle Dealerships', short: 'Dealers', emoji: '🏍️', color: '#06b6d4' },
 ];
 
 export function getServiceCategory(key) {
-  return SERVICE_CATEGORIES.find((c) => c.key === key) || SERVICE_CATEGORIES[0];
+  return SERVICE_CATEGORIES.find((c) => c.key === key)
+    || LEGACY_CATEGORIES.find((c) => c.key === key)
+    || SERVICE_CATEGORIES[0];
 }
 
 export function haversine(lat1, lng1, lat2, lng2) {

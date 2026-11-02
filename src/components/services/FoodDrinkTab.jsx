@@ -23,6 +23,9 @@ const FOOD_CATEGORIES = [
   { key: 'food_market', label: 'Food Markets', emoji: '🌮' },
 ];
 
+// Categories no longer offered as browse buttons, while existing listings stay visible under All.
+const HIDDEN_BROWSE_KEYS = new Set(['bakery', 'food_market']);
+
 function getFoodCategory(key) {
   return FOOD_CATEGORIES.find((c) => c.key === key) || FOOD_CATEGORIES[0];
 }
@@ -116,7 +119,7 @@ export default function FoodDrinkTab({ user }) {
       {isLoading ? <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-primary" /></div> : !hasSearchOrCategory ? <>
         <Button variant="secondary" onClick={() => setShowAll(true)} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl"><List size={18} /> Show All Food & Drink</Button>
         <div className="grid grid-cols-2 gap-2.5">
-          {FOOD_CATEGORIES.map((cat) => <button key={cat.key} onClick={() => setSelectedCategory(cat.key)} className="rounded-2xl bg-card p-4 text-left shadow-sm active:scale-[0.99]"><div className="text-2xl">{cat.emoji}</div><p className="mt-2 font-bold">{cat.label}</p></button>)}
+          {FOOD_CATEGORIES.filter((cat) => !HIDDEN_BROWSE_KEYS.has(cat.key)).map((cat) => <button key={cat.key} onClick={() => setSelectedCategory(cat.key)} className="rounded-2xl bg-card p-4 text-left shadow-sm active:scale-[0.99]"><div className="text-2xl">{cat.emoji}</div><p className="mt-2 font-bold">{cat.label}</p></button>)}
         </div>
       </> : filtered.length === 0 ? <div className="flex flex-col items-center gap-3 py-16 text-center"><UtensilsCrossed size={48} className="text-muted-foreground" /><p className="text-muted-foreground">No Food & Drink venues found.</p></div> : <>
         <p className="text-xs text-muted-foreground">{filtered.length} venue{filtered.length !== 1 ? 's' : ''} found</p>
