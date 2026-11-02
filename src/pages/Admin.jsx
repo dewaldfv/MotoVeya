@@ -11,6 +11,7 @@ import LoginPrompt from '@/components/LoginPrompt';
 import EditUserDialog from '@/components/admin/EditUserDialog';
 import POISubmitDialog from '@/components/services/POISubmitDialog';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
+import ServiceSubmitDialog from '@/components/services/ServiceSubmitDialog';
 import ArchivedEventPhotos from '@/components/admin/ArchivedEventPhotos';
 import BroadcastCard from '@/components/admin/BroadcastCard';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ export default function Admin() {
   const [pendingEvents, setPendingEvents] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
   const [pendingServices, setPendingServices] = useState([]);
+  const [allServices, setAllServices] = useState([]);
   const [users, setUsers] = useState([]);
   const [crashAlerts, setCrashAlerts] = useState([]);
   const [distressAlerts, setDistressAlerts] = useState([]);
@@ -29,6 +31,7 @@ export default function Admin() {
   const [editUser, setEditUser] = useState(null);
   const [poiSubmitOpen, setPoiSubmitOpen] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
+  const [editService, setEditService] = useState(null);
   const [editRequests, setEditRequests] = useState([]);
 
   useEffect(() => { loadAll(); }, []);
@@ -40,17 +43,18 @@ export default function Admin() {
       const me = await base44.auth.me();
       setUser(me);
       if (me.role !== 'admin') { setLoading(false); return; }
-      const [pending, events, pendingSvc, crashData, distressData] = await Promise.all([
+      const [pending, events, pendingSvc, services, crashData, distressData] = await Promise.all([
         base44.entities.Event.filter({ status: 'pending' }, '-created_date', 50),
         base44.entities.Event.list('-created_date', 100),
         base44.entities.Service.filter({ status: 'pending' }, '-created_date', 50),
+        base44.entities.Service.list('-created_date', 100),
         base44.entities.CrashAlert.list('-created_date', 20),
         base44.entities.DistressAlert.list('-created_date', 20),
       ]);
       let requests = [];
       try { requests = await base44.entities.EventEditRequest.list('-created_date', 50); } catch (e) { console.error(e); }
       setEditRequests(requests || []);
-      setPendingEvents(pending || []); setAllEvents(events || []); setPendingServices(pendingSvc || []); setCrashAlerts(crashData || []); setDistressAlerts(distressData || []);
+      setPendingEvents(pending || []); setAllEvents(events || []); setPendingServices(pendingSvc || []); setAllServices(services || []); setCrashAlerts(crashData || []); setDistressAlerts(distressData || []);
       try { const userData = await base44.entities.User.list('-created_date', 50); setUsers(userData || []); } catch (e) { console.error(e); }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -112,7 +116,7 @@ export default function Admin() {
       <div className="mb-4 grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-card p-3 text-center"><Users size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{users.length}</div><div className="text-[10px] text-muted-foreground">Users</div></div>
         <div className="rounded-2xl bg-card p-3 text-center"><Calendar size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{allEvents.length}</div><div className="text-[10px] text-muted-foreground">Events</div></div>
-        <div className="rounded-2xl bg-card p-3 text-center"><Wrench size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{pendingServices.length}</div><div className="text-[10px] text-muted-foreground">Services</div></div>
+        <div className="rounded-2xl bg-card p-3 text-center"><Wrench size={18} className="mx-auto mb-1 text-primary" /><div className="text-xl font-black">{allServices.length}</div><div className="text-[10px] text-muted-foreground">Services</div></div>
       </div>
 
       <div className="mb-4">
@@ -180,10 +184,36 @@ export default function Admin() {
               </div>
               <div className="mt-3 flex gap-2">
                 <Button size="sm" className="flex-1" onClick={() => handleApproveService(svc.id)}><Check size={16} className="mr-1" /> Approve</Button>
+                <Button size="sm" variant="secondary" onClick={() => setEditService(svc)}><Pencil size={16} className="mr-1" /> Edit</Button>
                 <Button size="sm" variant="destructive" onClick={() => setRejectTarget({ type: 'service', record: svc })}><X size={16} className="mr-1" /> Reject</Button>
               </div>
             </div>
           ))}
+
+          <div className="mt-6 border-t pt-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="font-bold">All Existing Services</h2>
+                <p className="text-xs text-muted-foreground">View and directly update any existing service.</p>
+              </div>
+              <Badge variant="outline">{allServices.length}</Badge>
+            </div>
+            <div className="space-y-2">
+              {allServices.map((svc) => (
+                <div key={svc.id} className="flex items-center gap-3 rounded-2xl bg-card p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-bold truncate">{svc.name}</h3>
+                      <Badge variant={svc.status === 'approved' ? 'default' : svc.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">{svc.status || 'pending'}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{[svc.town, svc.province].filter(Boolean).join(', ') || svc.address || 'No address'}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{svc.category?.replace(/_/g, ' ') || 'Service'}</p>
+                  </div>
+                  <Button size="sm" variant="secondary" onClick={() => setEditService(svc)}><Pencil size={16} className="mr-1" /> Edit</Button>
+                </div>
+              ))}
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="users" className="space-y-2">
@@ -273,6 +303,8 @@ export default function Admin() {
       />
 
       <EventSubmitDialog open={!!editEvent} onOpenChange={(o) => { if (!o) setEditEvent(null); }} onSubmitted={loadAll} editEvent={editEvent} onEditClose={() => setEditEvent(null)} />
+
+      <ServiceSubmitDialog open={!!editService} onOpenChange={(o) => { if (!o) setEditService(null); }} onSubmitted={loadAll} editService={editService} onEditClose={() => setEditService(null)} />
 
       {editUser && (
         <EditUserDialog

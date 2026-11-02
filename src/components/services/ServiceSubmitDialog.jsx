@@ -39,7 +39,7 @@ const FOOD_CATEGORIES = [
   { key: 'food_market', label: 'Food Markets', emoji: '🌮' },
 ];
 
-export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, foodOnly = false }) {
+export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, foodOnly = false, editService = null, onEditClose }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -48,10 +48,41 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
   const categoryOptions = foodOnly ? FOOD_CATEGORIES : SERVICE_CATEGORIES;
 
   useEffect(() => {
-    if (open && foodOnly && !form.category.startsWith('food_')) {
+    if (!open) return;
+    if (editService) {
+      const str = (v) => (v == null ? '' : String(v));
+      setForm({
+        ...EMPTY,
+        name: str(editService.name),
+        category: editService.category || EMPTY.category,
+        description: str(editService.description),
+        address: str(editService.address),
+        town: str(editService.town),
+        province: str(editService.province),
+        lat: editService.lat != null ? String(editService.lat) : '',
+        lng: editService.lng != null ? String(editService.lng) : '',
+        phone: str(editService.phone),
+        email: str(editService.email),
+        website: str(editService.website),
+        opening_hours: str(editService.opening_hours),
+        is_open_24h: !!editService.is_open_24h,
+        price_range: str(editService.price_range),
+        service_menu: str(editService.service_menu),
+        social_links: str(editService.social_links),
+        submitter_notes: str(editService.submitter_notes),
+        logo_url: str(editService.logo_url),
+        photo_urls: editService.photo_urls || [],
+      });
+    } else {
+      setForm(EMPTY);
+    }
+  }, [open, editService]);
+
+  useEffect(() => {
+    if (open && !editService && foodOnly && !form.category.startsWith('food_')) {
       setForm((f) => ({ ...f, category: FOOD_CATEGORIES[0].key }));
     }
-  }, [open, foodOnly, form.category]);
+  }, [open, foodOnly, editService, form.category]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -96,7 +127,7 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
     if (!form.lat || !form.lng) {toast.error('Please set the location on the map');return;}
     setSaving(true);
     try {
-      await base44.entities.Service.create({
+      const payload = {
         name: form.name.trim(),
         category: form.category,
         description: form.description.trim() || undefined,
@@ -116,15 +147,21 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
         submitter_notes: form.submitter_notes.trim() || undefined,
         logo_url: form.logo_url || undefined,
         photo_urls: form.photo_urls || [],
-        status: 'pending'
-      });
-      toast.success(`${foodOnly ? 'Food & Drink venue' : 'Service'} submitted! Awaiting admin approval.`);
+      };
+      if (editService) {
+        await base44.entities.Service.update(editService.id, { ...payload, status: 'approved' });
+        toast.success('Service updated and published');
+      } else {
+        await base44.entities.Service.create({ ...payload, status: 'pending' });
+        toast.success(`${foodOnly ? 'Food & Drink venue' : 'Service'} submitted! Awaiting admin approval.`);
+      }
       onOpenChange(false);
+      onEditClose?.();
       onSubmitted?.();
       setForm(EMPTY);
     } catch (e) {
       console.error(e);
-      toast.error('Failed to submit service');
+      toast.error(editService ? 'Failed to update service' : 'Failed to submit service');
     } finally {
       setSaving(false);
     }
@@ -135,7 +172,7 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{foodOnly ? 'Submit a Food & Drink Venue' : 'Submit a Service'}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{editService ? 'Edit Service' : foodOnly ? 'Submit a Food & Drink Venue' : 'Submit a Service'}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div><Label>Business Name *</Label><Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Joe's Bike Workshop" className="min-h-[48px]" /></div>
 
@@ -254,11 +291,11 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
 
           <div><Label>Notes for Admin (optional)</Label><Textarea value={form.submitter_notes} onChange={(e) => set('submitter_notes', e.target.value)} placeholder="Anything the admin should know" rows={2} /></div>
 
-          <p className="text-xs text-muted-foreground">Your listing will be reviewed by an admin before appearing in {foodOnly ? 'Food & Drink' : 'Services'}.</p>
+          <p className="text-xs text-muted-foreground">{editService ? 'Saving publishes these changes to the live service listing immediately.' : <>Your listing will be reviewed by an admin before appearing in {foodOnly ? 'Food & Drink' : 'Services'}.</>}</p>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button disabled={saving} onClick={handleSubmit}>{saving ? 'Submitting...' : foodOnly ? 'Submit Venue' : 'Submit Service'}</Button>
+          <Button disabled={saving} onClick={handleSubmit}>{saving ? 'Saving...' : editService ? 'Save Changes' : foodOnly ? 'Submit Venue' : 'Submit Service'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>);
