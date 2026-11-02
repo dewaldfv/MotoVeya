@@ -2,7 +2,7 @@
 export const FUEL_BRAND_LOGOS = {
   engen: {
     label: 'Engen',
-    url: null,
+    url: 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/82f328c23_BoldRedStylizedELogo.png',
   },
   shell: {
     label: 'Shell',
