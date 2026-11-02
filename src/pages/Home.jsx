@@ -16,6 +16,7 @@ import { useRideSession } from '@/hooks/useRideSession';
 import { useIdleMapUi, revealMapUi } from '@/hooks/useIdleMapUi';
 import NavigationOverlay from '@/components/NavigationOverlay';
 import SearchPanel from '@/components/SearchPanel';
+import FuelStationSheet from '@/components/map/FuelStationSheet';
 import TutorialWalkthrough from '@/components/TutorialWalkthrough';
 import SavedPlaceDialog from '@/components/SavedPlaceDialog';
 import { setRideActive } from '@/lib/rideStatus';
@@ -58,6 +59,7 @@ export default function Home() {
   const [controlOpen, setControlOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [selectedFuel, setSelectedFuel] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [selectedGroupPlace, setSelectedGroupPlace] = useState(null);
   const [editSavedPlace, setEditSavedPlace] = useState(null);
@@ -390,6 +392,8 @@ export default function Home() {
   const servicesToShow = useMemo(() => services.filter((service) =>
     FOOD_SERVICE_CATEGORIES.has(service.category) ? overlays.food : overlays.services
   ), [services, overlays]);
+  const showFuel = overlays.fuel || activeCat === 'fuel';
+  const fuelToShow = useMemo(() => (showFuel ? fuelStations : []), [showFuel, fuelStations]);
   const friendsToShow = useMemo(() => (overlays.friends ? friends : []), [friends, overlays]);
   const eventsToShow = useMemo(() => (overlays.events ? (Array.isArray(eventData) ? eventData : []).filter((e) => e.lat != null && e.lng != null) : []), [eventData, overlays]);
   const activeLabel = MAP_CATEGORIES.find((c) => c.key === activeCat)?.label || activeCat;
@@ -620,6 +624,9 @@ export default function Home() {
         services={servicesToShow}
         showServices={overlays.services || overlays.food}
         onServiceClick={setSelectedService}
+        fuelStations={fuelToShow}
+        showFuel={showFuel}
+        onFuelClick={setSelectedFuel}
         friends={friendsToShow}
         showFriends={overlays.friends}
         onFriendClick={setSelectedFriend}
@@ -790,6 +797,14 @@ export default function Home() {
 
       <ServiceDetailSheet service={selectedService} userPos={session.userPos}
       isFavorite={false} onNavigate={handleServiceNavigate} onClose={() => setSelectedService(null)} />
+
+      <FuelStationSheet
+        station={selectedFuel}
+        onClose={() => setSelectedFuel(null)}
+        onNavigate={(station) => {
+          setSelectedFuel(null);
+          session.navigateTo({ lat: station.lat, lng: station.lng, name: station.name });
+        }} />
 
       <FriendInfoSheet friend={selectedFriend} userPos={session.userPos}
       onClose={() => setSelectedFriend(null)}

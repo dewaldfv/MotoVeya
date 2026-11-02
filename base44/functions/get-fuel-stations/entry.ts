@@ -8,7 +8,7 @@ const ENDPOINTS = [
 
 const BRAND_ALIASES: Record<string,string> = {
   engen:'engen','engen petroleum':'engen',
-  astron:'astron energy','astron energy':'astron energy',caltex:'astron energy',
+  astron:'astron energy','astron energy':'astron energy',caltex:'caltex',
   bp:'bp','bp south africa':'bp',petrosa:'petrosa',
   puma:'puma energy','puma energy':'puma energy',sasol:'sasol',shell:'shell',
   total:'totalenergies',totalenergies:'totalenergies','total energies':'totalenergies',
@@ -87,6 +87,7 @@ export default async function (req: Request) {
         name: stationName(tags),
         lat: Number(p[0]), lng: Number(p[1]),
         brand: brandRecord?.name || tags.brand || null,
+        raw_brand: tags.brand || null,
         brand_id: brandRecord?.id || null,
         logo_url: brandRecord?.marker_logo_url || brandRecord?.logo_url || null,
         primary_colour: brandRecord?.primary_colour || null,
