@@ -24,7 +24,20 @@ function normalizeBrand(value: unknown) {
   return BRAND_ALIASES[key] || key || null;
 }
 function stationName(tags: any) {
-  return tags?.name || tags?.brand || tags?.operator || 'Fuel Station';
+  // Only use what the source actually provides; otherwise stay honest and generic.
+  const label = [tags?.name, tags?.brand, tags?.operator]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .find((value) => value.length > 0);
+  return label || 'Fuel Station';
+}
+
+function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number) {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const h = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 function fuelTypes(tags: any) {
   const types: string[] = [];
@@ -154,7 +167,8 @@ export default async function (req: Request) {
         .map((b: any) => [String(b.normalized_name || b.name || '').toLowerCase().trim(), b])
     );
 
-    let stations = await fetchNominatim(lat, lng, radius);
+    let stations = (await fetchNominatim(lat, lng, radius))
+      .filter((station: any) => distanceKm(lat, lng, station.lat, station.lng) <= radius / 1000);
     let source = 'OpenStreetMap search';
 
     if (!stations.length) {
@@ -164,7 +178,8 @@ export default async function (req: Request) {
         const p = el.lat != null ? [el.lat, el.lon] : [el.center?.lat, el.center?.lon];
         if (p[0] == null || p[1] == null) return null;
         return stationFromTags(String(el.id), el.type, Number(p[0]), Number(p[1]), el.tags || {});
-      }).filter(Boolean);
+      }).filter((station: any) => station
+        && distanceKm(lat, lng, station.lat, station.lng) <= radius / 1000);
     }
 
     const deduped = new Map<string, any>();
