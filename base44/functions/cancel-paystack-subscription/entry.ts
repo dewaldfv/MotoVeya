@@ -9,13 +9,15 @@ export default async function(req) {
     if (!me) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const svc = base44.asServiceRole;
+    // No payment_provider filter: premium plans granted in-app or by trial carry
+    // no provider, and filtering them out left those riders unable to cancel.
     const subs = await svc.entities.Subscription.filter(
-      { user_id: me.id, plan: 'premium', payment_provider: 'paystack' },
+      { user_id: me.id, plan: 'premium' },
       '-created_date',
       10
     );
 
-    const activeSub = subs.find((s) => ['active', 'past_due'].includes(s.status));
+    const activeSub = subs.find((s) => ['active', 'past_due', 'trialing'].includes(s.status));
     if (!activeSub) {
       return Response.json({ error: 'No active subscription to cancel' }, { status: 400 });
     }

@@ -40,6 +40,14 @@ export default async function(req) {
           valid = s;
           break;
         }
+        // Period ended — close it out so the rider's tier matches their entitlement.
+        if (s.expiry_date && new Date(s.expiry_date) <= now) {
+          await svc.entities.Subscription.update(s.id, { status: 'expired' }).catch(() => {});
+          await svc.entities.User.update(me.id, {
+            subscription_tier: 'free',
+            subscription_status: 'expired',
+          }).catch(() => {});
+        }
       }
     }
 

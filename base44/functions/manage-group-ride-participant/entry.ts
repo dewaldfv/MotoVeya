@@ -33,6 +33,12 @@ Deno.serve(async (req) => {
           leader_name: participant.user_name,
           sweep_id: ride.sweep_id === participant.user_id ? null : ride.sweep_id,
         });
+        // Demote the outgoing leader so the ride never shows two leaders.
+        const previous = (await svc.entities.RideParticipant.filter({ group_ride_id: rideId }, '-last_updated', 100))
+          .filter((p) => p.user_id === ride.leader_id && p.id !== participantId);
+        await Promise.all(previous.map((p) =>
+          svc.entities.RideParticipant.update(p.id, { role: 'member' }).catch(() => {})
+        ));
       } else if (role === 'sweep') {
         await svc.entities.GroupRide.update(rideId, {
           sweep_id: participant.user_id,
