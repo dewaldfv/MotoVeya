@@ -20,8 +20,35 @@ export default async function(req) {
       return Response.json({ error: 'No active subscription to cancel' }, { status: 400 });
     }
 
-    if (!activeSub.paystack_subscription_code || !activeSub.paystack_email_token) {
-      return Response.json({ error: 'Missing subscription credentials — please contact support' }, { status: 400 });
+    const isPaystack = !!activeSub.paystack_subscription_code && !!activeSub.paystack_email_token;
+
+    if (!isPaystack) {
+      // Subscription wasn't billed through Paystack (e.g. granted in-app): stop renewal only.
+      const now = new Date();
+      const fallbackExpiry = new Date(now);
+      if (activeSub.billing_cycle === 'annual') fallbackExpiry.setFullYear(fallbackExpiry.getFullYear() + 1);
+      else fallbackExpiry.setMonth(fallbackExpiry.getMonth() + 1);
+
+      await svc.entities.Subscription.update(activeSub.id, {
+        status: 'cancelled',
+        auto_renew: false,
+        expiry_date: activeSub.expiry_date || fallbackExpiry.toISOString(),
+      });
+
+      const endStr = new Date(activeSub.expiry_date || fallbackExpiry).toLocaleDateString('en-ZA', {
+        day: 'numeric', month: 'long', year: 'numeric',
+      });
+
+      await svc.entities.Notification.create({
+        type: 'group_update',
+        title: 'Subscription Cancelled',
+        body: `Your Premium subscription has been cancelled. You'll keep Premium access until ${endStr}, then revert to Free.`,
+        recipient_id: me.id,
+        is_read: false,
+        action_url: '/premium',
+      }).catch(() => {});
+
+      return Response.json({ success: true, expiry_date: activeSub.expiry_date || fallbackExpiry.toISOString() });
     }
 
     // Call Paystack's disable-subscription API.

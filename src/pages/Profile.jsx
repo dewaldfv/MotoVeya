@@ -16,6 +16,7 @@ import MenuCard from '@/components/profile/MenuCard';
 import BikeCard from '@/components/profile/BikeCard';
 import EditProfileDialog from '@/components/profile/EditProfileDialog';
 import EmergencySafetySheet from '@/components/profile/EmergencySafetySheet';
+import SubscriptionCard from '@/components/SubscriptionCard';
 import { toast } from 'sonner';
 
 const coerceBike = (form) => ({
@@ -188,7 +189,11 @@ export default function Profile() {
           totalDistance={stats.totalDistance}
           fuelUsed={stats.fuelUsed}
           achievements={stats.achievementCount} />
-        
+
+        <SubscriptionCard onCancelled={async () => {
+          const me = await base44.auth.me().catch(() => null);
+          if (me) setUser(me);
+        }} />
 
         {!isPremium &&
         <motion.div
