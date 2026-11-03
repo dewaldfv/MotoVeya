@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Check, X, Users, Calendar, AlertTriangle, Siren, Crown, Wrench, MapPin, Pencil } from 'lucide-react';
+import { Shield, Check, X, Users, Calendar, Crown, Wrench, MapPin, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import EventSubmitDialog from '@/components/EventSubmitDialog';
 import ServiceSubmitDialog from '@/components/services/ServiceSubmitDialog';
 import ArchivedEventPhotos from '@/components/admin/ArchivedEventPhotos';
 import BroadcastCard from '@/components/admin/BroadcastCard';
+import AdminAlertsTab from '@/components/admin/AdminAlertsTab';
 import { toast } from 'sonner';
 
 export default function Admin() {
@@ -254,31 +255,8 @@ export default function Admin() {
           </div>
         </TabsContent>
 
-        <TabsContent value="alerts" className="space-y-2">
-          {crashAlerts.length === 0 && distressAlerts.length === 0 ? <p className="py-8 text-center text-muted-foreground">No alerts recorded.</p> : (
-            <>
-              {crashAlerts.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 rounded-2xl bg-card p-3">
-                  <AlertTriangle size={20} className="text-destructive" />
-                  <div className="flex-1">
-                    <p className="font-medium">Crash — {a.rider_name}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(a.timestamp).toLocaleString('en-ZA')}</p>
-                  </div>
-                  <Badge variant={a.status === 'resolved' ? 'secondary' : 'destructive'}>{a.status}</Badge>
-                </div>
-              ))}
-              {distressAlerts.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 rounded-2xl bg-card p-3">
-                  <Siren size={20} className="text-destructive" />
-                  <div className="flex-1">
-                    <p className="font-medium">Distress — {a.rider_name}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(a.timestamp).toLocaleString('en-ZA')}</p>
-                  </div>
-                  <Badge variant={a.status === 'resolved' ? 'secondary' : 'destructive'}>{a.status}</Badge>
-                </div>
-              ))}
-            </>
-          )}
+        <TabsContent value="alerts">
+          <AdminAlertsTab crashAlerts={crashAlerts} distressAlerts={distressAlerts} onRefresh={loadAll} />
         </TabsContent>
       </Tabs>
 
