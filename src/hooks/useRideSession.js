@@ -25,7 +25,7 @@ function calculateBearing(lat1, lng1, lat2, lng2) {
 }
 import { toast } from 'sonner';
 import { notifyFriendsOfRide } from '@/lib/rideInvite';
-import { startNativeLocationTracking, stopNativeLocationTracking } from '@/lib/nativeTracking';
+import { startNativeLocationTracking, stopNativeLocationTracking, isNativeLocationTrackingAvailable } from '@/lib/nativeTracking';
 
 const SA_CENTER = [-26.2041, 28.0473];
 
@@ -257,6 +257,24 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     watchIdRef.current = watchId;
     return () => { navigator.geolocation.clearWatch(watchId); watchIdRef.current = null; };
   }, [rideStatus, gpsConfig, markGpsUpdate]);
+
+  // Android can stop the native foreground service while the phone is locked
+  // (battery savers, OEM task killers) and a WebView reload loses it entirely.
+  // Re-arm it on mount and whenever the rider returns, so a long ride always has
+  // a native GPS source the next time the screen locks.
+  useEffect(() => {
+    if (rideStatus !== 'active') return;
+    const ensureNative = () => {
+      if (!isNativeLocationTrackingAvailable()) return;
+      startNativeLocationTracking().catch(() => {});
+    };
+    ensureNative();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') ensureNative();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [rideStatus]);
 
   // Duration timer
   useEffect(() => {
@@ -908,7 +926,12 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     // Start the native Android foreground location service immediately when a ride begins.
     // Web geolocation remains active for the UI; native tracking continues with the screen locked.
     startNativeLocationTracking().then((result) => {
-      if (!result.started && result.native) console.warn('MotoVeya native foreground tracking could not start');
+      if (result.started || !result.native) return;
+      if (result.permissionDenied) {
+        toast.error('Location permission denied — tracking stops when the screen locks');
+      } else {
+        toast.warning('Always-on tracking did not start — tracking stops when the screen locks');
+      }
     }).catch((e) => console.warn('Native foreground tracking unavailable:', e));
     const dest = destOverride || destination;
     if (replayTrack?.coordinates?.length >= 2) {

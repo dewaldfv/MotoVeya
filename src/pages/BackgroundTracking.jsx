@@ -11,6 +11,9 @@ import {
   getStoredDeviceToken,
   detectPlatform,
   isBackgroundLocationGranted,
+  openBackgroundLocationSettings,
+  isIgnoringBatteryOptimizations,
+  requestBatteryOptimizationExemption,
 } from '@/lib/nativeTracking';
 import { toast } from 'sonner';
 
@@ -29,11 +32,16 @@ export default function BackgroundTracking() {
   const [revoking, setRevoking] = useState(false);
   const platform = detectPlatform();
   const [bgLocationGranted, setBgLocationGranted] = useState(true);
+  const [batteryExempt, setBatteryExempt] = useState(true);
 
   useEffect(() => {
     if (platform !== 'android') return;
-    setBgLocationGranted(isBackgroundLocationGranted());
-    const onFocus = () => setBgLocationGranted(isBackgroundLocationGranted());
+    const refresh = () => {
+      setBgLocationGranted(isBackgroundLocationGranted());
+      setBatteryExempt(isIgnoringBatteryOptimizations());
+    };
+    refresh();
+    const onFocus = refresh;
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onFocus);
     return () => {
@@ -78,6 +86,8 @@ export default function BackgroundTracking() {
       }
       if (!result.started) throw new Error('Native location tracking did not start');
       toast.success('Always-on tracking is active on this device');
+      setBgLocationGranted(isBackgroundLocationGranted());
+      setBatteryExempt(isIgnoringBatteryOptimizations());
       await load();
     } catch (e) {
       console.error(e);
@@ -123,6 +133,14 @@ export default function BackgroundTracking() {
     } finally {
       setRevoking(false);
     }
+  };
+
+  const handleBackgroundPermission = () => {
+    openBackgroundLocationSettings();
+  };
+
+  const handleBatteryExemption = () => {
+    requestBatteryOptimizationExemption();
   };
 
   return (
@@ -219,6 +237,28 @@ export default function BackgroundTracking() {
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Tracking may stop when the screen locks. Open Android Settings &rarr; Permissions &rarr; Location &rarr; MotoVeya, and select <strong>Allow all the time</strong>.
               </p>
+              <button
+                onClick={handleBackgroundPermission}
+                className="mt-2 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-black active:scale-[0.99]">
+                Open location settings
+              </button>
+            </div>
+          </div>
+        )}
+
+        {platform === 'android' && primaryDevice && trackingOn && !batteryExempt && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+            <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-500" />
+            <div>
+              <p className="text-sm font-bold text-amber-600 dark:text-amber-400">Battery optimisation is on</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Android can shut the tracking service down while the phone is locked. Allow MotoVeya to run without battery restrictions.
+              </p>
+              <button
+                onClick={handleBatteryExemption}
+                className="mt-2 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-black active:scale-[0.99]">
+                Allow background activity
+              </button>
             </div>
           </div>
         )}

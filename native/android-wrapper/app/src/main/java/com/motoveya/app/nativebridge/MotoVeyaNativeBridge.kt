@@ -40,8 +40,10 @@ class MotoVeyaNativeBridge(
             ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
         if ((fine || coarse) && notificationsGranted) {
-            // Foreground location already granted — request background location if needed
-            requestBackgroundLocationIfNeeded(callbackName)
+            // Foreground location is everything a location foreground service needs
+            // to keep delivering fixes with the screen locked. Background location is
+            // requested separately, because Android 11+ only grants it from Settings.
+            invokeCallback(callbackName, true)
             return true
         }
 
@@ -61,28 +63,55 @@ class MotoVeyaNativeBridge(
     }
 
     /**
-     * On Android 10+, ACCESS_BACKGROUND_LOCATION must be requested separately
-     * (on 11+ it cannot be combined with foreground location). Without it the
-     * foreground service may stop receiving location fixes when the screen locks
-     * on manufacturer ROMs (Samsung, Xiaomi, Huawei).
+     * Background location ("Allow all the time") is what stops manufacturer ROMs
+     * (Samsung, Xiaomi, Huawei) killing the service. Android 11+ never shows a
+     * runtime dialog for it, so the rider is sent to the app's settings screen.
      */
-    private fun requestBackgroundLocationIfNeeded(callbackName: String) {
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
-            invokeCallback(callbackName, true)
-            return
+    @JavascriptInterface
+    fun requestBackgroundLocationPermission(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q || isBackgroundLocationGranted()) return true
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            activity.runOnUiThread {
+                try {
+                    activity.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = android.net.Uri.fromParts("package", activity.packageName, null)
+                    })
+                } catch (_: Exception) {
+                }
+            }
+            return false
         }
-        val bgGranted = ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (bgGranted) {
-            invokeCallback(callbackName, true)
-            return
-        }
-        if (callbackName.isBlank()) return
-        pendingLocationCallback = sanitize(callbackName)
         ActivityCompat.requestPermissions(
             activity,
             arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
             BACKGROUND_LOCATION_REQUEST
         )
+        return false
+    }
+
+    @JavascriptInterface
+    fun isForegroundLocationGranted(): Boolean =
+        ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    @JavascriptInterface
+    fun isIgnoringBatteryOptimizations(): Boolean {
+        val power = activity.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        return power.isIgnoringBatteryOptimizations(activity.packageName)
+    }
+
+    @JavascriptInterface
+    fun requestBatteryOptimizationExemption(): Boolean {
+        val power = activity.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        if (power.isIgnoringBatteryOptimizations(activity.packageName)) return true
+        return try {
+            activity.startActivity(android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = android.net.Uri.parse("package:${activity.packageName}")
+            })
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     fun onRequestPermissionsResult(requestCode: Int, grantResults: IntArray) {
@@ -91,14 +120,9 @@ class MotoVeyaNativeBridge(
                 val locationGranted =
                     ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                     ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                if (locationGranted) {
-                    // Foreground location granted — now request background location
-                    val cb = pendingLocationCallback
-                    requestBackgroundLocationIfNeeded(cb ?: "")
-                } else {
-                    pendingLocationCallback?.let { invokeCallback(it, false) }
-                    pendingLocationCallback = null
-                }
+                // Start the service as soon as foreground location is granted.
+                pendingLocationCallback?.let { invokeCallback(it, locationGranted) }
+                pendingLocationCallback = null
             }
             BACKGROUND_LOCATION_REQUEST -> {
                 // Background location result — tracking can proceed either way,

@@ -53,16 +53,26 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
             context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit()
                 .putBoolean(CRASH_DETECTION_KEY, enabled)
                 .apply()
-            context.startService(Intent(context, MotoVeyaLocationForegroundService::class.java).apply {
-                action = ACTION_SET_CRASH_DETECTION
-                putExtra(EXTRA_CRASH_DETECTION_ENABLED, enabled)
-            })
+            // Throws on Android 8+ when called from the background; the setting is
+            // already persisted above and applies on the next service start.
+            try {
+                context.startService(Intent(context, MotoVeyaLocationForegroundService::class.java).apply {
+                    action = ACTION_SET_CRASH_DETECTION
+                    putExtra(EXTRA_CRASH_DETECTION_ENABLED, enabled)
+                })
+            } catch (_: Exception) {
+            }
         }
 
         fun stop(context: android.content.Context) {
-            context.startService(Intent(context, MotoVeyaLocationForegroundService::class.java).apply {
-                action = ACTION_STOP
-            })
+            try {
+                context.startService(Intent(context, MotoVeyaLocationForegroundService::class.java).apply {
+                    action = ACTION_STOP
+                })
+            } catch (_: Exception) {
+                // Background start blocked — stop the service directly instead.
+                context.stopService(Intent(context, MotoVeyaLocationForegroundService::class.java))
+            }
         }
     }
 
@@ -152,22 +162,22 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
                     EXTRA_CRASH_DETECTION_ENABLED,
                     getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(CRASH_DETECTION_KEY, true)
                 )
-                if (deviceToken.isNullOrBlank()) {
+                if (deviceToken.isNullOrBlank() || !hasLocationPermission()) {
                     stopSelf()
                     return START_NOT_STICKY
                 }
-                startForeground(NOTIFICATION_ID, buildNotification("Ride tracking active"))
+                if (!promoteToForeground("Ride tracking active")) return START_NOT_STICKY
                 startTracking()
                 if (crashDetectionEnabled) startCrashDetection() else stopCrashDetection()
                 postPendingCrash()
             }
             null -> {
                 // Android can recreate a START_STICKY service with a null Intent.
-                if (deviceToken.isNullOrBlank()) {
+                if (deviceToken.isNullOrBlank() || !hasLocationPermission()) {
                     stopSelf()
                     return START_NOT_STICKY
                 }
-                startForeground(NOTIFICATION_ID, buildNotification("Ride tracking resumed"))
+                if (!promoteToForeground("Ride tracking resumed")) return START_NOT_STICKY
                 startTracking()
                 if (crashDetectionEnabled) startCrashDetection() else stopCrashDetection()
                 postLocationIfPossible()
@@ -177,9 +187,37 @@ class MotoVeyaLocationForegroundService : Service(), SensorEventListener {
         return START_STICKY
     }
 
+    private fun hasLocationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    /**
+     * Android 14 throws a SecurityException when a location foreground service is
+     * promoted without location permission, which killed the process (and every
+     * later background fix) instead of just pausing tracking.
+     */
+    private fun promoteToForeground(status: String): Boolean {
+        return try {
+            val notification = buildNotification(status)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            true
+        } catch (error: Exception) {
+            android.util.Log.w("MotoVeyaTracking", "Could not promote service to foreground", error)
+            stopSelf()
+            false
+        }
+    }
+
     private fun startTracking() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (!hasLocationPermission()) {
             stopSelf()
             return
         }

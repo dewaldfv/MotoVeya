@@ -137,6 +137,10 @@ export function useLocationBroadcast() {
       lastRideEventRef.current = Date.now();
       // Ride Mode is active — stop our own watch to avoid competing GPS updates.
       stopOwnWatch();
+      // Push the fix straight away instead of waiting for the next tick: with the
+      // screen locked, background timers are throttled or suspended, but the GPS
+      // callback still fires. Throttling happens inside broadcast().
+      broadcast();
     };
     // Lightweight fallback watch: when no ride is active but consent is on,
     // share the user's location so friends can see them even off-ride.

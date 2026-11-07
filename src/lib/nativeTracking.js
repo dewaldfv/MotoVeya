@@ -156,17 +156,23 @@ export function requestNativeCameraAndMicrophone() {
 }
 
 export async function startNativeLocationTracking() {
+  if (!isNativeLocationTrackingAvailable()) return { started: false, native: false };
+  // Only foreground location is required to run a location foreground service.
+  // Requiring "Allow all the time" here used to block the service from starting
+  // on Android 11+, leaving the web geolocation watch as the only source — and
+  // that one dies when the screen locks.
   const permissionGranted = await requestNativeLocationPermission();
-  if (permissionGranted === null) return { started: false, native: false };
-  if (!permissionGranted) return { started: false, native: true, permissionDenied: true };
+  if (permissionGranted === false) {
+    return { started: false, native: true, permissionDenied: true, backgroundLocationGranted: isBackgroundLocationGranted() };
+  }
   let token = getStoredDeviceToken();
   if (!token) {
-    const registered = await registerNativeDevice({ platform: detectPlatform() });
+    const registered = await registerNativeDevice({ platform: detectPlatform() }).catch(() => null);
     token = registered?.token || getStoredDeviceToken();
   }
-  if (!token) return { started: false, native: false };
+  if (!token) return { started: false, native: true };
   const bridge = getNativeBridge();
-  if (!bridge?.startNativeLocationTracking) return { started: false, native: false };
+  if (!bridge?.startNativeLocationTracking) return { started: false, native: true };
   const crashDetectionEnabled = (() => {
     try { return localStorage.getItem('motogo_crash_detection_enabled') !== 'false'; } catch { return true; }
   })();
@@ -175,10 +181,27 @@ export async function startNativeLocationTracking() {
     const started = typeof startWithOptions === 'function'
       ? !!startWithOptions.call(bridge, token, crashDetectionEnabled)
       : !!bridge.startNativeLocationTracking(token);
-    return { started, native: true, crashDetectionEnabled };
+    return { started, native: true, crashDetectionEnabled, backgroundLocationGranted: isBackgroundLocationGranted() };
   } catch {
     return { started: false, native: true, crashDetectionEnabled };
   }
+}
+
+// Android 11+ never shows a runtime dialog for "Allow all the time". The bridge
+// opens the app's permission settings instead; the status is re-read on focus.
+export function openBackgroundLocationSettings() {
+  const bridge = getNativeBridge();
+  try { return !!bridge?.requestBackgroundLocationPermission?.(); } catch { return false; }
+}
+
+export function isIgnoringBatteryOptimizations() {
+  const bridge = getNativeBridge();
+  try { return bridge?.isIgnoringBatteryOptimizations ? !!bridge.isIgnoringBatteryOptimizations() : true; } catch { return true; }
+}
+
+export function requestBatteryOptimizationExemption() {
+  const bridge = getNativeBridge();
+  try { return !!bridge?.requestBatteryOptimizationExemption?.(); } catch { return false; }
 }
 
 export function setNativeCrashDetectionEnabled(enabled) {
