@@ -32,9 +32,20 @@ function groupColor(g) {
   return '#3b82f6';
 }
 
-function riderSvg(heading, isCrashRecovery) {
-  const color = isCrashRecovery ? '#ef4444' : '#FF6F00';
+function riderSvg(heading, isCrashRecovery, stale) {
+  const color = isCrashRecovery ? '#ef4444' : stale ? '#94a3b8' : '#FF6F00';
   return `<svg width="28" height="28" viewBox="0 0 24 24" fill="${color}" stroke="#fff" stroke-width="2" stroke-linejoin="round" style="transform:rotate(${heading || 0}deg);transition:transform 0.3s ease"><path d="M12 2 L20 20 L12 16 L4 20 Z"/></svg>`;
+}
+
+/**
+ * Self marker markup: the heading arrow plus, when the fix is no longer
+ * trustworthy, a "last known" label so the rider knows the dot is approximate.
+ */
+function riderHtml(heading, isCrashRecovery, stale, label) {
+  const badge = stale
+    ? `<span style="position:absolute;top:30px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:2px 7px;border-radius:999px;background:rgba(15,23,42,0.85);border:1px solid rgba(148,163,184,0.5);color:#e2e8f0;font-family:Inter,Arial,sans-serif;font-size:10px;font-weight:600;line-height:1.4;pointer-events:none">${label || 'Last known'}</span>`
+    : '';
+  return `<div style="position:relative;display:flex;align-items:center;justify-content:center;opacity:${stale ? 0.75 : 1};transition:opacity 0.2s ease">${riderSvg(heading, isCrashRecovery, stale)}${badge}</div>`;
 }
 
 function circleElement(color, size = 14) {
@@ -137,14 +148,14 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
       if (!m) {
         const el = document.createElement('div');
         el.style.pointerEvents = 'auto';
-        el.innerHTML = riderSvg(screenHeading, isCrashRecovery);
+        el.innerHTML = riderHtml(screenHeading, isCrashRecovery, rider.stale, rider.statusLabel);
         m = new maplibregl.Marker({ element: el })
           .setLngLat([rider.lng, rider.lat])
           .addTo(map);
         markers.set(id, m);
         riderTargetRef.current = { lat: rider.lat, lng: rider.lng, accuracy: rider.accuracy || 0, velLat: 0, velLng: 0, t: performance.now() };
       } else {
-        m.getElement().innerHTML = riderSvg(screenHeading, isCrashRecovery);
+        m.getElement().innerHTML = riderHtml(screenHeading, isCrashRecovery, rider.stale, rider.statusLabel);
         const prev = riderTargetRef.current;
         let velLat = 0, velLng = 0;
         if (prev && prev.lat != null) {

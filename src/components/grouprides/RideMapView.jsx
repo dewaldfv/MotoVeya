@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl';
 import MapLibreContainer from '@/components/MapLibreContainer';
 import MapLibreLine from '@/components/MapLibreLine';
 import CustomMapMarker from '@/components/CustomMapMarker';
+import CurrentLocationMarker from '@/components/map/CurrentLocationMarker';
 import { useMapInstance } from '@/lib/maplibreContext';
 
 const SA_CENTER = [-26.2041, 28.0473];
@@ -75,6 +76,10 @@ export default function RideMapView({ participants = [], route = [], breadcrumb 
         <CustomMapMarker position={[destination.lat, destination.lng]} anchor="bottom">
           <div style={{ width: 26, height: 26, background: '#4285F4', borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,.5)' }} />
         </CustomMapMarker>
+      )}
+
+      {!participants.some((p) => p.user_id === user?.id && p.lat != null) && (
+        <CurrentLocationMarker position={selfPos} enabled={!selfPos} zIndex={60} />
       )}
 
       {participants.map((p) =>

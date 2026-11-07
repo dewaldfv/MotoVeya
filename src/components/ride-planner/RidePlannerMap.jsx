@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl';
 import MapLibreContainer from '@/components/MapLibreContainer';
 import MapLibreLine from '@/components/MapLibreLine';
 import CustomMapMarker from '@/components/CustomMapMarker';
+import CurrentLocationMarker from '@/components/map/CurrentLocationMarker';
 import { useMapInstance } from '@/lib/maplibreContext';
 
 const SA_CENTER = [-26.2041, 28.0473];
@@ -82,6 +83,7 @@ export default function RidePlannerMap({ waypoints = [], routeData = null, route
     <div className="relative h-72 w-full overflow-hidden rounded-2xl border border-border bg-card">
       <MapLibreContainer center={center} zoom={6} layer="standard">
         <FitWaypoints waypoints={waypoints} />
+        <CurrentLocationMarker zIndex={30} />
         {path.length > 1 && (
           <>
             <MapLibreLine id="planner-casing" coordinates={path} color="#ffffff" width={8} opacity={0.9} />

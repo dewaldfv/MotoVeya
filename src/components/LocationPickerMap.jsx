@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import MapLibreContainer from './MapLibreContainer';
 import CustomMapMarker from './CustomMapMarker';
+import CurrentLocationMarker from '@/components/map/CurrentLocationMarker';
 import { useMapInstance } from '@/lib/maplibreContext';
 import ImportFromGoogleMapsButton from '@/components/ImportFromGoogleMapsButton';
 import LocationInfoCard from '@/components/LocationInfoCard';
@@ -169,6 +170,7 @@ export default function LocationPickerMap({ value, onChange, onImportInfo }) {
           <MapController mapRef={mapRef} value={value} importZoomRef={importZoomRef} />
           <UserLocationCenterer active={!value && !userInitDone} onDone={() => setUserInitDone(true)} />
           <ZoomTracker onZoom={setZoom} />
+          <CurrentLocationMarker zIndex={8} />
 
           {value && (
             <CustomMapMarker position={[value.lat, value.lng]} anchor="bottom">

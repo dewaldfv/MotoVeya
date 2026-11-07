@@ -13,6 +13,7 @@ import FuelStationMarkers from './map/FuelStationMarkers';
 import LiveMarkers from './map/LiveMarkers';
 import NativeEventMarkers from './map/NativeEventMarkers';
 import MapPopupContent from './MapPopupContent';
+import useCurrentLocation from '@/hooks/useCurrentLocation';
 
 const SA_CENTER = [-26.2041, 28.0473];
 
@@ -243,6 +244,32 @@ export default function MapView({
     return [Math.round(userPos[0] * 100) / 100, Math.round(userPos[1] * 100) / 100];
   }, [userPos?.[0], userPos?.[1]]);
 
+  // When no ride session is reporting a position, fall back to the device fix so
+  // the rider's own location is always on the map — with a stale marker when the
+  // fix is old or too coarse to trust.
+  const current = useCurrentLocation({ enabled: !riders[0] });
+  const selfRider = useMemo(() => {
+    if (riders[0]) return riders[0];
+    if (!current.position) return null;
+    return {
+      id: 'me',
+      lat: current.position[0],
+      lng: current.position[1],
+      accuracy: current.accuracy,
+      heading: current.heading,
+      stale: current.stale,
+      statusLabel: current.statusLabel,
+    };
+  }, [
+    riders[0],
+    current.position?.[0],
+    current.position?.[1],
+    current.accuracy,
+    current.heading,
+    current.stale,
+    current.statusLabel,
+  ]);
+
   const poiMarkers = null;
   const distressMarkers = useMemo(
     () => distressAlerts.filter((d) => isValid(d.lat, d.lng)).map((d) => (
@@ -366,7 +393,7 @@ export default function MapView({
       )}
 
       <LiveMarkers
-        rider={riders[0] || null}
+        rider={selfRider}
         friends={friends}
         groupRiders={groupRiders}
         onFriendClick={onFriendClick}
