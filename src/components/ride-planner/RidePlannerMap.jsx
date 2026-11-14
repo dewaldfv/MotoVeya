@@ -4,6 +4,7 @@ import MapLibreContainer from '@/components/MapLibreContainer';
 import MapLibreLine from '@/components/MapLibreLine';
 import CustomMapMarker from '@/components/CustomMapMarker';
 import CurrentLocationMarker from '@/components/map/CurrentLocationMarker';
+import useCurrentLocation from '@/hooks/useCurrentLocation';
 import { useMapInstance } from '@/lib/maplibreContext';
 
 const SA_CENTER = [-26.2041, 28.0473];
@@ -23,6 +24,49 @@ function FitWaypoints({ waypoints }) {
     map.fitBounds(bounds, { padding: 80 });
     done.current = true;
   }, [map, waypoints.length]);
+  return null;
+}
+
+// Tap anywhere on the map to drop a new waypoint pin.
+function MapTapHandler({ onTap, disabled }) {
+  const map = useMapInstance();
+  const onTapRef = useRef(onTap);
+  useEffect(() => { onTapRef.current = onTap; }, [onTap]);
+
+  useEffect(() => {
+    if (!map || disabled || !onTap) return;
+    const canvas = map.getCanvas();
+    const previousCursor = canvas.style.cursor;
+    canvas.style.cursor = 'crosshair';
+    // A pan that ends with a mouse-up can also emit a click — ignore those so
+    // moving the map never drops a pin by accident.
+    let lastDragEnd = 0;
+    const handleDragEnd = () => { lastDragEnd = Date.now(); };
+    const handleClick = (e) => {
+      if (Date.now() - lastDragEnd < 300) return;
+      onTapRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+    };
+    map.on('dragend', handleDragEnd);
+    map.on('click', handleClick);
+    return () => {
+      map.off('dragend', handleDragEnd);
+      map.off('click', handleClick);
+      canvas.style.cursor = previousCursor;
+    };
+  }, [map, disabled, onTap]);
+
+  return null;
+}
+
+// Before the first waypoint exists, open the map where the rider actually is.
+function CenterOnUser({ position, enabled }) {
+  const map = useMapInstance();
+  const done = useRef(false);
+  useEffect(() => {
+    if (!map || !enabled || done.current || !position) return;
+    done.current = true;
+    map.jumpTo({ center: [position[1], position[0]], zoom: 11 });
+  }, [map, enabled, position?.[0], position?.[1]]);
   return null;
 }
 
@@ -75,14 +119,17 @@ function DraggableWaypointMarker({ waypoint, index, total, onDragEnd }) {
   return null;
 }
 
-export default function RidePlannerMap({ waypoints = [], routeData = null, routeLoading = false, suggestedStops = [], onWaypointDrag }) {
+export default function RidePlannerMap({ waypoints = [], routeData = null, routeLoading = false, suggestedStops = [], onWaypointDrag, onMapTap }) {
   const center = waypoints[0] ? [waypoints[0].lat, waypoints[0].lng] : SA_CENTER;
   const path = routeData?.coordinates?.length ? routeData.coordinates : waypoints.map((w) => [w.lat, w.lng]);
+  const { position: localPosition } = useCurrentLocation({ enabled: waypoints.length === 0 });
 
   return (
     <div className="relative h-72 w-full overflow-hidden rounded-2xl border border-border bg-card">
       <MapLibreContainer center={center} zoom={6} layer="standard">
         <FitWaypoints waypoints={waypoints} />
+        <CenterOnUser position={waypoints.length === 0 ? localPosition : null} enabled={waypoints.length === 0} />
+        <MapTapHandler onTap={onMapTap} />
         <CurrentLocationMarker zIndex={30} />
         {path.length > 1 && (
           <>
@@ -119,6 +166,11 @@ export default function RidePlannerMap({ waypoints = [], routeData = null, route
       {routeLoading && (
         <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white">
           Calculating route{'\u2026'}
+        </div>
+      )}
+      {onMapTap && (
+        <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/75 px-3 py-1.5 text-[11px] font-semibold text-white">
+          Tap the map to drop a waypoint pin
         </div>
       )}
     </div>

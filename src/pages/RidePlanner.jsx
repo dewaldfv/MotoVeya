@@ -237,6 +237,25 @@ export default function RidePlanner() {
     setWaypoints((prev) => [...prev, { name: loc.name, lat: loc.lat, lng: loc.lng }]);
   };
 
+  // Drop a pin on the map: the tapped point becomes the next waypoint, named
+  // from a reverse geocode so the existing list stays readable.
+  const addDroppedWaypoint = async ({ lat, lng }) => {
+    const point = { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+    setWaypoints((prev) => {
+      if (prev.some((w) => Math.abs(w.lat - point.lat) < 0.000002 && Math.abs(w.lng - point.lng) < 0.000002)) return prev;
+      return [...prev, { name: 'Dropped pin', ...point }];
+    });
+    try {
+      const res = await base44.functions.invoke('reverse-geocode', { lat: point.lat, lng: point.lng });
+      const name = res.data?.name;
+      if (name) {
+        setWaypoints((prev) => prev.map((w) => (
+          w.name === 'Dropped pin' && w.lat === point.lat && w.lng === point.lng ? { ...w, name } : w
+        )));
+      }
+    } catch (e) { /* keep the generic label */ }
+  };
+
   const updateWaypoint = (i, loc) => {
     setWaypoints((prev) => prev.map((w, idx) => (idx === i ? { ...w, lat: loc.lat, lng: loc.lng } : w)));
   };
@@ -487,31 +506,40 @@ export default function RidePlanner() {
           </div>
         )}
 
-        {waypoints.length > 0 && (
-          <>
-            <RidePlannerMap waypoints={routedWaypoints} routeData={routeData} routeLoading={routeLoading} suggestedStops={suggestedStops} onWaypointDrag={updateWaypoint} />
-            {routeLoading && <div className="rounded-2xl border border-border bg-card p-3 text-sm text-muted-foreground">Calculating actual road route…</div>}
-            {routeData && <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4 text-sm">
-              <div><p className="text-xs text-muted-foreground">Road distance</p><p className="font-bold">{routeData.distance_km.toFixed(1)} km</p></div>
-              <div><p className="text-xs text-muted-foreground">Estimated riding time</p><p className="font-bold">{Math.floor(routeData.duration_minutes / 60)}h {Math.round(routeData.duration_minutes % 60)}m</p></div>
-            </div>}
-            <WeatherCard weather={weather} loading={weatherLoading} plannedDate={plannedDate} />
-            <RangeWarning waypoints={routedWaypoints} routeData={routeData} />
-            <StopSuggestions
-              waypoints={routedWaypoints}
-              routeData={routeData}
-              onAddStop={addSuggestedStop}
-              onAddRecommendedStops={addRecommendedStops}
-              onSuggestChange={setSuggestedStops}
-            />
-            <RideReadiness
-              waypoints={routedWaypoints}
-              routeData={routeData}
-              routeLoading={routeLoading}
-              suggestedStops={suggestedStops}
-            />
-          </>
-        )}
+        <div className="space-y-3">
+          <RidePlannerMap
+            waypoints={routedWaypoints}
+            routeData={routeData}
+            routeLoading={routeLoading}
+            suggestedStops={suggestedStops}
+            onWaypointDrag={updateWaypoint}
+            onMapTap={sharedRoute ? null : addDroppedWaypoint}
+          />
+          {waypoints.length > 0 && (
+            <>
+              {routeLoading && <div className="rounded-2xl border border-border bg-card p-3 text-sm text-muted-foreground">Calculating actual road route…</div>}
+              {routeData && <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4 text-sm">
+                <div><p className="text-xs text-muted-foreground">Road distance</p><p className="font-bold">{routeData.distance_km.toFixed(1)} km</p></div>
+                <div><p className="text-xs text-muted-foreground">Estimated riding time</p><p className="font-bold">{Math.floor(routeData.duration_minutes / 60)}h {Math.round(routeData.duration_minutes % 60)}m</p></div>
+              </div>}
+              <WeatherCard weather={weather} loading={weatherLoading} plannedDate={plannedDate} />
+              <RangeWarning waypoints={routedWaypoints} routeData={routeData} />
+              <StopSuggestions
+                waypoints={routedWaypoints}
+                routeData={routeData}
+                onAddStop={addSuggestedStop}
+                onAddRecommendedStops={addRecommendedStops}
+                onSuggestChange={setSuggestedStops}
+              />
+              <RideReadiness
+                waypoints={routedWaypoints}
+                routeData={routeData}
+                routeLoading={routeLoading}
+                suggestedStops={suggestedStops}
+              />
+            </>
+          )}
+        </div>
 
         {waypoints.length > 0 && (
           <div className="overflow-hidden rounded-3xl border border-border bg-card">
