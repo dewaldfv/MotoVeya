@@ -10,9 +10,19 @@ import { sendPushToUsers } from './webPush.ts';
 export async function runEmergencyResponse(base44, user, body) {
   const svc = base44.asServiceRole;
 
-  const lat = Number(body.lat);
-  const lng = Number(body.lng);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+  // Accept numeric coordinates (including zero), but reject empty or coercible
+  // non-numeric values before converting and checking geographic bounds.
+  const parseCoordinate = (value) => {
+    if (typeof value === 'number') return value;
+    if (typeof value !== 'string') return NaN;
+    const trimmed = value.trim();
+    if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) return NaN;
+    return Number(trimmed);
+  };
+  const lat = parseCoordinate(body?.lat);
+  const lng = parseCoordinate(body?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) ||
+      lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     return { status: 400, body: { error: 'Valid location required' } };
   }
 
@@ -81,13 +91,13 @@ Time: ${localTime}
 Motorcycle: ${body.bike_make || ''} ${body.bike_model || ''} ${body.bike_year || ''}
 
 Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}
-Live tracking: ${trackingLink}
+Incident location (static map pin): ${trackingLink}
 
 Last known speed: ${body.speed_at_impact != null ? body.speed_at_impact + ' km/h' : 'Unknown'}
 Last known heading: ${body.heading_at_impact != null ? Math.round(body.heading_at_impact) + '°' : 'Unknown'}
 Battery level: ${body.battery_level != null ? body.battery_level + '%' : 'Unknown'}
 
-MotoVeya has detected a potential rider-down incident. The rider's live GPS location is being transmitted and updated continuously.
+MotoVeya has detected a potential rider-down incident. The map pin shows the location reported when this alert was created; it does not update automatically.
 
 Please attempt to contact the rider or reach them safely if you are nearby. This alert is visible to MotoVeya riders within 20 km of the incident.
 
@@ -115,7 +125,7 @@ This is an automated Rider Down alert from MotoVeya.`,
         await svc.entities.Notification.create({
           type: 'distress_alert',
           title: 'RIDER DOWN',
-          body: `${riderName} may need help. Live location is available.`,
+          body: `${riderName} may need help. Tap to view the reported incident location.`,
           is_read: false,
           recipient_id: contact.id,
           action_url: trackingLink,
@@ -174,7 +184,7 @@ This is an automated Rider Down alert from MotoVeya.`,
     try {
       await sendPushToUsers(svc, nearbyIds, {
         title: 'RIDER DOWN',
-        body: `${riderName} may need help within 20 km. Tap to view live location.`,
+        body: `${riderName} may need help within 20 km. Tap to view the reported incident location.`,
         type: 'distress_alert',
         action_url: trackingLink,
         rider_down: true,
