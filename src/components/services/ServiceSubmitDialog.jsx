@@ -42,11 +42,14 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
   const [uploading, setUploading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
+  const [processingImage, setProcessingImage] = useState(false);
+  const [extractedInfo, setExtractedInfo] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const categoryOptions = foodOnly ? FOOD_CATEGORIES : SERVICE_CATEGORIES;
 
   useEffect(() => {
     if (!open) return;
+    setExtractedInfo(null);
     if (editService) {
       const str = (v) => (v == null ? '' : String(v));
       setForm({
@@ -102,6 +105,50 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
 
   const handleRemoveImage = (idx) => {
     setForm((f) => ({ ...f, photo_urls: f.photo_urls.filter((_, i) => i !== idx) }));
+  };
+
+  const handleAutoFillUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProcessingImage(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const result = await base44.functions.invoke('process-service-image', {
+        image_url: file_url,
+        food_only: foodOnly,
+      });
+      const data = result?.data || result;
+      if (!data?.data) throw new Error(data?.error || 'The image could not be read');
+      const extracted = data.data;
+      setForm((f) => ({
+        ...f,
+        name: extracted.name || f.name,
+        category: extracted.category || f.category,
+        description: extracted.description || f.description,
+        address: extracted.address || f.address,
+        town: extracted.town || f.town,
+        province: extracted.province || f.province,
+        lat: extracted.lat != null ? String(extracted.lat) : f.lat,
+        lng: extracted.lng != null ? String(extracted.lng) : f.lng,
+        phone: extracted.phone || f.phone,
+        email: extracted.email || f.email,
+        website: extracted.website || f.website,
+        opening_hours: extracted.opening_hours || f.opening_hours,
+        is_open_24h: extracted.is_open_24h || f.is_open_24h,
+        price_range: extracted.price_range || f.price_range,
+        service_menu: extracted.service_menu || f.service_menu,
+        social_links: extracted.social_links || f.social_links,
+        photo_urls: [file_url, ...(f.photo_urls || []).filter((u) => u !== file_url)],
+      }));
+      setExtractedInfo({ confidence: extracted.confidence_score, missing: extracted.missing_fields || [] });
+      toast.success('Service details filled in from your image. Please review them.');
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || 'Could not read the image');
+    } finally {
+      setProcessingImage(false);
+      e.target.value = '';
+    }
   };
 
   const handleLogoUpload = async (e) => {
@@ -172,6 +219,24 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{editService ? 'Edit Service' : foodOnly ? 'Submit a Food & Drink Venue' : 'Submit a Service'}</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-base">Upload a Photo or Flyer</Label>
+                <p className="mt-1 text-xs text-muted-foreground">MotoVeya will read the image and fill in the business details, category, contact info and location for you to review.</p>
+              </div>
+              <label className="flex min-h-[44px] shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground">
+                {processingImage ? <><Loader2 size={16} className="animate-spin" /> Reading...</> : <><ImagePlus size={16} /> Upload</>}
+                <input type="file" accept="image/*" className="hidden" onChange={handleAutoFillUpload} disabled={processingImage} />
+              </label>
+            </div>
+            {extractedInfo && (
+              <div className="mt-2 rounded-lg bg-background/70 p-3 text-xs">
+                <div className="flex justify-between"><span>Extraction confidence</span><strong>{Math.round((extractedInfo.confidence || 0) * 100)}%</strong></div>
+                {extractedInfo.missing?.length > 0 && <p className="mt-1 text-amber-600">Still verify: {extractedInfo.missing.join(', ')}</p>}
+              </div>
+            )}
+          </div>
           <div><Label>Business Name *</Label><Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Joe's Bike Workshop" className="min-h-[48px]" /></div>
 
           <div>
