@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import MapLibreContainer from '@/components/MapLibreContainer';
+import PlannerMapControls from '@/components/ride-planner/PlannerMapControls';
+import { useMapLayer } from '@/lib/mapLayers';
 import MapLibreLine from '@/components/MapLibreLine';
 import CustomMapMarker from '@/components/CustomMapMarker';
 import CurrentLocationMarker from '@/components/map/CurrentLocationMarker';
@@ -123,10 +125,24 @@ export default function RidePlannerMap({ waypoints = [], routeData = null, route
   const center = waypoints[0] ? [waypoints[0].lat, waypoints[0].lng] : SA_CENTER;
   const path = routeData?.coordinates?.length ? routeData.coordinates : waypoints.map((w) => [w.lat, w.lng]);
   const { position: localPosition } = useCurrentLocation({ enabled: waypoints.length === 0 });
+  const [layer, setLayer, rawLayer] = useMapLayer();
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // Escape leaves fullscreen, matching the back-out expectation on desktop.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setFullscreen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fullscreen]);
 
   return (
-    <div className="relative h-72 w-full overflow-hidden rounded-2xl border border-border bg-card">
-      <MapLibreContainer center={center} zoom={6} layer="standard">
+    <div
+      className={fullscreen
+        ? 'fixed inset-0 z-[100] h-full w-full overflow-hidden bg-card'
+        : 'relative h-72 w-full overflow-hidden rounded-2xl border border-border bg-card'}
+    >
+      <MapLibreContainer center={center} zoom={6} layer={layer}>
         <FitWaypoints waypoints={waypoints} />
         <CenterOnUser position={waypoints.length === 0 ? localPosition : null} enabled={waypoints.length === 0} />
         <MapTapHandler onTap={onMapTap} />
@@ -163,6 +179,12 @@ export default function RidePlannerMap({ waypoints = [], routeData = null, route
           </CustomMapMarker>
         ))}
       </MapLibreContainer>
+      <PlannerMapControls
+        rawLayer={rawLayer}
+        onSelectLayer={setLayer}
+        fullscreen={fullscreen}
+        onToggleFullscreen={() => setFullscreen((v) => !v)}
+      />
       {routeLoading && (
         <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white">
           Calculating route{'\u2026'}
