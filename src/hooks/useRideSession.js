@@ -165,7 +165,9 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
         setSpeed(Math.round(spd));
       },
       () => {},
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+      // Keep the idle marker close to real time: a fix cached for several seconds
+      // makes the rider appear to lag behind the map before a ride starts.
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [rideStatus]);

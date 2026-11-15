@@ -158,17 +158,26 @@ export default function LiveMarkers({ rider, friends = [], groupRiders = [], onF
         m.getElement().innerHTML = riderHtml(screenHeading, isCrashRecovery, rider.stale, rider.statusLabel);
         const prev = riderTargetRef.current;
         let velLat = 0, velLng = 0;
-        if (prev && prev.lat != null) {
+        // While moving, glide along the reported speed and heading: between fixes
+        // this keeps the marker travelling at the rider's real pace instead of
+        // freezing at each fix and jumping to the next one.
+        if (Number.isFinite(rider.speed) && rider.speed > 3 && rider.heading != null) {
+          const metresPerSecond = rider.speed / 3.6;
+          const rad = (rider.heading * Math.PI) / 180;
+          const cosLat = Math.cos((rider.lat * Math.PI) / 180) || 1;
+          velLat = (metresPerSecond * Math.cos(rad)) / 111320;
+          velLng = (metresPerSecond * Math.sin(rad)) / (111320 * cosLat);
+        } else if (prev && prev.lat != null) {
           const dt = (performance.now() - (prev.t || 0)) / 1000;
           if (dt > 0.1 && dt < 5) {
             // Reject movement that falls within GPS noise: if the displacement
-            // is smaller than the reported accuracy (or a 5 m floor), treat
-            // the phone as stationary and carry zero velocity forward so the
-            // marker stays put instead of drifting with the jitter.
+            // is smaller than the noise floor, treat the phone as stationary and
+            // carry zero velocity forward so the marker stays put instead of
+            // drifting with the jitter.
             const dLat = rider.lat - prev.lat;
             const dLng = rider.lng - prev.lng;
             const meters = Math.hypot(dLat * 111000, dLng * 111000 * Math.cos((rider.lat * Math.PI) / 180));
-            const noiseFloor = Math.max(5, rider.accuracy || prev.accuracy || 0);
+            const noiseFloor = Math.max(6, Math.min(15, rider.accuracy || prev.accuracy || 6));
             if (meters >= noiseFloor) {
               velLat = Math.max(-0.0008, Math.min(0.0008, dLat / dt));
               velLng = Math.max(-0.0008, Math.min(0.0008, dLng / dt));
