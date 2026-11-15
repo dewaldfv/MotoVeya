@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
 import CalendarExportButton from '@/components/CalendarExportButton';
 import PullToRefresh from '@/components/PullToRefresh';
+import EventFilters, { matchesDatePreset, matchesEventSearch } from '@/components/events/EventFilters';
 import { formatEventDateRange } from '@/lib/eventDate';
 
 const CATS = ['all', 'rally', 'breakfast_run', 'pub_ride', 'birthday_bash', 'camping', 'track_day', 'charity_ride', 'bike_night', 'scenic_ride', 'day_jol', 'other'];
@@ -16,6 +17,8 @@ export default function Events() {
   const queryClient = useQueryClient();
   const [activeCat, setActiveCat] = useState('all');
   const [tab, setTab] = useState('upcoming');
+  const [search, setSearch] = useState('');
+  const [datePreset, setDatePreset] = useState('all');
   const [submitOpen, setSubmitOpen] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
 
@@ -41,7 +44,11 @@ export default function Events() {
   const tabEvents = tab === 'upcoming' ? (data?.upcoming ?? []) : (data?.past ?? []);
   const canEdit = (ev) => user && (user.role === 'admin' || (user.role === 'organizer' && ev.created_by_id === user.id));
   const canSubmit = user && (user.role === 'organizer' || user.role === 'admin');
-  const filtered = activeCat === 'all' ? tabEvents : tabEvents.filter((e) => e.category === activeCat);
+  const searched = tabEvents.filter(
+    (e) => matchesEventSearch(e, search) && matchesDatePreset(e.event_date, datePreset, tab)
+  );
+  const filtered = activeCat === 'all' ? searched : searched.filter((e) => e.category === activeCat);
+  const isNarrowed = search.trim() !== '' || datePreset !== 'all';
   const fmtDate = (ev) => formatEventDateRange(ev);
 
   const handleRefresh = async () => {
@@ -80,6 +87,13 @@ export default function Events() {
           </button>
         </div>
 
+        <EventFilters
+          search={search}
+          onSearchChange={setSearch}
+          datePreset={datePreset}
+          onDatePresetChange={setDatePreset}
+        />
+
         <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto">
           {CATS.map((cat) => (
             <button
@@ -99,7 +113,17 @@ export default function Events() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-20 text-center">
             <Calendar size={48} className="text-muted-foreground" />
-            <p className="text-muted-foreground">No {tab} events in this category yet.</p>
+            <p className="text-muted-foreground">
+              {isNarrowed ? 'No events match your search and filters.' : `No ${tab} events in this category yet.`}
+            </p>
+            {isNarrowed && (
+              <Button
+                variant="secondary"
+                onClick={() => { setSearch(''); setDatePreset('all'); setActiveCat('all'); }}
+              >
+                Clear filters
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
