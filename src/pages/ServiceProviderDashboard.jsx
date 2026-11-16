@@ -25,7 +25,8 @@ export default function ServiceProviderDashboard() {
     queryKey: ['provider-services', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      return (await base44.entities.Service.filter({ created_by_id: user.id }, '-created_date', 100)) || [];
+      const owned = { $or: [{ provider_id: user.id }, { created_by_id: user.id }] };
+      return (await base44.entities.Service.filter(owned, '-created_date', 100)) || [];
     },
     enabled: !!user?.id,
   });

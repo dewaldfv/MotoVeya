@@ -77,7 +77,11 @@ export default async function(req) {
       }
 
       if (!staff) {
-        const existing = await svc.entities.Service.filter({ created_by_id: me.id }, '-created_date', 500);
+        const existing = await svc.entities.Service.filter(
+          { $or: [{ provider_id: me.id }, { created_by_id: me.id }] },
+          '-created_date',
+          500
+        );
         const used = (existing || []).filter((s) => s.status === 'pending' || s.status === 'approved').length;
         if (used >= SLOT_LIMIT) {
           return Response.json(
@@ -96,6 +100,7 @@ export default async function(req) {
         ...payload,
         status: staff && payload.status ? payload.status : 'pending',
         created_by_id: me.id,
+        provider_id: me.id,
       });
       return Response.json({ service: created, slot_limit: SLOT_LIMIT });
     }
@@ -107,7 +112,8 @@ export default async function(req) {
     const existing = await svc.entities.Service.get(serviceId).catch(() => null);
     if (!existing) return Response.json({ error: 'Listing not found' }, { status: 404 });
 
-    if (!staff && existing.created_by_id !== me.id) {
+    const ownerId = existing.provider_id || existing.created_by_id;
+    if (!staff && ownerId !== me.id) {
       return Response.json({ error: 'You can only edit your own listings' }, { status: 403 });
     }
 

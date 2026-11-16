@@ -91,6 +91,10 @@
     "submitter_notes": {
       "type": "string"
     },
+    "provider_id": {
+      "type": "string",
+      "description": "User ID of the Service Provider who owns this listing."
+    },
     "rejection_reason": {
       "type": "string"
     },
