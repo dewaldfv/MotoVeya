@@ -10,6 +10,7 @@ import { useSpeedLimit } from '@/hooks/useSpeedLimit';
 import { saveRideState, getActiveRide, clearActiveRide, savePendingRide, getPendingRides, clearPendingRide } from '@/lib/rideCache';
 import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '@/lib/emergencyCache';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
+import { isServiceProvider } from '@/lib/plans';
 
 function normalizeBearing(deg) {
   return ((Number(deg) % 360) + 360) % 360;
@@ -41,6 +42,8 @@ function getCurrentPosition() {
 }
 
 export function useRideSession({ user, bike, fuelProfile, services = [], autoDetectEnabled = true, notifyFriends = true }) {
+  // The Service Provider package excludes ride mode entirely — manual and automatic.
+  const rideModeBlocked = useMemo(() => isServiceProvider(user), [user]);
   const [rideStatus, setRideStatus] = useState('idle');
   const [userPos, setUserPos] = useState(() => {
     try {
@@ -118,6 +121,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
 
   // Resume cached ride on mount
   useEffect(() => {
+    if (rideModeBlocked) { clearActiveRide(); return; }
     const pending = getPendingRides();
     if (pending.length > 0) {
       (async () => {
@@ -149,7 +153,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
     } else if (cached) {
       clearActiveRide();
     }
-  }, []);
+  }, [rideModeBlocked]);
 
   // Idle GPS tracking — keeps the rider marker live on the map
   useEffect(() => {
@@ -914,6 +918,10 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   };
 
   const startRide = async (destOverride, originOverride, routeWaypoints = [], replayTrack = null) => {
+    if (rideModeBlocked) {
+      toast.error('Ride mode is not available on Service Provider accounts');
+      return;
+    }
     const motionPermissionGranted = await requestMotionPermission();
     if (!motionPermissionGranted) {
       toast.warning('Motion-sensor access is unavailable or denied. Browser-based crash detection may not run on this device.');
@@ -1041,12 +1049,22 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
   const startRideRef = useRef(startRide);
   useEffect(() => { startRideRef.current = startRide; });
   useAutoRideStart({
-    enabled: autoDetectEnabled && rideStatus === 'idle',
+    enabled: autoDetectEnabled && rideStatus === 'idle' && !rideModeBlocked,
     onAutoStart: () => {
       toast.info('Ride Started Automatically');
       startRideRef.current();
     },
   });
+
+  // Service Provider accounts never hold an active ride mode: if the entitlement
+  // applies mid-ride (plan change, admin grant, refreshed user), the ride ends.
+  const endRideRef = useRef(handleEndRide);
+  useEffect(() => { endRideRef.current = handleEndRide; });
+  useEffect(() => {
+    if (!rideModeBlocked || rideStatus !== 'active') return;
+    toast.info('Ride mode is not available on Service Provider accounts');
+    endRideRef.current?.();
+  }, [rideModeBlocked, rideStatus]);
 
   const lowFuel = fuelRange !== null && fuelRange < 50;
   const isActive = rideStatus === 'active';
