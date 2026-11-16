@@ -100,6 +100,7 @@ export default function ConversationList({ user, onSelect }) {
     try {
       await base44.functions.invoke('messaging-secure', { action: 'delete_conversation', conversation_id: conv.id });
       await queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
       toast.success('Chat deleted');
     } catch (e) { console.error(e); toast.error('Could not delete chat'); }
   };
@@ -159,46 +160,57 @@ export default function ConversationList({ user, onSelect }) {
         </div>
       ) : (
         conversations.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => { if (!longPressed.current) openConversation(c); }}
-            onTouchStart={() => startPress(c)}
-            onTouchEnd={cancelPress}
-            onTouchMove={cancelPress}
-            onMouseDown={() => startPress(c)}
-            onMouseUp={cancelPress}
-            onMouseLeave={cancelPress}
-            className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left transition-transform active:scale-[0.98] select-none"
-          >
-            {c.is_group ? (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Users size={20} className="text-primary" />
-              </div>
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-base font-bold text-primary">
-                {c.other_participant_name?.charAt(0)?.toUpperCase()}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="flex min-w-0 items-center gap-2 truncate font-semibold">
-                  <span className="truncate">{c.is_group ? c.group_name : c.other_participant_name}</span>
-                  {c.unread && (
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread messages" />
-                  )}
-                </span>
-                {c.last_message_at && (
-                  <span className={`ml-2 shrink-0 text-xs ${c.unread ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
-                    {timeAgo(c.last_message_at)}
+          <div key={c.id} className="relative">
+            <button
+              onClick={() => { if (!longPressed.current) openConversation(c); }}
+              onTouchStart={() => startPress(c)}
+              onTouchEnd={cancelPress}
+              onTouchMove={cancelPress}
+              onMouseDown={() => startPress(c)}
+              onMouseUp={cancelPress}
+              onMouseLeave={cancelPress}
+              className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 pr-14 text-left transition-transform active:scale-[0.98] select-none"
+            >
+              {c.is_group ? (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Users size={20} className="text-primary" />
+                </div>
+              ) : (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-base font-bold text-primary">
+                  {c.other_participant_name?.charAt(0)?.toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="flex min-w-0 items-center gap-2 truncate font-semibold">
+                    <span className="truncate">{c.is_group ? c.group_name : c.other_participant_name}</span>
+                    {c.unread && (
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread messages" />
+                    )}
                   </span>
-                )}
+                  {c.last_message_at && (
+                    <span className={`ml-2 shrink-0 text-xs ${c.unread ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
+                      {timeAgo(c.last_message_at)}
+                    </span>
+                  )}
+                </div>
+                <p className={`truncate text-sm ${c.unread ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                  {c.last_sender_id === user.id ? 'You: ' : ''}
+                  {c.last_message_preview || (c.is_group ? 'Start the group chat' : 'Say hi!')}
+                </p>
               </div>
-              <p className={`truncate text-sm ${c.unread ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
-                {c.last_sender_id === user.id ? 'You: ' : ''}
-                {c.last_message_preview || (c.is_group ? 'Start the group chat' : 'Say hi!')}
-              </p>
-            </div>
-          </button>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(c); }}
+              onTouchStart={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              aria-label="Delete chat"
+              title="Delete chat"
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95"
+            >
+              <Trash2 size={17} />
+            </button>
+          </div>
         ))
       )}
 
