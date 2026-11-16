@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, Store, Check, X, Crown, Loader2, RefreshCw, Wrench } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import LoginPrompt from '@/components/LoginPrompt';
 import { PROVIDER_PLAN, PROVIDER_PERKS, PROVIDER_EXCLUDES, isServiceProvider } from '@/lib/plans';
 import { toast } from 'sonner';
 
@@ -11,11 +12,13 @@ export default function ProviderJoin() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [processing, setProcessing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
-  const { data: me, isLoading } = useQuery({
+  const { data: me, isLoading, isError: meFailed } = useQuery({
     queryKey: ['me'],
     queryFn: () => base44.auth.me(),
+    retry: false,
   });
 
   const provider = isServiceProvider(me);
@@ -26,24 +29,42 @@ export default function ProviderJoin() {
     enabled: !!me?.id && provider,
   });
 
+  // Returning from Paystack: confirm the payment, then open the provider dashboard.
+  // Nothing is activated unless Paystack confirms the transaction for this user.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('status') !== 'success') return;
     const reference = params.get('reference') || params.get('trxref');
+    if (!reference) return;
+    window.history.replaceState({}, '', '/provider/join');
+
+    let cancelled = false;
+    setConfirming(true);
+
     (async () => {
       try {
-        if (reference) await base44.functions.invoke('verify-paystack-payment', { reference });
+        const res = await base44.functions.invoke('verify-paystack-payment', { reference });
+        const activated = res.data?.active === true && res.data?.plan === 'provider';
         await queryClient.invalidateQueries({ queryKey: ['me'] });
-        toast.success('Payment successful. Your Service Provider package is active.');
+        if (cancelled) return;
+
+        if (activated) {
+          await queryClient.refetchQueries({ queryKey: ['me'] });
+          if (cancelled) return;
+          toast.success('Your Service Provider package is active.');
+          navigate('/provider-dashboard', { replace: true });
+          return;
+        }
+        toast.error('That payment was not completed, so your package is still inactive.');
       } catch (e) {
         console.error(e);
-        toast.success('Payment received. Your provider package will activate shortly.');
-        await queryClient.invalidateQueries({ queryKey: ['me'] });
+        if (!cancelled) toast.error('We could not confirm that payment. Please try again.');
       } finally {
-        window.history.replaceState({}, '', '/provider/join');
+        if (!cancelled) setConfirming(false);
       }
     })();
-  }, [queryClient]);
+
+    return () => { cancelled = true; };
+  }, [queryClient, navigate]);
 
   const handleSubscribe = async () => {
     if (isInIframe) {
@@ -83,12 +104,28 @@ export default function ProviderJoin() {
 
   const slotsUsed = listings.filter((s) => s.status === 'pending' || s.status === 'approved').length;
 
+  if (confirming) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background px-8 text-center">
+        <Loader2 size={32} className="animate-spin text-primary" />
+        <p className="text-lg font-black">Confirming your payment</p>
+        <p className="text-sm text-muted-foreground">
+          One moment while we activate your Service Provider package.
+        </p>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 size={28} className="animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (meFailed || !me) {
+    return <LoginPrompt message="Sign in to enrol for the Service Provider package." />;
   }
 
   return (
