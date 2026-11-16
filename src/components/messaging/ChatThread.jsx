@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { setActiveConversation } from '@/lib/messageNotifications';
+import { toast } from 'sonner';
 
 export default function ChatThread({ user, conversation, onBack }) {
   const queryClient = useQueryClient();
@@ -77,6 +78,8 @@ export default function ChatThread({ user, conversation, onBack }) {
     } catch (e) {
       console.error(e);
       setText(content);
+      const msg = e?.response?.data?.error || e?.data?.error || e?.message;
+      toast.error(msg || 'Message could not be sent');
     }
   };
 

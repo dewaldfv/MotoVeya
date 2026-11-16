@@ -90,6 +90,13 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Cannot message yourself' }, { status: 400 });
       }
 
+      // The recipient must be a real app user, otherwise the conversation would
+      // be delivered to an inbox nobody can open.
+      const recipientUser = await svc.entities.User.get(recipient_id).catch(() => null);
+      if (!recipientUser) {
+        return Response.json({ error: 'This contact cannot receive messages yet' }, { status: 404 });
+      }
+
       const key = [user.id, recipient_id].sort().join('_');
       const existing = await svc.entities.Conversation.filter({ conversation_key: key });
       let conv = existing[0];
@@ -98,7 +105,7 @@ Deno.serve(async (req) => {
 
       const sortedParticipants = [
         { id: user.id, name: user.full_name || 'Rider' },
-        { id: recipient_id, name: recipient_name || 'Rider' },
+        { id: recipient_id, name: recipient_name || recipientUser.full_name || 'Rider' },
       ].sort((a, b) => a.id.localeCompare(b.id));
 
       if (!conv) {
@@ -115,6 +122,8 @@ Deno.serve(async (req) => {
           last_message_preview: preview,
           last_message_at: now,
           last_sender_id: user.id,
+          // A new message brings an archived direct chat back into both inboxes.
+          is_archived: false,
         });
       }
 
@@ -131,9 +140,10 @@ Deno.serve(async (req) => {
         body: preview,
         recipient_id: recipient_id,
         conversation_id: conv.id,
+        action_url: '/community',
         data: JSON.stringify({ conversation_id: conv.id, sender_id: user.id }),
         is_read: false,
-      });
+      }).catch(() => {});
 
       try {
         await sendPushToUsers(svc, [recipient_id], {

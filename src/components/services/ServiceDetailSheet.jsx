@@ -4,9 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getServiceCategory, formatDistance, haversine, isOpenNow } from '@/lib/serviceCategories';
 import { safeHttpUrl } from '@/lib/safeUrl';
+import { useNavigate } from 'react-router-dom';
+import { messageContact } from '@/lib/contactChat';
 
 export default function ServiceDetailSheet({ service, userPos, isFavorite, onFavorite, onDirections, onNavigate, onMessage, onClose }) {
+  const navigate = useNavigate();
   if (!service) return null;
+  const recipientId = service.provider_id || service.created_by_id;
   const cat = getServiceCategory(service.category);
   const distance = userPos ? haversine(userPos[0], userPos[1], service.lat, service.lng) : null;
   const open = isOpenNow(service);
@@ -75,14 +79,18 @@ export default function ServiceDetailSheet({ service, userPos, isFavorite, onFav
 
         <div className="space-y-2 pt-2">
           <div className="flex gap-2">
-            {(onMessage || service.phone) && (
+            {(recipientId || service.phone) && (
               <Button
                 size="lg"
                 variant="secondary"
                 className="min-h-[56px] flex-1"
-                onClick={() => (onMessage ? onMessage(service) : window.open(`tel:${service.phone}`))}
+                onClick={() => {
+                  if (onMessage) return onMessage(service);
+                  if (recipientId) return messageContact(navigate, recipientId, 'Service Provider');
+                  window.open(`tel:${service.phone}`);
+                }}
               >
-                {onMessage
+                {recipientId
                   ? <><MessageCircle size={18} className="mr-2" /> Message</>
                   : <><Phone size={18} className="mr-2" /> Call</>}
               </Button>
