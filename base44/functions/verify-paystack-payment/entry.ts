@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { secrets } from 'base44:runtime';
-import { PLAN_AMOUNTS, PLAN_LABELS, isKnownPlan, planForAmount, applyPlanEntitlements } from '../../shared/planEntitlements.ts';
+import { PLAN_AMOUNTS, PLAN_LABELS, isKnownPlan, planForCode, planForAmount, applyPlanEntitlements } from '../../shared/planEntitlements.ts';
 
 const MONTHLY_PERIOD_DAYS = 30;
 
@@ -61,7 +61,9 @@ export default async function(req) {
 
     const metadata = tx.metadata || {};
     const cycle = 'monthly';
-    const plan = isKnownPlan(metadata.plan) ? metadata.plan : planForAmount(tx.amount);
+    const plan = isKnownPlan(metadata.plan)
+      ? metadata.plan
+      : planForCode(metadata.paystack_plan_code || tx.plan?.plan_code) || planForAmount(tx.amount);
     if (!plan || Number(tx.amount) !== PLAN_AMOUNTS[plan]) {
       return Response.json({ error: 'Unexpected payment amount' }, { status: 400 });
     }

@@ -11,6 +11,24 @@ export const PLAN_AMOUNTS = {
   gold: 8999,
 };
 
+/**
+ * The Paystack plans the user created for MotoVeya. Checkout charges these
+ * directly, so the amount billed always matches the plan's own price.
+ */
+export const PLAN_CODES = {
+  premium: 'PLN_szhwrzfq4viebfi',
+  provider: 'PLN_yvcyl1wl9a64tow',
+  provider_plus: 'PLN_j3eiq83khle4o7x',
+  organizer: 'PLN_tb6p9kvif0aqiet',
+  organizer_plus: 'PLN_vl9sgs0r8uh8pf9',
+  gold: 'PLN_t8ydrmdpvcw2dp4',
+};
+
+export function planForCode(code: any) {
+  if (typeof code !== 'string') return null;
+  return Object.keys(PLAN_CODES).find((plan) => PLAN_CODES[plan] === code) || null;
+}
+
 export const PLAN_LABELS = {
   premium: 'Premium',
   provider: 'Service Provider',

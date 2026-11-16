@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { secrets } from 'base44:runtime';
-import { PLAN_AMOUNTS, PLAN_LABELS, isKnownPlan, planForAmount, applyPlanEntitlements } from '../../shared/planEntitlements.ts';
+import { PLAN_AMOUNTS, PLAN_LABELS, isKnownPlan, planForCode, planForAmount, applyPlanEntitlements } from '../../shared/planEntitlements.ts';
 
 const GRACE_PERIOD_DAYS = 7;
 const MONTHLY_PERIOD_DAYS = 30;
@@ -48,6 +48,10 @@ async function resolvePlanForCharge(svc, data, metadata) {
 
   const planCode = data.plan?.plan_code || metadata.paystack_plan_code;
   if (planCode) {
+    // The codes the app checks out with identify the package exactly.
+    const mapped = planForCode(planCode);
+    if (mapped) return mapped;
+
     const byPlanCode = await svc.entities.Subscription.filter({ paystack_plan_code: planCode }, '-created_date', 5);
     if (byPlanCode[0]?.plan) return byPlanCode[0].plan;
   }
