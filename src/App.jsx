@@ -43,6 +43,7 @@ import About from '@/pages/About';
 import Contact from '@/pages/Contact';
 import SafetyGuidelines from '@/pages/SafetyGuidelines';
 import SupportCenter from '@/pages/SupportCenter';
+import Unsubscribe from '@/pages/Unsubscribe';
 import RidePlanner from '@/pages/RidePlanner';
 import SavedRoutes from '@/pages/SavedRoutes';
 import SavedPlaces from '@/pages/SavedPlaces';
@@ -74,7 +75,7 @@ const AuthenticatedApp = () => {
     if (authError) return; // let the auth error handler below deal with it
     const isGuest = localStorage.getItem('motogo_guest_mode') === 'true';
     const currentPath = window.location.pathname;
-    const isPublicAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password', '/welcome', '/oauth/consent', '/web-auth-bridge'].includes(currentPath) || currentPath.startsWith('/friend/');
+    const isPublicAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password', '/welcome', '/oauth/consent', '/web-auth-bridge', '/unsubscribe'].includes(currentPath) || currentPath.startsWith('/friend/');
     if (isPublicAuthRoute) return; // let auth/public pages render for unauthenticated visitors
     if (isFirstLaunch && !isAuthenticated && !isGuest) {
       navigate('/welcome', { replace: true });
@@ -99,7 +100,7 @@ const AuthenticatedApp = () => {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
       const currentPath = window.location.pathname;
-      const isPublicAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password', '/welcome', '/oauth/consent', '/web-auth-bridge'].includes(currentPath) || currentPath.startsWith('/friend/');
+      const isPublicAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password', '/welcome', '/oauth/consent', '/web-auth-bridge', '/unsubscribe'].includes(currentPath) || currentPath.startsWith('/friend/');
       if (!isPublicAuthRoute) {
         // Redirect to login automatically
         navigateToLogin();
@@ -112,6 +113,7 @@ const AuthenticatedApp = () => {
   const permissionPath = window.location.pathname;
   const isExternalPermissionFlow = permissionPath === '/oauth/consent'
     || permissionPath === '/web-auth-bridge'
+    || permissionPath === '/unsubscribe'
     || permissionPath.startsWith('/friend/');
   if (!permissionsDone && !isExternalPermissionFlow) {
     return <FirstLaunchPermissions onComplete={() => setPermissionsDone(true)} />;
@@ -133,6 +135,7 @@ const AuthenticatedApp = () => {
       <Route path="/contact" element={<Contact />} />
       <Route path="/safety-guidelines" element={<SafetyGuidelines />} />
       <Route path="/support" element={<SupportCenter />} />
+      <Route path="/unsubscribe" element={<Unsubscribe />} />
       {/* Add your page Route elements here */}
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
