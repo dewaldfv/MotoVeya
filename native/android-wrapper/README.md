@@ -27,6 +27,25 @@ The WebView exposes a restricted `MotoVeyaNative` JavaScript bridge. Ride Mode u
 - Location permission bridge
 - Notification permission request on Android 13+
 - Authenticated device-token handoff to the existing Base44 `native-location` function
+- Native push alerts through Firebase Cloud Messaging (messages, ride invites,
+  events, approvals, emergency alerts) with deep links into the right screen
+
+## Native push setup (required once)
+
+The installed app receives alerts through Firebase Cloud Messaging, because an
+Android WebView has no Web Push API.
+
+1. In the Firebase console create/select the MotoVeya project and add an Android
+   app with package name `com.motoveya.app`.
+2. Download `google-services.json` and place it at
+   `native/android-wrapper/app/google-services.json` (it is a build input, never
+   committed to a public repo).
+3. In Firebase: Project settings -> Service accounts -> Generate new private
+   key, and save the whole JSON as the app secret `FCM_SERVICE_ACCOUNT_JSON`
+   in Base44 (Dashboard -> Secrets). The server uses it to send alerts.
+4. Rebuild and publish the app, open it, allow notifications in Settings.
+   The shell hands its FCM token to `register-native-device`, which stores it on
+   the rider's NativeDevice record for delivery while the app is closed.
 
 ## Open in Android Studio
 

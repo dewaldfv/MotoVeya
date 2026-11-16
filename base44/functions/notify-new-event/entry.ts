@@ -1,24 +1,11 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { secrets } from 'base44:runtime';
-import webpush from 'npm:web-push@3.6.7';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
+import { sendPushToUsers } from '../../shared/webPush.ts';
 
-let vapidConfigured = false;
-function ensureVapid() {
-  if (vapidConfigured) return;
-  const publicKey = secrets.get('VAPID_PUBLIC_KEY');
-  const privateKey = secrets.get('VAPID_PRIVATE_KEY');
-  if (!publicKey || !privateKey) {
-    throw new Error('VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY not set');
-  }
-  webpush.setVapidDetails('mailto:Dewald.motoVeya@gmail.com', publicKey, privateKey);
-  vapidConfigured = true;
-}
-
-// Send a Web Push notification to every stored subscription (all app users),
-// and create an in-app Notification record for each subscribed user. Runs as
-// the service role so it can read other users' subscriptions and create
-// notifications addressed to them. Expired/invalid subscriptions are pruned.
-Deno.serve(async (req) => {
+// Announces a newly approved event to every rider reachable on any device:
+// one in-app Notification record plus OS-level push (browser + Android app).
+// Runs as the service role so it can read other users' subscriptions and
+// create notifications addressed to them.
+export default async function (req) {
   try {
     const base44 = createClientFromRequest(req);
     const svc = base44.asServiceRole;
@@ -26,7 +13,7 @@ Deno.serve(async (req) => {
     const { event_id } = body;
     if (!event_id) return Response.json({ error: 'Missing event_id' }, { status: 400 });
 
-    const ev = await svc.entities.Event.get(event_id).catch(() => null);
+    const ev = await svc.entities.Event.get(event_id).catch((e) => (e.status === 404 ? null : Promise.reject(e)));
     if (!ev) return Response.json({ error: 'Event not found' }, { status: 404 });
 
     // Never announce unpublished/unapproved events. This function is intended
@@ -41,16 +28,22 @@ Deno.serve(async (req) => {
       : `A new event "${ev.title}" has been added. Tap to view.`;
     const action_url = `/events/${ev.id}`;
 
-    let subs = [];
-    try {
-      subs = await svc.entities.PushSubscription.list('-created_date', 500);
-    } catch (e) {
-      console.error('list subs', e.message);
-    }
+    const [subs, devices] = await Promise.all([
+      svc.entities.PushSubscription.list('-created_date', 500).catch((e) => {
+        console.error('list subs', e.message);
+        return [];
+      }),
+      svc.entities.NativeDevice.list('-created_date', 500).catch(() => []),
+    ]);
 
-    // One in-app Notification per subscribed user.
+    // Recipients: anyone reachable on a browser subscription or an Android app
+    // device that still allows alerts.
     const userIds = new Set();
     (subs || []).forEach((s) => { if (s.user_id) userIds.add(s.user_id); });
+    (devices || []).forEach((d) => {
+      if (d.user_id && d.push_token && d.push_enabled !== false) userIds.add(d.user_id);
+    });
+
     const notifs = [...userIds].map((recipient_id) => ({
       type: 'nearby_event',
       title,
@@ -66,41 +59,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Web push to every subscription.
-    let sent = 0;
-    try {
-      ensureVapid();
-    } catch (e) {
-      console.error('ensureVapid', e.message);
-      return Response.json({ sent: 0, notified: notifs.length, error: e.message });
-    }
-    const payloadStr = JSON.stringify({
+    const result = await sendPushToUsers(svc, [...userIds], {
       title,
       body: notifBody,
       type: 'new_event',
       action_url,
       eventId: ev.id,
     });
-    await Promise.all(
-      (subs || []).map((s) =>
-        webpush
-          .sendNotification(
-            { endpoint: s.endpoint, keys: { p256dh: s.p256dh_key, auth: s.auth_key } },
-            payloadStr
-          )
-          .then(() => { sent += 1; })
-          .catch(async (err) => {
-            const status = err && err.statusCode;
-            if (status === 404 || status === 410) {
-              try { await svc.entities.PushSubscription.delete(s.id); } catch (e) {}
-            }
-          })
-      )
-    );
 
-    return Response.json({ success: true, sent, notified: notifs.length });
+    return Response.json({ success: true, sent: result.sent, notified: notifs.length });
   } catch (error) {
     console.error('notify-new-event error', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
-});
+}

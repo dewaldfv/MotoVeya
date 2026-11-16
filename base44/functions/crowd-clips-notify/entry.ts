@@ -1,31 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { secrets } from 'base44:runtime';
-import webpush from 'npm:web-push@3.6.7';
-
-let vapidConfigured = false;
-function ensureVapid() {
-  if (vapidConfigured) return;
-  const publicKey = secrets.get('VAPID_PUBLIC_KEY');
-  const privateKey = secrets.get('VAPID_PRIVATE_KEY');
-  if (!publicKey || !privateKey) throw new Error('VAPID keys are not configured');
-  webpush.setVapidDetails('mailto:Dewald.motoVeya@gmail.com', publicKey, privateKey);
-  vapidConfigured = true;
-}
-
-async function pushToUser(svc, userId, payload) {
-  if (!userId) return;
-  try { ensureVapid(); } catch (e) { console.error('VAPID', e.message); return; }
-  const subs = await svc.entities.PushSubscription.list('-created_date', 500).catch(() => []);
-  const mine = (subs || []).filter((s) => s.user_id === userId);
-  await Promise.all(mine.map((s) => webpush.sendNotification(
-    { endpoint: s.endpoint, keys: { p256dh: s.p256dh_key, auth: s.auth_key } },
-    JSON.stringify(payload)
-  ).catch(async (err) => {
-    if (err?.statusCode === 404 || err?.statusCode === 410) {
-      await svc.entities.PushSubscription.delete(s.id).catch(() => {});
-    }
-  })));
-}
+import { sendPushToUsers } from '../../shared/webPush.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -70,13 +44,13 @@ Deno.serve(async (req) => {
       action_url: clip_id ? '/crowd-clips' : '/crowd-clips',
     }).catch((e) => console.error('in-app notification', e.message));
 
-    await pushToUser(svc, creator_id, {
+    await sendPushToUsers(svc, [creator_id], {
       title,
       body,
       type,
       action_url: '/crowd-clips',
       clipId: clip_id || null,
-    });
+    }).catch((e) => console.error('crowd clip push', e.message));
 
     return Response.json({ success: true });
   } catch (error) {

@@ -34,7 +34,7 @@ export function detectPlatform() {
 // Register (or re-register) this device for background tracking. Called from the
 // web foreground where the user has a live session; the returned device_token is
 // what the native background service later uses to authenticate.
-export async function registerNativeDevice({ platform, appVersion } = {}) {
+export async function registerNativeDevice({ platform, appVersion, pushToken } = {}) {
   let token = getStoredDeviceToken();
   if (!token) {
     token = generateDeviceToken();
@@ -47,12 +47,14 @@ export async function registerNativeDevice({ platform, appVersion } = {}) {
     device_token: token,
     platform: plat,
     app_version: appVersion || (navigator.userAgent || '').slice(0, 64),
+    ...(pushToken ? { push_token: pushToken } : {}),
   });
   const deviceId = res?.data?.device_id || res?.device_id;
+  const pushRegistered = !!(res?.data?.push_registered ?? res?.push_registered);
   if (deviceId) {
     try { localStorage.setItem(DEVICE_ID_KEY, deviceId); } catch {}
   }
-  return { token, deviceId, platform: plat };
+  return { token, deviceId, platform: plat, pushRegistered };
 }
 
 export async function getMyDevices() {
@@ -187,6 +189,37 @@ export function requestNativeNotificationPermission() {
       bridge.requestNotificationPermission(callbackName);
     } catch {
       finish(false);
+    }
+  });
+}
+
+// --- Native push (Firebase Cloud Messaging) ---
+// The Android shell owns the FCM token; the WebView cannot see it, so the token
+// is requested from the bridge and handed to the server for alert delivery.
+export function isNativePushAvailable() {
+  const bridge = getNativeBridge();
+  return typeof bridge?.requestPushToken === 'function';
+}
+
+export function requestNativePushToken() {
+  const bridge = getNativeBridge();
+  if (typeof bridge?.requestPushToken !== 'function') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const callbackName = '__motoveyaPushTokenResult';
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      try { delete window[callbackName]; } catch {}
+      resolve(value ? String(value) : null);
+    };
+    const timeoutId = setTimeout(() => finish(null), 20000);
+    window[callbackName] = finish;
+    try {
+      bridge.requestPushToken(callbackName);
+    } catch {
+      finish(null);
     }
   });
 }

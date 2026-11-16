@@ -18,6 +18,19 @@
     "app_version": {
       "type": "string"
     },
+    "push_token": {
+      "type": "string",
+      "description": "Firebase Cloud Messaging registration token for this installed app."
+    },
+    "push_token_updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "push_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "False once the rider blocks notifications or FCM reports the token as unregistered."
+    },
     "last_lat": {
       "type": "number"
     },

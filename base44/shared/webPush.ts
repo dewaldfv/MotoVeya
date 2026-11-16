@@ -1,10 +1,14 @@
-// Shared Web Push helper used by messaging-secure (messages, invites,
-// approvals) and the emergency response (Rider Down alerts to nearby riders).
-// Centralized so any backend function can deliver OS-level pushes through the
-// same VAPID config and expired-subscription pruning.
+// Shared push helper used by messaging-secure (messages, invites, approvals),
+// the emergency response (Rider Down alerts) and admin broadcasts.
+//
+// Two delivery channels, one call:
+//  - Web Push (VAPID) for browsers and the installed PWA
+//  - FCM for the Play Store Android app, whose WebView has no push API
+// so every existing alert flow reaches a rider wherever MotoVeya is open.
 
 import { secrets } from 'base44:runtime';
 import webpush from 'npm:web-push@3.6.7';
+import { sendNativePushToUsers } from './nativePush.ts';
 
 let vapidConfigured = false;
 function ensureVapid() {
@@ -18,13 +22,9 @@ function ensureVapid() {
   vapidConfigured = true;
 }
 
-// Send a Web Push notification to every stored subscription owned by the
-// given user ids. `svc` is a base44 service-role client (bypasses RLS so we
-// can read other users' subscriptions). Expired/invalid subscriptions are
-// pruned automatically.
-export async function sendPushToUsers(svc, userIds, payload) {
-  const ids = (userIds || []).filter(Boolean);
-  if (ids.length === 0) return { sent: 0 };
+// Web Push to every stored subscription of the given users. Expired/invalid
+// subscriptions are pruned automatically.
+async function sendWebPushToUsers(svc, ids, payload) {
   try {
     ensureVapid();
   } catch (e) {
@@ -60,4 +60,23 @@ export async function sendPushToUsers(svc, userIds, payload) {
     )
   );
   return { sent };
+}
+
+// Send a notification to every device the given users have registered —
+// browsers (Web Push) and the installed Android app (FCM).
+export async function sendPushToUsers(svc, userIds, payload) {
+  const ids = (userIds || []).filter(Boolean);
+  if (ids.length === 0) return { sent: 0 };
+
+  const web = await sendWebPushToUsers(svc, ids, payload);
+  const native = await sendNativePushToUsers(svc, ids, payload).catch((e) => {
+    console.error('webPush native', e.message);
+    return { sent: 0, error: e.message };
+  });
+
+  return {
+    sent: (web?.sent || 0) + (native?.sent || 0),
+    webSent: web?.sent || 0,
+    nativeSent: native?.sent || 0,
+  };
 }
