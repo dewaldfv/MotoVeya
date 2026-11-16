@@ -1,14 +1,16 @@
 // Shared push helper used by messaging-secure (messages, invites, approvals),
 // the emergency response (Rider Down alerts) and admin broadcasts.
 //
-// Two delivery channels, one call:
+// Three delivery channels, one call:
 //  - Web Push (VAPID) for browsers and the installed PWA
-//  - FCM for the Play Store Android app, whose WebView has no push API
+//  - FCM for the custom Android wrapper (native/android-wrapper)
+//  - Base44 native push for the Play Store build published by the platform
 // so every existing alert flow reaches a rider wherever MotoVeya is open.
 
 import { secrets } from 'base44:runtime';
 import webpush from 'npm:web-push@3.6.7';
 import { sendNativePushToUsers } from './nativePush.ts';
+import { sendCorePushToUsers } from './corePush.ts';
 
 let vapidConfigured = false;
 function ensureVapid() {
@@ -74,9 +76,15 @@ export async function sendPushToUsers(svc, userIds, payload) {
     return { sent: 0, error: e.message };
   });
 
+  const core = await sendCorePushToUsers(svc, ids, payload).catch((e) => {
+    console.error('webPush core', e.message);
+    return { sent: 0, error: e.message };
+  });
+
   return {
-    sent: (web?.sent || 0) + (native?.sent || 0),
+    sent: (web?.sent || 0) + (native?.sent || 0) + (core?.sent || 0),
     webSent: web?.sent || 0,
     nativeSent: native?.sent || 0,
+    coreSent: core?.sent || 0,
   };
 }
