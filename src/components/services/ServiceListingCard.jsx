@@ -1,7 +1,7 @@
-import { Phone, Navigation, Star, MapPin, Heart, Route } from 'lucide-react';
+import { Phone, MessageCircle, Navigation, Star, MapPin, Heart, Route } from 'lucide-react';
 import { getServiceCategory, formatDistance, haversine, isOpenNow } from '@/lib/serviceCategories';
 
-export default function ServiceListingCard({ service, userPos, isFavorite, onFavorite, onSelect, onDirections, onNavigate }) {
+export default function ServiceListingCard({ service, userPos, isFavorite, onFavorite, onSelect, onDirections, onNavigate, onMessage }) {
   const cat = getServiceCategory(service.category);
   const distance = userPos ? haversine(userPos[0], userPos[1], service.lat, service.lng) : null;
   const open = isOpenNow(service);
@@ -40,10 +40,11 @@ export default function ServiceListingCard({ service, userPos, isFavorite, onFav
         </div>
       </div>
       <div className="mt-2 flex gap-2">
-        {service.phone && (
-          <button onClick={(e) => { e.stopPropagation(); window.open(`tel:${service.phone}`); }}
+        {(onMessage || service.phone) && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onMessage ? onMessage(service) : window.open(`tel:${service.phone}`); }}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-secondary py-2 text-sm font-semibold">
-            <Phone size={14} /> Call
+            {onMessage ? <><MessageCircle size={14} /> Message</> : <><Phone size={14} /> Call</>}
           </button>
           )}
           <button onClick={(e) => { e.stopPropagation(); onDirections(service); }}

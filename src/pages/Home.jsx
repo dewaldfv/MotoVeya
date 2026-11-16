@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Navigation, Phone, MapPin, ExternalLink, LocateFixed, Layers, X, Compass, Search } from 'lucide-react';
+import { Navigation, Phone, MapPin, ExternalLink, LocateFixed, Layers, X, Compass, Search, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { isPremiumUser } from '@/lib/plans';
+import { messageContact } from '@/lib/contactChat';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +48,7 @@ const formatDate = (d) => new Date(d).toLocaleDateString('en-ZA', { day: 'numeri
 
 export default function Home() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [pois, setPois] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -781,6 +785,15 @@ export default function Home() {
             <div className="flex items-center gap-2 text-white/75"><Phone size={16} /> {selected.contact_phone}</div>
             }
             </div>
+            {isPremiumUser(me) && selected.event_date && selected.created_by_id && selected.created_by_id !== me?.id &&
+            <Button
+              size="lg"
+              variant="secondary"
+              className="min-h-[56px] w-full text-base"
+              onClick={() => { const organizerId = selected.created_by_id; setSelected(null); messageContact(navigate, organizerId, 'Organizer'); }}>
+              <MessageCircle size={18} className="mr-2" /> Message Organizer
+            </Button>
+            }
             <div className="flex gap-2 pt-2">
               <Button size="lg" className="min-h-[56px] flex-1 text-base" onClick={() => handleDirections(selected)}>
                 <Navigation size={18} className="mr-2" /> Get Directions
@@ -796,7 +809,11 @@ export default function Home() {
       </BottomSheet>
 
       <ServiceDetailSheet service={selectedService} userPos={session.userPos}
-      isFavorite={false} onNavigate={handleServiceNavigate} onClose={() => setSelectedService(null)} />
+      isFavorite={false} onNavigate={handleServiceNavigate}
+      onMessage={isPremiumUser(me) && selectedService?.provider_id
+        ? (service) => { setSelectedService(null); messageContact(navigate, service.provider_id, 'Service Provider'); }
+        : undefined}
+      onClose={() => setSelectedService(null)} />
 
       <FuelStationSheet
         station={selectedFuel}

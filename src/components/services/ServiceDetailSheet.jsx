@@ -1,11 +1,11 @@
-import { Phone, Navigation, Star, MapPin, Globe, Clock, BadgeCheck, Crown, Heart, Tag, Route } from 'lucide-react';
+import { Phone, MessageCircle, Navigation, Star, MapPin, Globe, Clock, BadgeCheck, Crown, Heart, Tag, Route } from 'lucide-react';
 import BottomSheet from '@/components/BottomSheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getServiceCategory, formatDistance, haversine, isOpenNow } from '@/lib/serviceCategories';
 import { safeHttpUrl } from '@/lib/safeUrl';
 
-export default function ServiceDetailSheet({ service, userPos, isFavorite, onFavorite, onDirections, onNavigate, onClose }) {
+export default function ServiceDetailSheet({ service, userPos, isFavorite, onFavorite, onDirections, onNavigate, onMessage, onClose }) {
   if (!service) return null;
   const cat = getServiceCategory(service.category);
   const distance = userPos ? haversine(userPos[0], userPos[1], service.lat, service.lng) : null;
@@ -75,9 +75,16 @@ export default function ServiceDetailSheet({ service, userPos, isFavorite, onFav
 
         <div className="space-y-2 pt-2">
           <div className="flex gap-2">
-            {service.phone && (
-              <Button size="lg" variant="secondary" className="min-h-[56px] flex-1" onClick={() => window.open(`tel:${service.phone}`)}>
-                <Phone size={18} className="mr-2" /> Call
+            {(onMessage || service.phone) && (
+              <Button
+                size="lg"
+                variant="secondary"
+                className="min-h-[56px] flex-1"
+                onClick={() => (onMessage ? onMessage(service) : window.open(`tel:${service.phone}`))}
+              >
+                {onMessage
+                  ? <><MessageCircle size={18} className="mr-2" /> Message</>
+                  : <><Phone size={18} className="mr-2" /> Call</>}
               </Button>
             )}
             {onFavorite && (

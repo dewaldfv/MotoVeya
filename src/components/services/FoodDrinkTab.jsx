@@ -11,7 +11,8 @@ import ServiceDetailSheet from './ServiceDetailSheet';
 import ServiceFilters from './ServiceFilters';
 import ServiceSubmitDialog from './ServiceSubmitDialog';
 import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
-import { canManageServices } from '@/lib/plans';
+import { canManageServices, isPremiumUser } from '@/lib/plans';
+import { messageContact } from '@/lib/contactChat';
 import { haversine, isOpenNow } from '@/lib/serviceCategories';
 import { toast } from 'sonner';
 
@@ -34,6 +35,12 @@ function getFoodCategory(key) {
 
 export default function FoodDrinkTab({ user }) {
   const navigate = useNavigate();
+  // Premium riders reach a listed provider through Chat instead of a phone call.
+  const canMessage = (place) => !!place?.provider_id && isPremiumUser(user);
+  const handleMessageProvider = (place) => {
+    setSelectedPlace(null);
+    messageContact(navigate, place.provider_id, 'Service Provider');
+  };
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -126,10 +133,10 @@ export default function FoodDrinkTab({ user }) {
         </div>
       </> : filtered.length === 0 ? <div className="flex flex-col items-center gap-3 py-16 text-center"><UtensilsCrossed size={48} className="text-muted-foreground" /><p className="text-muted-foreground">No Food & Drink venues found.</p></div> : <>
         <p className="text-xs text-muted-foreground">{filtered.length} venue{filtered.length !== 1 ? 's' : ''} found</p>
-        <div className="space-y-2.5 landscape:grid landscape:grid-cols-2 landscape:gap-2.5 landscape:space-y-0">{filtered.map((place) => <ServiceListingCard key={place.id} service={place} userPos={userPos} isFavorite={favoriteIds.has(place.id)} onFavorite={handleFavorite} onSelect={handleSelect} onDirections={handleDirections} onNavigate={handleNavigate} />)}</div>
+        <div className="space-y-2.5 landscape:grid landscape:grid-cols-2 landscape:gap-2.5 landscape:space-y-0">{filtered.map((place) => <ServiceListingCard key={place.id} service={place} userPos={userPos} isFavorite={favoriteIds.has(place.id)} onFavorite={handleFavorite} onSelect={handleSelect} onDirections={handleDirections} onNavigate={handleNavigate} onMessage={canMessage(place) ? handleMessageProvider : undefined} />)}</div>
       </>}
 
-      <ServiceDetailSheet service={selectedPlace} userPos={userPos} isFavorite={selectedPlace ? favoriteIds.has(selectedPlace.id) : false} onFavorite={handleFavorite} onDirections={handleDirections} onNavigate={handleNavigate} onClose={() => setSelectedPlace(null)} />
+      <ServiceDetailSheet service={selectedPlace} userPos={userPos} isFavorite={selectedPlace ? favoriteIds.has(selectedPlace.id) : false} onFavorite={handleFavorite} onDirections={handleDirections} onNavigate={handleNavigate} onMessage={canMessage(selectedPlace) ? handleMessageProvider : undefined} onClose={() => setSelectedPlace(null)} />
       <ServiceFilters open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} />
       <PremiumUpgradePrompt
         open={upgradeOpen}

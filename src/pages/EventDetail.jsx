@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Calendar, MapPin, Phone, Mail, ExternalLink, Navigation, Tag, Heart, Pencil } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, Phone, Mail, ExternalLink, Navigation, Tag, Heart, Pencil, MessageCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,8 @@ import { formatEventDateRange } from '@/lib/eventDate';
 import { safeHttpUrl } from '@/lib/safeUrl';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
 import EventGallery from '@/components/events/EventGallery';
-import { isOrganizerOnlyAccount } from '@/lib/plans';
+import { isOrganizerOnlyAccount, isPremiumUser } from '@/lib/plans';
+import { messageContact } from '@/lib/contactChat';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -130,6 +131,15 @@ export default function EventDetail() {
             </Button>
           )}
         </div>
+        {isPremiumUser(user) && event.created_by_id && event.created_by_id !== user?.id && (
+          <Button
+            size="lg"
+            variant="secondary"
+            className="mt-2 min-h-[56px] w-full text-base"
+            onClick={() => messageContact(navigate, event.created_by_id, 'Organizer')}>
+            <MessageCircle size={18} className="mr-2" /> Message Organizer
+          </Button>
+        )}
         <div className="mt-2">
           <CalendarExportButton event={event} className="w-full" />
         </div>

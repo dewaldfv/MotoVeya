@@ -12,7 +12,8 @@ import ServiceDetailSheet from './ServiceDetailSheet';
 import ServiceFilters from './ServiceFilters';
 import ServiceSubmitDialog from './ServiceSubmitDialog';
 import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
-import { canManageServices } from '@/lib/plans';
+import { canManageServices, isPremiumUser } from '@/lib/plans';
+import { messageContact } from '@/lib/contactChat';
 import { getServiceCategory, haversine, isOpenNow } from '@/lib/serviceCategories';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -51,6 +52,13 @@ export default function ServicesTab({ user }) {
   });
 
   const favoriteIds = useMemo(() => new Set(favorites.map((f) => f.service_id)), [favorites]);
+
+  // Premium riders reach a listed provider through Chat instead of a phone call.
+  const canMessage = (service) => !!service?.provider_id && isPremiumUser(user);
+  const handleMessageProvider = (service) => {
+    setSelectedService(null);
+    messageContact(navigate, service.provider_id, 'Service Provider');
+  };
 
   const filteredServices = useMemo(() => {
     let result = services;
@@ -169,14 +177,17 @@ export default function ServicesTab({ user }) {
                   {filteredServices.map((service) => (
                     <ServiceListingCard key={service.id} service={service} userPos={userPos}
                       isFavorite={favoriteIds.has(service.id)} onFavorite={handleFavorite}
-                      onSelect={handleSelect} onDirections={handleDirections} onNavigate={handleNavigate} />
+                      onSelect={handleSelect} onDirections={handleDirections} onNavigate={handleNavigate}
+                      onMessage={canMessage(service) ? handleMessageProvider : undefined} />
                   ))}
                 </div>
               </>}
 
       <ServiceDetailSheet service={selectedService} userPos={userPos}
         isFavorite={selectedService ? favoriteIds.has(selectedService.id) : false}
-        onFavorite={handleFavorite} onDirections={handleDirections} onNavigate={handleNavigate} onClose={() => setSelectedService(null)} />
+        onFavorite={handleFavorite} onDirections={handleDirections} onNavigate={handleNavigate}
+        onMessage={canMessage(selectedService) ? handleMessageProvider : undefined}
+        onClose={() => setSelectedService(null)} />
 
       <ServiceFilters open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} />
 
