@@ -30,12 +30,21 @@ export default function ChatThread({ user, conversation, onBack }) {
     refetchInterval: 10000,
   });
 
+  // Opening the thread — and every new message that lands while it is open —
+  // clears its unread state and refreshes the dots, counter and icon badge.
   useEffect(() => {
-    if (convId) {
-      base44.functions.invoke('messaging-secure', { action: 'mark_read', conversation_id: convId }).catch(() => {});
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    }
-  }, [convId, queryClient]);
+    if (!convId) return;
+    let cancelled = false;
+    base44.functions
+      .invoke('messaging-secure', { action: 'mark_read', conversation_id: convId })
+      .then(() => {
+        if (cancelled) return;
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [convId, messages.length, queryClient]);
 
   // Messages are read through the authorization-checked backend function.
   // Do not subscribe directly to the Message entity: its records are private.

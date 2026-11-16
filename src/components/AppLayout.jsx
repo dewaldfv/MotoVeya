@@ -18,6 +18,8 @@ import { useIdleMapUi } from '@/hooks/useIdleMapUi';
 import { usePresence } from '@/hooks/usePresence';
 import { useOverlayBackHandler } from '@/hooks/useOverlayBackHandler';
 import { useScreenWakeLock } from '@/hooks/useScreenWakeLock';
+import useUnreadCount from '@/hooks/useUnreadCount';
+import useAppBadge from '@/hooks/useAppBadge';
 
 const pageVariants = {
   initial: { opacity: 0, x: '100%' },
@@ -53,6 +55,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { user, isLoadingAuth } = useAuth();
   usePresence(!!user && !isLoadingAuth);
+  useAppBadge(useUnreadCount(!!user && !isLoadingAuth));
 
   useEffect(() => {
     if (!isLoadingAuth && user && user.onboarding_completed !== true) {

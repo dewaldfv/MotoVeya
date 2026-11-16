@@ -3,6 +3,7 @@ import { useTabHistory } from '@/lib/TabHistoryContext';
 import useKeyboardVisible from '@/hooks/useKeyboardVisible';
 import { useAuth } from '@/lib/AuthContext';
 import { isProviderOnlyAccount, isOrganizerOnlyAccount, canManageServices } from '@/lib/plans';
+import useUnreadCount from '@/hooks/useUnreadCount';
 
 const navItems = [
 { key: 'map', icon: Map, label: 'Map' },
@@ -19,6 +20,7 @@ export default function BottomNav({ hidden = false }) {
   const { currentTab, switchToTab } = useTabHistory();
   const keyboardVisible = useKeyboardVisible();
   const { user } = useAuth();
+  const unreadCount = useUnreadCount(!!user);
   const isProvider = isProviderOnlyAccount(user);
   const isOrganizer = isOrganizerOnlyAccount(user);
   // The Service Provider and Organizer packages both lose the Rides tab; both keep
@@ -46,11 +48,16 @@ export default function BottomNav({ hidden = false }) {
         <button
           key={key}
           onClick={() => switchToTab(key)}
-          className={`flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl transition-colors bg-[hsl(var(--card))] opacity-100 ${
+          className={`relative flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl transition-colors bg-[hsl(var(--card))] opacity-100 ${
           currentTab === key ? 'text-primary' : 'text-muted-foreground'}`
           }>
           
             <Icon size={21} strokeWidth={2.2} />
+            {key === 'community' && unreadCount > 0 && (
+              <span className="absolute right-1/2 top-0.5 -mr-4 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
             <span className="text-[10px] font-semibold leading-tight">{label}</span>
           </button>
         )}

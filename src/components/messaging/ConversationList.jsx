@@ -4,6 +4,7 @@ import { MessageCircle, Plus, ArrowLeft, Users, Archive, Trash2 } from 'lucide-r
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import BottomSheet from '@/components/BottomSheet';
+import useUnreadCount from '@/hooks/useUnreadCount';
 import { toast } from 'sonner';
 
 function timeAgo(dateStr) {
@@ -25,6 +26,19 @@ export default function ConversationList({ user, onSelect }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const pressTimer = useRef(null);
   const longPressed = useRef(false);
+  const unreadCount = useUnreadCount(!!user);
+
+  // Clear the dot the moment a conversation is opened; the server confirms it
+  // when the thread marks the conversation as read.
+  const openConversation = (conv) => {
+    if (conv.unread) {
+      queryClient.setQueryData(['conversations'], (old = []) =>
+        (old || []).map((c) => (c.id === conv.id ? { ...c, unread: false } : c))
+      );
+      queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
+    }
+    onSelect(conv);
+  };
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations'],
@@ -122,7 +136,14 @@ export default function ConversationList({ user, onSelect }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-bold">Messages</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold">Messages</h3>
+          {unreadCount > 0 && (
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </div>
         <Button size="sm" onClick={() => setShowNew(true)}>
           <Plus size={16} className="mr-1" /> New
         </Button>
@@ -140,7 +161,7 @@ export default function ConversationList({ user, onSelect }) {
         conversations.map((c) => (
           <button
             key={c.id}
-            onClick={() => { if (!longPressed.current) onSelect(c); }}
+            onClick={() => { if (!longPressed.current) openConversation(c); }}
             onTouchStart={() => startPress(c)}
             onTouchEnd={cancelPress}
             onTouchMove={cancelPress}
@@ -160,14 +181,19 @@ export default function ConversationList({ user, onSelect }) {
             )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
-                <span className="truncate font-semibold">
-                  {c.is_group ? c.group_name : c.other_participant_name}
+                <span className="flex min-w-0 items-center gap-2 truncate font-semibold">
+                  <span className="truncate">{c.is_group ? c.group_name : c.other_participant_name}</span>
+                  {c.unread && (
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread messages" />
+                  )}
                 </span>
                 {c.last_message_at && (
-                  <span className="ml-2 shrink-0 text-xs text-muted-foreground">{timeAgo(c.last_message_at)}</span>
+                  <span className={`ml-2 shrink-0 text-xs ${c.unread ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
+                    {timeAgo(c.last_message_at)}
+                  </span>
                 )}
               </div>
-              <p className="truncate text-sm text-muted-foreground">
+              <p className={`truncate text-sm ${c.unread ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
                 {c.last_sender_id === user.id ? 'You: ' : ''}
                 {c.last_message_preview || (c.is_group ? 'Start the group chat' : 'Say hi!')}
               </p>

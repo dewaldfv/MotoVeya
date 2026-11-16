@@ -24,6 +24,32 @@ async function canAccessConversation(svc, conversation, userId) {
   }
 }
 
+// A conversation is unread for a user when it holds a real message from someone
+// else that arrived after that user last opened the thread.
+function isConversationUnread(conv, userId, lastReadAt) {
+  if (!conv?.last_message_preview) return false;
+  if (!conv.last_message_at || !conv.last_sender_id) return false;
+  if (conv.last_sender_id === userId) return false;
+  if (!lastReadAt) return true;
+  return new Date(conv.last_message_at).getTime() > new Date(lastReadAt).getTime();
+}
+
+// Returns the caller's active conversations plus the set of those with unread messages.
+async function unreadSummary(svc, userId) {
+  const [all, reads] = await Promise.all([
+    svc.entities.Conversation.list('-last_message_at', 200),
+    svc.entities.ConversationRead.filter({ user_id: userId }, '-created_date', 500).catch(() => []),
+  ]);
+  const readMap = new Map((reads || []).map((r) => [r.conversation_id, r.last_read_at]));
+  const mine = (all || []).filter(
+    (c) => Array.isArray(c.participant_ids) && c.participant_ids.includes(userId) && !c.is_archived
+  );
+  const unreadIds = new Set(
+    mine.filter((c) => isConversationUnread(c, userId, readMap.get(c.id))).map((c) => c.id)
+  );
+  return { mine, unreadIds, total: unreadIds.size };
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -35,12 +61,10 @@ Deno.serve(async (req) => {
     const { action } = body;
 
     if (action === 'conversations') {
-      const all = await svc.entities.Conversation.list('-last_message_at', 200);
-      const mine = (all || []).filter(
-        (c) => Array.isArray(c.participant_ids) && c.participant_ids.includes(user.id) && !c.is_archived
-      );
+      const { mine, unreadIds, total } = await unreadSummary(svc, user.id);
       const conversations = mine.map((c) => {
         const isGroup = !!c.group_id || (c.participant_ids?.length || 0) > 2;
+        const unread = unreadIds.has(c.id);
         if (isGroup) {
           return {
             id: c.id,
@@ -50,6 +74,7 @@ Deno.serve(async (req) => {
             last_message_preview: c.last_message_preview || '',
             last_message_at: c.last_message_at,
             last_sender_id: c.last_sender_id,
+            unread,
           };
         }
         const otherIdx = c.participant_ids[0] === user.id ? 1 : 0;
@@ -61,9 +86,17 @@ Deno.serve(async (req) => {
           last_message_preview: c.last_message_preview || '',
           last_message_at: c.last_message_at,
           last_sender_id: c.last_sender_id,
+          unread,
         };
       });
-      return Response.json({ conversations });
+      return Response.json({ conversations, unread_total: total });
+    }
+
+    // Total number of conversations holding unread messages, used by the
+    // Community nav dot/counter and the app-icon badge.
+    if (action === 'unread_count') {
+      const { total } = await unreadSummary(svc, user.id);
+      return Response.json({ total });
     }
 
     if (action === 'messages') {
@@ -260,6 +293,30 @@ Deno.serve(async (req) => {
     if (action === 'mark_read') {
       const { conversation_id } = body;
       if (!conversation_id) return Response.json({ error: 'Missing conversation_id' }, { status: 400 });
+      const now = new Date().toISOString();
+      const conv = await svc.entities.Conversation.get(conversation_id).catch(() => null);
+      if (!conv) return Response.json({ error: 'Forbidden' }, { status: 403 });
+      const allowed = await canAccessConversation(svc, conv, user.id);
+      if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
+
+      const existing = await svc.entities.ConversationRead.filter({
+        conversation_id,
+        user_id: user.id,
+      });
+      if (existing && existing.length > 0) {
+        await svc.entities.ConversationRead.update(existing[0].id, {
+          last_read_at: now,
+          created_by_id: existing[0].created_by_id || user.id,
+        });
+      } else {
+        await svc.entities.ConversationRead.create({
+          conversation_id,
+          user_id: user.id,
+          last_read_at: now,
+          created_by_id: user.id,
+        });
+      }
+
       await svc.entities.Notification.updateMany(
         { recipient_id: user.id, conversation_id, is_read: false, type: 'message' },
         { $set: { is_read: true } }
