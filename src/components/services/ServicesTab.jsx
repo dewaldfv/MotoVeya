@@ -12,7 +12,7 @@ import ServiceDetailSheet from './ServiceDetailSheet';
 import ServiceFilters from './ServiceFilters';
 import ServiceSubmitDialog from './ServiceSubmitDialog';
 import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
-import { canManageServices, isPremiumUser } from '@/lib/plans';
+import { canManageServices, canMessageUsers } from '@/lib/plans';
 import { messageContact } from '@/lib/contactChat';
 import { getServiceCategory, haversine, isOpenNow } from '@/lib/serviceCategories';
 import { Plus } from 'lucide-react';
@@ -54,7 +54,7 @@ export default function ServicesTab({ user }) {
   const favoriteIds = useMemo(() => new Set(favorites.map((f) => f.service_id)), [favorites]);
 
   // Premium riders reach a listed provider through Chat instead of a phone call.
-  const canMessage = (service) => !!service?.provider_id && isPremiumUser(user);
+  const canMessage = (service) => !!service?.provider_id && canMessageUsers(user);
   const handleMessageProvider = (service) => {
     setSelectedService(null);
     messageContact(navigate, service.provider_id, 'Service Provider');

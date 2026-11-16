@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Navigation, Phone, MapPin, ExternalLink, LocateFixed, Layers, X, Compass, Search, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { isPremiumUser } from '@/lib/plans';
+import { isPremiumUser, canMessageUsers } from '@/lib/plans';
 import { messageContact } from '@/lib/contactChat';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -785,7 +785,7 @@ export default function Home() {
             <div className="flex items-center gap-2 text-white/75"><Phone size={16} /> {selected.contact_phone}</div>
             }
             </div>
-            {isPremiumUser(me) && selected.event_date && selected.created_by_id && selected.created_by_id !== me?.id &&
+            {canMessageUsers(me) && selected.event_date && selected.created_by_id && selected.created_by_id !== me?.id &&
             <Button
               size="lg"
               variant="secondary"
@@ -810,7 +810,7 @@ export default function Home() {
 
       <ServiceDetailSheet service={selectedService} userPos={session.userPos}
       isFavorite={false} onNavigate={handleServiceNavigate}
-      onMessage={isPremiumUser(me) && selectedService?.provider_id
+      onMessage={canMessageUsers(me) && selectedService?.provider_id
         ? (service) => { setSelectedService(null); messageContact(navigate, service.provider_id, 'Service Provider'); }
         : undefined}
       onClose={() => setSelectedService(null)} />

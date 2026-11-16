@@ -11,7 +11,7 @@ import { formatEventDateRange } from '@/lib/eventDate';
 import { safeHttpUrl } from '@/lib/safeUrl';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
 import EventGallery from '@/components/events/EventGallery';
-import { isOrganizerOnlyAccount, isPremiumUser, canCreateEvents } from '@/lib/plans';
+import { isOrganizerOnlyAccount, isPremiumUser, canCreateEvents, canMessageUsers } from '@/lib/plans';
 import { messageContact } from '@/lib/contactChat';
 
 export default function EventDetail() {
@@ -131,7 +131,7 @@ export default function EventDetail() {
             </Button>
           )}
         </div>
-        {isPremiumUser(user) && event.created_by_id && event.created_by_id !== user?.id && (
+        {canMessageUsers(user) && event.created_by_id && event.created_by_id !== user?.id && (
           <Button
             size="lg"
             variant="secondary"

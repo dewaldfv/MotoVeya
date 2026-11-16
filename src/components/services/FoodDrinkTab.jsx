@@ -11,7 +11,7 @@ import ServiceDetailSheet from './ServiceDetailSheet';
 import ServiceFilters from './ServiceFilters';
 import ServiceSubmitDialog from './ServiceSubmitDialog';
 import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
-import { canManageServices, isPremiumUser } from '@/lib/plans';
+import { canManageServices, canMessageUsers } from '@/lib/plans';
 import { messageContact } from '@/lib/contactChat';
 import { haversine, isOpenNow } from '@/lib/serviceCategories';
 import { toast } from 'sonner';
@@ -36,7 +36,7 @@ function getFoodCategory(key) {
 export default function FoodDrinkTab({ user }) {
   const navigate = useNavigate();
   // Premium riders reach a listed provider through Chat instead of a phone call.
-  const canMessage = (place) => !!place?.provider_id && isPremiumUser(user);
+  const canMessage = (place) => !!place?.provider_id && canMessageUsers(user);
   const handleMessageProvider = (place) => {
     setSelectedPlace(null);
     messageContact(navigate, place.provider_id, 'Service Provider');

@@ -152,6 +152,11 @@ export function isPremiumUser(user) {
   return true;
 }
 
+/** Direct messaging (riders, providers, organizers) is a Premium action; admins get it too. */
+export function canMessageUsers(user) {
+  return isAdminUser(user) || isPremiumUser(user);
+}
+
 /**
  * Accounts whose only paid access is the Service Provider package. Those accounts
  * keep the rider features out of reach; Provider+, Organizer+ and Gold also carry

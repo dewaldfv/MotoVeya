@@ -19,7 +19,7 @@ import GroupMembersDialog from '@/components/community/GroupMembersDialog';
 import FriendsDashboard from '@/components/community/FriendsDashboard';
 import GroupRidesList from '@/components/grouprides/GroupRidesList';
 import MessagesTab from '@/components/messaging/MessagesTab';
-import { isOrganizerOnlyAccount, isProviderOnlyAccount } from '@/lib/plans';
+import { isOrganizerOnlyAccount, isProviderOnlyAccount, canMessageUsers } from '@/lib/plans';
 import { toast } from 'sonner';
 
 function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
@@ -122,7 +122,7 @@ export default function Community() {
 
   const memberGroupIds = new Set(memberships.map((m) => m.group_id));
   const myGroups = groups.filter((g) => memberGroupIds.has(g.id));
-  const isPremium = user?.subscription_tier === 'premium';
+  const isPremium = canMessageUsers(user);
 
   const handleRefresh = async () => {
     await Promise.all([
