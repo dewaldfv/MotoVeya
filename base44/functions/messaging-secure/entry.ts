@@ -36,13 +36,20 @@ function isConversationUnread(conv, userId, lastReadAt) {
 
 // Returns the caller's active conversations plus the set of those with unread messages.
 async function unreadSummary(svc, userId) {
-  const [all, reads] = await Promise.all([
+  const [all, reads, hides] = await Promise.all([
     svc.entities.Conversation.list('-last_message_at', 200),
     svc.entities.ConversationRead.filter({ user_id: userId }, '-created_date', 500).catch(() => []),
+    svc.entities.ConversationHide.filter({ user_id: userId }, '-created_date', 500).catch(() => []),
   ]);
   const readMap = new Map((reads || []).map((r) => [r.conversation_id, r.last_read_at]));
+  // Conversations this user removed from their own inbox are hidden for them only.
+  const hiddenIds = new Set((hides || []).map((h) => h.conversation_id));
   const mine = (all || []).filter(
-    (c) => Array.isArray(c.participant_ids) && c.participant_ids.includes(userId) && !c.is_archived
+    (c) =>
+      Array.isArray(c.participant_ids) &&
+      c.participant_ids.includes(userId) &&
+      !c.is_archived &&
+      !hiddenIds.has(c.id)
   );
   const unreadIds = new Set(
     mine.filter((c) => isConversationUnread(c, userId, readMap.get(c.id))).map((c) => c.id)
@@ -166,6 +173,9 @@ Deno.serve(async (req) => {
         sender_name: user.full_name || 'Rider',
         content: content.trim(),
       });
+
+      // A new direct message brings a chat hidden by either side back into their inbox.
+      await svc.entities.ConversationHide.deleteMany({ conversation_id: conv.id }).catch(() => {});
 
       await svc.entities.Notification.create({
         type: 'message',
@@ -433,6 +443,26 @@ Deno.serve(async (req) => {
       const allowed = await canAccessConversation(svc, conv, user.id);
       if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
       await svc.entities.Conversation.update(conversation_id, { is_archived: true });
+      return Response.json({ success: true });
+    }
+
+    // Removes the chat from the caller's own inbox only — the conversation and its
+    // messages stay intact for everybody else, including groups the caller has left.
+    if (action === 'hide_conversation') {
+      const { conversation_id } = body;
+      if (!conversation_id) return Response.json({ error: 'Missing conversation_id' }, { status: 400 });
+
+      const existing = await svc.entities.ConversationHide.filter({
+        conversation_id,
+        user_id: user.id,
+      });
+      if (!existing || existing.length === 0) {
+        await svc.entities.ConversationHide.create({
+          conversation_id,
+          user_id: user.id,
+          created_by_id: user.id,
+        });
+      }
       return Response.json({ success: true });
     }
 

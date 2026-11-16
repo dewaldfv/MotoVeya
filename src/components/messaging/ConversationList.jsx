@@ -98,12 +98,12 @@ export default function ConversationList({ user, onSelect }) {
     setConfirmDelete(null);
     if (!conv) return;
     try {
-      await base44.functions.invoke('messaging-secure', { action: 'delete_conversation', conversation_id: conv.id });
+      await base44.functions.invoke('messaging-secure', { action: 'hide_conversation', conversation_id: conv.id });
       // Drop it from the list immediately, then confirm against the server.
       queryClient.setQueryData(['conversations'], (old = []) => (old || []).filter((c) => c.id !== conv.id));
       await queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
-      toast.success('Chat deleted');
+      toast.success('Chat removed from your inbox');
     } catch (e) {
       console.error(e);
       const msg = e?.response?.data?.error || e?.data?.error || e?.message;
@@ -237,11 +237,13 @@ export default function ConversationList({ user, onSelect }) {
         </div>
       </BottomSheet>
 
-      <BottomSheet open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete this chat?">
-        <p className="text-sm text-muted-foreground">This will permanently remove the conversation and all its messages.</p>
+      <BottomSheet open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Remove this chat?">
+        <p className="text-sm text-muted-foreground">
+          This hides the chat from your inbox only. Messages stay in the conversation for everyone else.
+        </p>
         <div className="mt-4 flex gap-2">
           <Button variant="ghost" className="flex-1" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-          <Button variant="destructive" className="flex-1" onClick={handleDelete}>Delete</Button>
+          <Button variant="destructive" className="flex-1" onClick={handleDelete}>Remove</Button>
         </div>
       </BottomSheet>
     </div>
