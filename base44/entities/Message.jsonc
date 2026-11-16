@@ -13,6 +13,14 @@
     },
     "content": {
       "type": "string"
+    },
+    "delivered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "read_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [

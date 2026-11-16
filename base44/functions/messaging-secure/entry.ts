@@ -113,12 +113,20 @@ Deno.serve(async (req) => {
       if (!conv) return Response.json({ error: 'Forbidden' }, { status: 403 });
       const allowed = await canAccessConversation(svc, conv, user.id);
       if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
-      const messages = await svc.entities.Message.filter(
-        { conversation_id },
-        'created_date',
-        200
-      );
-      return Response.json({ messages: messages || [] });
+      const messages =
+        (await svc.entities.Message.filter({ conversation_id }, 'created_date', 200)) || [];
+
+      // Loading the thread counts as delivery for every incoming message.
+      const now = new Date().toISOString();
+      const undelivered = messages.filter((m) => m.sender_id !== user.id && !m.delivered_at);
+      if (undelivered.length > 0) {
+        await svc.entities.Message.bulkUpdate(
+          undelivered.map((m) => ({ id: m.id, delivered_at: now }))
+        ).catch((e) => console.error('delivery receipt', e?.message));
+        undelivered.forEach((m) => { m.delivered_at = now; });
+      }
+
+      return Response.json({ messages });
     }
 
     if (action === 'send') {
@@ -331,6 +339,16 @@ Deno.serve(async (req) => {
         { recipient_id: user.id, conversation_id, is_read: false, type: 'message' },
         { $set: { is_read: true } }
       );
+
+      // Opening the thread marks every incoming message as read (and delivered).
+      const threadMessages = await svc.entities.Message.filter({ conversation_id }, 'created_date', 200).catch(() => []);
+      const unread = (threadMessages || []).filter((m) => m.sender_id !== user.id && (!m.read_at || !m.delivered_at));
+      if (unread.length > 0) {
+        await svc.entities.Message.bulkUpdate(
+          unread.map((m) => ({ id: m.id, read_at: now, delivered_at: m.delivered_at || now }))
+        ).catch((e) => console.error('read receipt', e?.message));
+      }
+
       return Response.json({ success: true });
     }
 

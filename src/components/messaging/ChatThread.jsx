@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { setActiveConversation } from '@/lib/messageNotifications';
+import MessageBubble from '@/components/messaging/MessageBubble';
 import { toast } from 'sonner';
 
 export default function ChatThread({ user, conversation, onBack }) {
@@ -41,6 +42,7 @@ export default function ChatThread({ user, conversation, onBack }) {
         if (cancelled) return;
         queryClient.invalidateQueries({ queryKey: ['conversations'] });
         queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
+        queryClient.invalidateQueries({ queryKey: ['messages', convId] });
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -127,23 +129,9 @@ export default function ChatThread({ user, conversation, onBack }) {
             {isGroup ? 'Send the first message to the group!' : 'Start the conversation — say hi!'}
           </p>
         ) : (
-          messages.map((m) => {
-            const isMe = m.sender_id === user.id;
-            return (
-              <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${
-                    isMe ? 'rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md bg-card text-card-foreground'
-                  }`}
-                >
-                  {isGroup && !isMe && (
-                    <p className="mb-0.5 text-[11px] font-semibold text-primary">{m.sender_name || 'Rider'}</p>
-                  )}
-                  {m.content}
-                </div>
-              </div>
-            );
-          })
+          messages.map((m) => (
+            <MessageBubble key={m.id} message={m} isMe={m.sender_id === user.id} isGroup={isGroup} />
+          ))
         )}
       </div>
 
