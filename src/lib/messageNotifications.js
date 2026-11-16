@@ -31,6 +31,11 @@ export async function requestNotificationPermission() {
       /* ignore — some browsers require a user gesture */
     }
   }
+  // Permission granted here must also start the background Web Push subscription,
+  // otherwise nothing arrives once the app is minimized.
+  if (Notification.permission === 'granted' && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('motoveya:notifications-enabled'));
+  }
   return Notification.permission;
 }
 
