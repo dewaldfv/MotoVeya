@@ -19,6 +19,45 @@ export const PREMIUM_FEATURES = [
   { icon: 'BarChart3', label: 'Ride History & Statistics', free: false, premium: true },
 ];
 
+export const PROVIDER_PLAN = {
+  label: 'Service Provider',
+  monthly: 29.99,
+  slots: 10,
+};
+
+export const PROVIDER_PERKS = [
+  `Up to ${PROVIDER_PLAN.slots} service or venue listings`,
+  'Create and edit your own listings',
+  'Track views on every listing you own',
+  'Appear on the rider map and service directory',
+];
+
+export const PROVIDER_EXCLUDES = [
+  'Ride mode and the Rides tab',
+  'Community: Groups, Friends and Food pages',
+  'Profile: Achievements, Emergency and Safety',
+];
+
+export function isAdminUser(user) {
+  return user?.role === 'admin' || user?.role === 'moderator';
+}
+
+/** True only while the Service Provider package is paid up. */
+export function isServiceProvider(user) {
+  if (!user || user.account_type !== 'provider') return false;
+  if (user.provider_status === 'expired' || user.provider_status === 'none') return false;
+  if (user.provider_expiry) {
+    const expiry = new Date(user.provider_expiry);
+    if (expiry < new Date()) return false;
+  }
+  return true;
+}
+
+/** Only providers and admins may add or edit service listings. */
+export function canManageServices(user) {
+  return isAdminUser(user) || isServiceProvider(user);
+}
+
 export function isPremiumUser(user) {
   if (!user || user.subscription_tier !== 'premium') return false;
   if (user.subscription_expiry) {

@@ -86,6 +86,49 @@
         }
       }
     },
+    "account_type": {
+      "type": "string",
+      "enum": [
+        "rider",
+        "provider"
+      ],
+      "default": "rider",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "provider_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "active",
+        "cancelled",
+        "expired"
+      ],
+      "default": "none",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "provider_expiry": {
+      "type": "string",
+      "format": "date-time",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
     "total_distance_km": {
       "type": "number",
       "default": 0

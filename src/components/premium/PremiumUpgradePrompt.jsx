@@ -12,12 +12,14 @@ export default function PremiumUpgradePrompt({
   title = 'Premium feature',
   description,
   benefits = [],
+  ctaLabel = 'Upgrade to Premium',
+  to = '/premium',
 }) {
   const navigate = useNavigate();
 
   const goToUpgrade = () => {
     onOpenChange?.(false);
-    navigate('/premium');
+    navigate(to);
   };
 
   return (
@@ -43,7 +45,7 @@ export default function PremiumUpgradePrompt({
         )}
 
         <Button onClick={goToUpgrade} className="min-h-[48px] w-full rounded-xl font-bold">
-          Upgrade to Premium
+          {ctaLabel}
         </Button>
         <button
           type="button"

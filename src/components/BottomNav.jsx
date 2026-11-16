@@ -1,6 +1,8 @@
 import { Map, Route, Calendar, Users, User, Clapperboard } from 'lucide-react';
 import { useTabHistory } from '@/lib/TabHistoryContext';
 import useKeyboardVisible from '@/hooks/useKeyboardVisible';
+import { useAuth } from '@/lib/AuthContext';
+import { isServiceProvider } from '@/lib/plans';
 
 const navItems = [
 { key: 'map', icon: Map, label: 'Map' },
@@ -14,6 +16,11 @@ const navItems = [
 export default function BottomNav({ hidden = false }) {
   const { currentTab, switchToTab } = useTabHistory();
   const keyboardVisible = useKeyboardVisible();
+  const { user } = useAuth();
+  // The Service Provider package excludes the Rides tab and Community areas.
+  const visible = isServiceProvider(user)
+    ? navItems.filter((item) => item.key !== 'rides' && item.key !== 'community')
+    : navItems;
 
   return (
     <nav
@@ -26,7 +33,7 @@ export default function BottomNav({ hidden = false }) {
       }}>
       
       <div className="mx-auto flex max-w-2xl items-center justify-around gap-0.5 px-1.5 landscape:py-1 my-1">
-        {navItems.map(({ key, icon: Icon, label }) =>
+        {visible.map(({ key, icon: Icon, label }) =>
         <button
           key={key}
           onClick={() => switchToTab(key)}

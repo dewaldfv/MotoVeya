@@ -54,6 +54,8 @@ import ServiceProviderDashboard from '@/pages/ServiceProviderDashboard';
 import FriendRequest from '@/pages/FriendRequest';
 import BackgroundTracking from '@/pages/BackgroundTracking';
 import FirstLaunchPermissions from '@/components/permissions/FirstLaunchPermissions';
+import ProviderJoin from '@/pages/ProviderJoin';
+import ProviderRouteGuard from '@/components/ProviderRouteGuard';
 import { hasCompletedPermissionSetup } from '@/lib/permissions';
 
 const AuthenticatedApp = () => {
@@ -134,12 +136,12 @@ const AuthenticatedApp = () => {
       {/* Add your page Route elements here */}
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/rides/history" element={<RideHistory />} />
-        <Route path="/rides" element={<Rides />} />
-        <Route path="/rides/:id" element={<RideDetail />} />
+        <Route path="/rides/history" element={<ProviderRouteGuard><RideHistory /></ProviderRouteGuard>} />
+        <Route path="/rides" element={<ProviderRouteGuard><Rides /></ProviderRouteGuard>} />
+        <Route path="/rides/:id" element={<ProviderRouteGuard><RideDetail /></ProviderRouteGuard>} />
         <Route path="/events" element={<Events />} />
         <Route path="/events/:id" element={<EventDetail />} />
-        <Route path="/community" element={<Community />} />
+        <Route path="/community" element={<ProviderRouteGuard><Community /></ProviderRouteGuard>} />
         <Route path="/crowd-clips" element={<CrowdClips />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<Admin />} />
@@ -156,15 +158,16 @@ const AuthenticatedApp = () => {
         <Route path="/legal" element={<Legal />} />
         <Route path="/fuel-tracker" element={<FuelTracker />} />
         <Route path="/ride-planner" element={<RidePlanner />} />
-        <Route path="/rides/saved" element={<SavedRoutes />} />
+        <Route path="/rides/saved" element={<ProviderRouteGuard><SavedRoutes /></ProviderRouteGuard>} />
         <Route path="/saved-places" element={<SavedPlaces />} />
         <Route path="/bike-garage" element={<BikeGarage />} />
         <Route path="/service-history" element={<ServiceHistory />} />
-        <Route path="/safety-dashboard" element={<SafetyDashboard />} />
-        <Route path="/achievements" element={<Achievements />} />
+        <Route path="/safety-dashboard" element={<ProviderRouteGuard><SafetyDashboard /></ProviderRouteGuard>} />
+        <Route path="/achievements" element={<ProviderRouteGuard><Achievements /></ProviderRouteGuard>} />
         <Route path="/provider-dashboard" element={<ServiceProviderDashboard />} />
+        <Route path="/provider/join" element={<ProviderJoin />} />
         <Route path="/rider/:id" element={<RiderProfile />} />
-        <Route path="/ride/group/:id" element={<ActiveGroupRide />} />
+        <Route path="/ride/group/:id" element={<ProviderRouteGuard><ActiveGroupRide /></ProviderRouteGuard>} />
       </Route>
       <Route path="/ride/active" element={<Navigate to="/" replace />} />
       <Route path="/onboarding" element={<Onboarding />} />

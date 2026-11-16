@@ -3,7 +3,9 @@ import { secrets } from 'base44:runtime';
 
 const GRACE_PERIOD_DAYS = 7;
 const MONTHLY_PERIOD_DAYS = 30;
-const EXPECTED_AMOUNT = 8999;
+// Amount per package in kobo/cents.
+const PACKAGE_AMOUNTS = { premium: 8999, provider: 2999 };
+const planForAmount = (amount) => (Number(amount) === PACKAGE_AMOUNTS.provider ? 'provider' : 'premium');
 
 async function verifyPaystackSignature(body, signatureHeader, secret) {
   const encoder = new TextEncoder();
@@ -94,7 +96,8 @@ export default async function(req) {
         console.error(`charge.success: unexpected currency ${data.currency}`);
         return Response.json({ error: 'Unexpected currency' }, { status: 400 });
       }
-      if (Number(data.amount) !== EXPECTED_AMOUNT) {
+      const plan = metadata.plan === 'provider' ? 'provider' : planForAmount(data.amount);
+      if (Number(data.amount) !== PACKAGE_AMOUNTS[plan]) {
         console.error(`charge.success: unexpected amount ${data.amount}`);
         return Response.json({ error: 'Unexpected amount' }, { status: 400 });
       }
@@ -131,7 +134,7 @@ export default async function(req) {
 
       // For recurring charges, extend the existing subscription record.
       const userSubs = await base44.entities.Subscription.filter(
-        { user_id: userId, plan: 'premium', payment_provider: 'paystack' },
+        { user_id: userId, plan, payment_provider: 'paystack' },
         '-created_date',
         10
       );
@@ -152,7 +155,7 @@ export default async function(req) {
         const amount = data.amount / 100;
         await base44.entities.Subscription.create({
           user_id: userId,
-          plan: 'premium',
+          plan,
           status: 'active',
           billing_cycle: 'monthly',
           amount_zar: amount,
@@ -168,13 +171,21 @@ export default async function(req) {
         });
       }
 
-      await base44.entities.User.update(userId, {
-        subscription_tier: 'premium',
-        subscription_status: 'active',
-        subscription_expiry: periodEnd.toISOString(),
-      });
+      if (plan === 'provider') {
+        await base44.entities.User.update(userId, {
+          account_type: 'provider',
+          provider_status: 'active',
+          provider_expiry: periodEnd.toISOString(),
+        });
+      } else {
+        await base44.entities.User.update(userId, {
+          subscription_tier: 'premium',
+          subscription_status: 'active',
+          subscription_expiry: periodEnd.toISOString(),
+        });
+      }
 
-      console.log(`Premium activated/extended for user ${userId} (ref ${reference})`);
+      console.log(`${plan} activated/extended for user ${userId} (ref ${reference})`);
       return Response.json({ received: true });
     }
 
@@ -191,7 +202,7 @@ export default async function(req) {
           if (users.length > 0) {
             const userId = users[0].id;
             const subs = await base44.entities.Subscription.filter(
-              { user_id: userId, plan: 'premium', payment_provider: 'paystack' },
+              { user_id: userId, payment_provider: 'paystack' },
               '-created_date',
               10
             );
@@ -234,7 +245,7 @@ export default async function(req) {
       }
 
       const subs = await base44.entities.Subscription.filter(
-        { user_id: userId, plan: 'premium', payment_provider: 'paystack' },
+        { user_id: userId, payment_provider: 'paystack' },
         '-created_date',
         10
       );

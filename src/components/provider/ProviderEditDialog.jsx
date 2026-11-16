@@ -54,12 +54,17 @@ export default function ProviderEditDialog({ service, onClose, onSaved }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await base44.entities.Service.update(service.id, form);
+      await base44.functions.invoke('manage-service-listing', {
+        action: 'update',
+        service_id: service.id,
+        data: form,
+      });
       toast.success('Listing updated');
       onSaved();
     } catch (e) {
       console.error(e);
-      toast.error('Failed to update listing');
+      const message = e?.response?.data?.error || e?.data?.error || e?.message;
+      toast.error(message || 'Failed to update listing');
     } finally {
       setSaving(false);
     }

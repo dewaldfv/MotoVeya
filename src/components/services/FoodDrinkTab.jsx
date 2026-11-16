@@ -11,7 +11,7 @@ import ServiceDetailSheet from './ServiceDetailSheet';
 import ServiceFilters from './ServiceFilters';
 import ServiceSubmitDialog from './ServiceSubmitDialog';
 import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
-import { isPremiumUser } from '@/lib/plans';
+import { canManageServices } from '@/lib/plans';
 import { haversine, isOpenNow } from '@/lib/serviceCategories';
 import { toast } from 'sonner';
 
@@ -117,7 +117,7 @@ export default function FoodDrinkTab({ user }) {
         <button onClick={() => setShowFilters(true)} className="glove-target flex items-center justify-center rounded-xl bg-card px-3 shadow-sm"><SlidersHorizontal size={18} /></button>
       </div>
 
-      <Button onClick={() => (isPremiumUser(user) ? setSubmitOpen(true) : setUpgradeOpen(true))} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl"><Plus size={18} /> Submit a Food & Drink Venue</Button>
+      <Button onClick={() => (canManageServices(user) ? setSubmitOpen(true) : setUpgradeOpen(true))} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl"><Plus size={18} /> Submit a Food & Drink Venue</Button>
 
       {isLoading ? <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-primary" /></div> : !hasSearchOrCategory ? <>
         <Button variant="secondary" onClick={() => setShowAll(true)} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl"><List size={18} /> Show All Food & Drink</Button>
@@ -134,9 +134,11 @@ export default function FoodDrinkTab({ user }) {
       <PremiumUpgradePrompt
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
-        title="Premium venue listing"
-        description="Listing a venue is a Premium feature. Upgrade to add your restaurant, pub or café to the rider map."
-        benefits={['Publish your venue on the map', 'Manage your listing details', 'Get discovered by hungry riders']}
+        title="Service Provider package required"
+        description="Only Service Providers and admins can add or edit venue listings. The package is R29.99/month and includes 10 listing slots."
+        benefits={['Publish up to 10 listings', 'Edit your listings anytime', 'Get discovered by hungry riders']}
+        ctaLabel="See the Provider package"
+        to="/provider/join"
       />
 
       <ServiceSubmitDialog foodOnly open={submitOpen} onOpenChange={setSubmitOpen} onSubmitted={() => queryClient.invalidateQueries({ queryKey: ['food-drink'] })} />

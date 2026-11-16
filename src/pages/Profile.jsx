@@ -17,6 +17,7 @@ import BikeCard from '@/components/profile/BikeCard';
 import EditProfileDialog from '@/components/profile/EditProfileDialog';
 import EmergencySafetySheet from '@/components/profile/EmergencySafetySheet';
 import SubscriptionCard from '@/components/SubscriptionCard';
+import { isServiceProvider, isAdminUser } from '@/lib/plans';
 import { toast } from 'sonner';
 
 const coerceBike = (form) => ({
@@ -113,6 +114,8 @@ export default function Profile() {
   }, [user, rides, refills, bikes]);
 
   const isPremium = user?.subscription_tier === 'premium';
+  const isProvider = isServiceProvider(user);
+  const isStaff = isAdminUser(user);
 
   const openAddBike = () => {
     setEditingBike(null);
@@ -213,23 +216,25 @@ export default function Profile() {
         }
 
         <div className="space-y-2.5">
-          <MenuCard
-            icon={Trophy}
-            title="Achievements"
-            subtitle="Badges, milestones and riding goals"
-            details={stats.newestBadge || 'No badges yet — start riding!'}
-            delay={0.5}
-            onClick={() => navigate('/achievements')} />
-          
+          {!isProvider && (
+            <>
+              <MenuCard
+                icon={Trophy}
+                title="Achievements"
+                subtitle="Badges, milestones and riding goals"
+                details={stats.newestBadge || 'No badges yet — start riding!'}
+                delay={0.5}
+                onClick={() => navigate('/achievements')} />
 
-          <MenuCard
-            icon={Shield}
-            title="Emergency & Safety"
-            subtitle="Crash Detection, SOS and Emergency Contacts"
-            details={`Crash Detection ${crashDetectionOn ? 'ON' : 'OFF'} · ${emergencyContacts} Emergency Contact${emergencyContacts === 1 ? '' : 's'}`}
-            delay={0.6}
-            onClick={() => setEmergencyOpen(true)} />
-          
+              <MenuCard
+                icon={Shield}
+                title="Emergency & Safety"
+                subtitle="Crash Detection, SOS and Emergency Contacts"
+                details={`Crash Detection ${crashDetectionOn ? 'ON' : 'OFF'} · ${emergencyContacts} Emergency Contact${emergencyContacts === 1 ? '' : 's'}`}
+                delay={0.6}
+                onClick={() => setEmergencyOpen(true)} />
+            </>
+          )}
 
           <MenuCard
             icon={Crown}
@@ -257,10 +262,10 @@ export default function Profile() {
 
           <MenuCard
             icon={Store}
-            title="Provider Dashboard"
-            subtitle="Manage your shop listings, contact info and views"
+            title={isProvider || isStaff ? 'Provider Dashboard' : 'Become a Service Provider'}
+            subtitle={isProvider || isStaff ? 'Manage your shop listings, contact info and views' : 'R29.99/month · 10 listing slots'}
             delay={0.726}
-            onClick={() => navigate('/provider-dashboard')} />
+            onClick={() => navigate(isProvider || isStaff ? '/provider-dashboard' : '/provider/join')} />
 
           <MenuCard
             icon={LifeBuoy}

@@ -12,7 +12,7 @@ import ServiceDetailSheet from './ServiceDetailSheet';
 import ServiceFilters from './ServiceFilters';
 import ServiceSubmitDialog from './ServiceSubmitDialog';
 import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
-import { isPremiumUser } from '@/lib/plans';
+import { canManageServices } from '@/lib/plans';
 import { getServiceCategory, haversine, isOpenNow } from '@/lib/serviceCategories';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -104,7 +104,7 @@ export default function ServicesTab({ user }) {
   };
 
   const handleSubmitPress = () => {
-    if (isPremiumUser(user)) setSubmitOpen(true);
+    if (canManageServices(user)) setSubmitOpen(true);
     else setUpgradeOpen(true);
   };
 
@@ -183,9 +183,11 @@ export default function ServicesTab({ user }) {
       <PremiumUpgradePrompt
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
-        title="Premium service listing"
-        description="Listing a service is a Premium feature. Upgrade to put your workshop, shop or venue in front of riders nearby."
-        benefits={['Publish your business on the map', 'Manage your listing details', 'Get discovered by riders']}
+        title="Service Provider package required"
+        description="Only Service Providers and admins can add or edit service listings. The package is R29.99/month and includes 10 listing slots."
+        benefits={['Publish up to 10 listings', 'Edit your own listings anytime', 'Get discovered by riders nearby']}
+        ctaLabel="See the Provider package"
+        to="/provider/join"
       />
 
       <ServiceSubmitDialog

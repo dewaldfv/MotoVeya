@@ -2,7 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { secrets } from 'base44:runtime';
 
 const MONTHLY_PERIOD_DAYS = 30;
-const EXPECTED_AMOUNT = 8999;
+// Amount per package in kobo/cents.
+const PACKAGE_AMOUNTS = { premium: 8999, provider: 2999 };
 
 // Extract subscription_code + email_token from the verify response.
 // Paystack includes a `subscription` object on plan-based transaction verifications.
@@ -61,7 +62,8 @@ export default async function(req) {
 
     const metadata = tx.metadata || {};
     const cycle = 'monthly';
-    if (Number(tx.amount) !== EXPECTED_AMOUNT) {
+    const plan = metadata.plan === 'provider' ? 'provider' : 'premium';
+    if (Number(tx.amount) !== PACKAGE_AMOUNTS[plan]) {
       return Response.json({ error: 'Unexpected payment amount' }, { status: 400 });
     }
 
@@ -85,7 +87,7 @@ export default async function(req) {
 
       // Check if a subscription record already exists (e.g. from subscription.create event).
       const userSubs = await svc.entities.Subscription.filter(
-        { user_id: me.id, plan: 'premium', payment_provider: 'paystack' },
+        { user_id: me.id, plan, payment_provider: 'paystack' },
         '-created_date',
         10
       );
@@ -106,7 +108,7 @@ export default async function(req) {
       } else {
         await svc.entities.Subscription.create({
           user_id: me.id,
-          plan: 'premium',
+          plan,
           status: 'active',
           billing_cycle: cycle,
           amount_zar: amount,
@@ -122,12 +124,20 @@ export default async function(req) {
         });
       }
 
-      await svc.entities.User.update(me.id, {
-        subscription_tier: 'premium',
-        subscription_status: 'active',
-        subscription_expiry: periodEnd.toISOString(),
-      });
-      console.log(`Premium activated via verify for user ${me.id} (ref ${reference})`);
+      if (plan === 'provider') {
+        await svc.entities.User.update(me.id, {
+          account_type: 'provider',
+          provider_status: 'active',
+          provider_expiry: periodEnd.toISOString(),
+        });
+      } else {
+        await svc.entities.User.update(me.id, {
+          subscription_tier: 'premium',
+          subscription_status: 'active',
+          subscription_expiry: periodEnd.toISOString(),
+        });
+      }
+      console.log(`${plan} activated via verify for user ${me.id} (ref ${reference})`);
     } else if (subInfo?.subscription_code && !existing[0].paystack_subscription_code) {
       // Backfill subscription code if the webhook didn't capture it yet.
       await svc.entities.Subscription.update(existing[0].id, {
@@ -136,7 +146,7 @@ export default async function(req) {
       });
     }
 
-    return Response.json({ status: 'success', active: true });
+    return Response.json({ status: 'success', active: true, plan });
   } catch (error) {
     console.error('verify-paystack-payment error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });

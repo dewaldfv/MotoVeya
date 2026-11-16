@@ -51,8 +51,38 @@ export default async function(req) {
       }
     }
 
+    // ---- Service Provider package entitlement ----
+    let providerSub = null;
+    for (const s of subs) {
+      if (s.plan !== 'provider') continue;
+      if (!['active', 'trialing', 'cancelled', 'past_due'].includes(s.status)) continue;
+      if (s.expiry_date && new Date(s.expiry_date) <= now) {
+        await svc.entities.Subscription.update(s.id, { status: 'expired' }).catch(() => {});
+        continue;
+      }
+      providerSub = s;
+      break;
+    }
+
+    const providerEnded = me.account_type === 'provider' && !providerSub;
+    if (providerSub && (me.account_type !== 'provider' || me.provider_status !== 'active')) {
+      await svc.entities.User.update(me.id, {
+        account_type: 'provider',
+        provider_status: providerSub.status === 'cancelled' ? 'cancelled' : 'active',
+        provider_expiry: providerSub.expiry_date || null,
+      }).catch(() => {});
+    } else if (providerEnded) {
+      await svc.entities.User.update(me.id, {
+        account_type: 'rider',
+        provider_status: 'expired',
+        provider_expiry: null,
+      }).catch(() => {});
+    }
+
     return Response.json({
       is_premium: !!valid,
+      is_provider: !!providerSub,
+      provider_expiry: providerSub?.expiry_date || null,
       plan: valid?.plan || 'free',
       status: valid?.status || 'none',
       expiry_date: valid?.expiry_date || null,

@@ -11,6 +11,7 @@ import VoiceChannelProvider from './voice/VoiceChannelProvider';
 import NotificationPopUp from './NotificationPopUp';
 import OrientationPermissionPrompt from './OrientationPermissionPrompt';
 import { getActiveRide } from '@/lib/rideCache';
+import { isServiceProvider } from '@/lib/plans';
 import { subscribeRideActive } from '@/lib/rideStatus';
 import { useScreenOrientation } from '@/hooks/useScreenOrientation';
 import { useIdleMapUi } from '@/hooks/useIdleMapUi';
@@ -99,7 +100,7 @@ export default function AppLayout() {
     >
       <NotificationPopUp />
       <OrientationPermissionPrompt />
-      {hasActiveRide && !rideActive && <RideResumeBanner />}
+      {hasActiveRide && !rideActive && !isServiceProvider(user) && <RideResumeBanner />}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={location.pathname}

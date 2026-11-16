@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, Crown, ChevronLeft, RefreshCw } from 'lucide-react';
+import { Check, X, Crown, ChevronLeft, RefreshCw, Store, ChevronRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { PRICING, PREMIUM_FEATURES } from '@/lib/plans';
@@ -141,6 +141,20 @@ export default function GoPremium() {
             </Button>
           </div>
         )}
+
+        <button
+          onClick={() => navigate('/provider/join')}
+          className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99]"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Store size={20} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">Own a workshop, shop or venue?</span>
+            <span className="block text-xs text-muted-foreground">Service Provider package · R29.99/month · 10 listing slots</span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-muted-foreground" />
+        </button>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card">
           <div className="grid grid-cols-3 border-b border-border bg-muted/50 px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">

@@ -9,7 +9,8 @@
       "type": "string",
       "enum": [
         "free",
-        "premium"
+        "premium",
+        "provider"
       ],
       "default": "free"
     },

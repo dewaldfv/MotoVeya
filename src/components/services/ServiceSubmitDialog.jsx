@@ -193,11 +193,17 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
         logo_url: form.logo_url || undefined,
         photo_urls: form.photo_urls || [],
       };
+      const response = await base44.functions.invoke('manage-service-listing', {
+        action: editService ? 'update' : 'create',
+        service_id: editService?.id,
+        data: {
+          ...payload,
+          ...(editService ? { status: 'approved' } : {}),
+        },
+      });
       if (editService) {
-        await base44.entities.Service.update(editService.id, { ...payload, status: 'approved' });
         toast.success('Service updated and published');
       } else {
-        await base44.entities.Service.create({ ...payload, status: 'pending' });
         toast.success(`${foodOnly ? 'Food & Drink venue' : 'Service'} submitted! Awaiting admin approval.`);
       }
       onOpenChange(false);
@@ -206,7 +212,8 @@ export default function ServiceSubmitDialog({ open, onOpenChange, onSubmitted, f
       setForm(EMPTY);
     } catch (e) {
       console.error(e);
-      toast.error(editService ? 'Failed to update service' : 'Failed to submit service');
+      const message = e?.response?.data?.error || e?.data?.error || e?.message;
+      toast.error(message || (editService ? 'Failed to update service' : 'Failed to submit service'));
     } finally {
       setSaving(false);
     }
