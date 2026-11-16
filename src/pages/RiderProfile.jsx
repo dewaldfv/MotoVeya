@@ -10,7 +10,9 @@ import MiniActivityChart from '@/components/community/MiniActivityChart';
 import RiderQuickActions from '@/components/community/RiderQuickActions';
 import FriendLocationSheet from '@/components/community/FriendLocationSheet';
 import LoginPrompt from '@/components/LoginPrompt';
-import { formatDistance, formatDuration, onlineStatus, computeAchievements } from '@/lib/riderStats';
+import PremiumLockedSection from '@/components/premium/PremiumLockedSection';
+import { isPremiumUser } from '@/lib/plans';
+import { formatDistance, formatDuration, formatRelativeDate, onlineStatus, computeAchievements } from '@/lib/riderStats';
 import { inviteFriendToRide } from '@/lib/rideInvite';
 import { toast } from 'sonner';
 
@@ -78,6 +80,7 @@ export default function RiderProfile() {
   const status = onlineStatus(rider.weekly?.last_ride_date);
   const achievements = computeAchievements(rider);
   const locShared = friend?.location_shared && friend?.last_lat != null;
+  const isPremiumViewer = isPremiumUser(me);
 
   const handleNavigate = () => {
     if (!locShared) { toast.error('Location not shared'); return; }
@@ -168,7 +171,21 @@ export default function RiderProfile() {
       {rider.privacy?.show_achievements && (
       <div className="mb-4">
         <Section title={`Achievements (${achievements.length})`}>
-...
+          {achievements.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No achievements yet.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {achievements.map((achievement) => (
+                <div key={achievement.id} className="flex items-center gap-2 rounded-xl bg-secondary/60 p-2">
+                  <span className="text-lg">{achievement.emoji}</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold">{achievement.label}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">{achievement.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Section>
       </div>
       )}
@@ -183,7 +200,29 @@ export default function RiderProfile() {
       {rider.privacy?.show_completed_rides && (
       <div className="mb-4">
         <Section title="Ride History">
-...
+          <PremiumLockedSection
+            locked={!isPremiumViewer}
+            title="Ride history is Premium"
+            message="Upgrade to Premium to unlock full ride history and stats."
+          >
+            {(rider.history || []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No completed rides yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {rider.history.map((ride) => (
+                  <div key={ride.id} className="flex items-center justify-between gap-2 rounded-xl bg-secondary/60 p-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold">{ride.title || 'Ride'}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {formatRelativeDate(ride.ride_date)} · {formatDuration(ride.duration_minutes)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-sm font-black text-primary">{formatDistance(ride.distance_km)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </PremiumLockedSection>
         </Section>
       </div>
       )}
@@ -191,7 +230,15 @@ export default function RiderProfile() {
       {rider.privacy?.show_photos && (
       <div className="mb-4">
         <Section title={`Photos (${rider.photos?.length || 0})`}>
-...
+          {(rider.photos || []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No photos shared yet.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5">
+              {rider.photos.map((url, i) => (
+                <img key={`${url}-${i}`} src={url} alt="Ride photo" loading="lazy" className="h-24 w-full rounded-xl object-cover" />
+              ))}
+            </div>
+          )}
         </Section>
       </div>
       )}

@@ -11,6 +11,8 @@ import ServiceListingCard from './ServiceListingCard';
 import ServiceDetailSheet from './ServiceDetailSheet';
 import ServiceFilters from './ServiceFilters';
 import ServiceSubmitDialog from './ServiceSubmitDialog';
+import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
+import { isPremiumUser } from '@/lib/plans';
 import { getServiceCategory, haversine, isOpenNow } from '@/lib/serviceCategories';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,6 +25,7 @@ export default function ServicesTab({ user }) {
   const [selectedService, setSelectedService] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [filters, setFilters] = useState({ distance: null, rating: null, openNow: false, verified: false, premiumPartner: false });
   const [userPos, setUserPos] = useState(null);
   const [showAll, setShowAll] = useState(false);
@@ -100,6 +103,11 @@ export default function ServicesTab({ user }) {
     navigate('/');
   };
 
+  const handleSubmitPress = () => {
+    if (isPremiumUser(user)) setSubmitOpen(true);
+    else setUpgradeOpen(true);
+  };
+
   const handleSelect = (service) => {
     setSelectedService(service);
     if (service?.id) {
@@ -133,7 +141,7 @@ export default function ServicesTab({ user }) {
         </button>
       </div>
 
-      <Button onClick={() => setSubmitOpen(true)} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl">
+      <Button onClick={handleSubmitPress} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl">
         <Plus size={18} /> Submit a Service
       </Button>
 
@@ -171,6 +179,14 @@ export default function ServicesTab({ user }) {
         onFavorite={handleFavorite} onDirections={handleDirections} onNavigate={handleNavigate} onClose={() => setSelectedService(null)} />
 
       <ServiceFilters open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} />
+
+      <PremiumUpgradePrompt
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        title="Premium service listing"
+        description="Listing a service is a Premium feature. Upgrade to put your workshop, shop or venue in front of riders nearby."
+        benefits={['Publish your business on the map', 'Manage your listing details', 'Get discovered by riders']}
+      />
 
       <ServiceSubmitDialog
         open={submitOpen}

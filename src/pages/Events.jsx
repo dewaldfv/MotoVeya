@@ -9,6 +9,8 @@ import EventSubmitDialog from '@/components/EventSubmitDialog';
 import CalendarExportButton from '@/components/CalendarExportButton';
 import PullToRefresh from '@/components/PullToRefresh';
 import EventFilters, { matchesDatePreset, matchesEventSearch } from '@/components/events/EventFilters';
+import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
+import { isPremiumUser } from '@/lib/plans';
 import { formatEventDateRange } from '@/lib/eventDate';
 
 const CATS = ['all', 'rally', 'breakfast_run', 'pub_ride', 'birthday_bash', 'camping', 'track_day', 'charity_ride', 'bike_night', 'scenic_ride', 'day_jol', 'other'];
@@ -19,6 +21,7 @@ export default function Events() {
   const [tab, setTab] = useState('upcoming');
   const [search, setSearch] = useState('');
   const [datePreset, setDatePreset] = useState('all');
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
 
@@ -43,7 +46,12 @@ export default function Events() {
   const user = data?.user ?? null;
   const tabEvents = tab === 'upcoming' ? (data?.upcoming ?? []) : (data?.past ?? []);
   const canEdit = (ev) => user && (user.role === 'admin' || (user.role === 'organizer' && ev.created_by_id === user.id));
-  const canSubmit = user && (user.role === 'organizer' || user.role === 'admin');
+  const isPremium = isPremiumUser(user);
+  const canSubmit = !!user;
+  const handleSubmitPress = () => {
+    if (isPremium) setSubmitOpen(true);
+    else setUpgradeOpen(true);
+  };
   const searched = tabEvents.filter(
     (e) => matchesEventSearch(e, search) && matchesDatePreset(e.event_date, datePreset, tab)
   );
@@ -65,7 +73,7 @@ export default function Events() {
               <CalendarExportButton events={filtered} label="Export" variant="secondary" size="default" />
             )}
             {canSubmit && (
-              <Button onClick={() => setSubmitOpen(true)} className="min-h-[48px]">
+              <Button onClick={handleSubmitPress} className="min-h-[48px]">
                 <Plus size={18} className="mr-1" /> Submit
               </Button>
             )}
@@ -148,6 +156,14 @@ export default function Events() {
             ))}
           </div>
         )}
+
+        <PremiumUpgradePrompt
+          open={upgradeOpen}
+          onOpenChange={setUpgradeOpen}
+          title="Premium event submission"
+          description="Submitting events is a Premium feature. Upgrade to share your rides and gatherings with riders across South Africa."
+          benefits={['Submit unlimited events', 'Reach every rider on the map', 'Manage your own listings']}
+        />
 
         <EventSubmitDialog open={submitOpen} onOpenChange={setSubmitOpen} onSubmitted={() => queryClient.invalidateQueries({ queryKey: ['events'] })} editEvent={editEvent} onEditClose={() => setEditEvent(null)} />
       </div>
