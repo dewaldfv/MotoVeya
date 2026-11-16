@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, ChevronLeft, RefreshCw, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
 import { PREMIUM_FEATURES } from '@/lib/plans';
-import PlanPicker from '@/components/plans/PlanPicker';
+import PlanBanners from '@/components/plans/PlanBanners';
 import SubscriptionCard from '@/components/SubscriptionCard';
 import { toast } from 'sonner';
 
@@ -13,6 +12,20 @@ const FEATURE_ICONS = {
   Fuel: '⛽', MapPin: '📍', Siren: '🚨', Ambulance: '🚑', UserPlus: '➕',
   Radar: '📡', Route: '🗺️', BarChart3: '📊',
 };
+
+const HERO_IMAGE = 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/6889ac46b_generated_0000a60f.jpg';
+const PHOTO_HANDLEBAR = 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/6889ac46b_generated_0000a60f.jpg';
+const PHOTO_RALLY = 'https://media.base44.com/images/public/6a474c2524cd25817436fd3b/b3fb6d824_generated_7ed02e3f.jpg';
+
+function ValueCell({ value, highlight }) {
+  if (value === true) {
+    return <Check size={16} stroke="#F4A900" strokeWidth={3} style={{ margin: '0 auto' }} />;
+  }
+  if (value === false) {
+    return <X size={16} stroke="#8b959b" strokeWidth={3} style={{ margin: '0 auto' }} />;
+  }
+  return <span className={`premium-cmp__v${highlight ? ' premium-cmp__v--p' : ''}`}>{value}</span>;
+}
 
 export default function GoPremium() {
   const navigate = useNavigate();
@@ -79,75 +92,66 @@ export default function GoPremium() {
   const activePlan = entitlement?.plan && entitlement.plan !== 'free' ? entitlement.plan : null;
 
   return (
-    <div className="min-h-screen bg-background pb-10">
-      <div
-        className="sticky top-0 z-10 flex items-center gap-3 bg-background/95 p-4 backdrop-blur-lg"
-        style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}
-      >
-        <button onClick={() => navigate(-1)} className="glove-target flex items-center justify-center rounded-full bg-card" aria-label="Back">
-          <ChevronLeft size={24} />
+    <div className="premium-page">
+      <div className="premium-top">
+        <button type="button" onClick={() => navigate(-1)} className="premium-back" aria-label="Back">
+          <ChevronLeft size={24} stroke="#F4F4F1" strokeWidth={2.2} />
         </button>
-        <h1 className="text-lg font-bold">Plans &amp; Pricing</h1>
+        <h1>Plans &amp; Pricing</h1>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4">
-        <div className="mb-5">
-          <h2 className="text-3xl font-black leading-tight tracking-tight">Choose your access</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Rider features, business listings and event organising. One monthly subscription, cancel anytime.
-          </p>
+      <div className="premium-hero">
+        <img className="premium-hero__bg" src={HERO_IMAGE} alt="Motorcycle rider on a mountain pass at dusk" />
+        <div className="premium-hero__scrim" />
+        <div className="premium-stripe" />
+        <div className="premium-hero__in">
+          <h2>Choose your <em>access</em></h2>
+          <p>Rider features, business listings and event organising. One monthly subscription, cancel anytime.</p>
         </div>
+      </div>
 
-        <PlanPicker currentPlan={activePlan} onSubscribed={loadEntitlement} />
+      <div className="premium-wrap">
+        <PlanBanners currentPlan={activePlan} onSubscribed={loadEntitlement} />
 
         {activePlan && (
-          <div className="mt-5">
-            <SubscriptionCard onCancelled={loadEntitlement} />
+          <div className="premium-sub">
+            <SubscriptionCard variant="dark" onCancelled={loadEntitlement} />
           </div>
         )}
 
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <Button
-            onClick={handleRestore}
-            disabled={processing}
-            variant="ghost"
-            className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl text-sm"
-          >
-            {processing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} Restore purchases
-          </Button>
-          <Button
-            onClick={() => navigate('/provider/join')}
-            variant="ghost"
-            className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl text-sm"
-          >
+        <div className="premium-acts">
+          <button type="button" className="premium-ghost" onClick={handleRestore} disabled={processing}>
+            {processing ? <Loader2 size={16} className="animate-spin" stroke="#F4A900" /> : <RefreshCw size={16} stroke="#F4A900" strokeWidth={2.2} />}
+            Restore purchases
+          </button>
+          <button type="button" className="premium-ghost" onClick={() => navigate('/provider/join')}>
             Business listing details
-          </Button>
+          </button>
         </div>
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card">
-          <div className="grid grid-cols-3 border-b border-border bg-muted/50 px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+        <div className="premium-photos">
+          <img src={PHOTO_HANDLEBAR} alt="Motorcycle handlebar with amber navigation display" />
+          <img src={PHOTO_RALLY} alt="Group of motorcycles at an evening rally" />
+        </div>
+
+        <div className="premium-cmp">
+          <div className="premium-cmp__row premium-cmp__row--h">
             <span>Premium rider feature</span>
-            <span className="text-center">Free</span>
-            <span className="text-center text-primary">Premium</span>
+            <span>Free</span>
+            <span>Premium</span>
           </div>
-          {PREMIUM_FEATURES.map((f, i) => (
-            <div key={i} className={`grid grid-cols-3 items-center px-4 py-3 text-sm ${i % 2 === 0 ? 'bg-card' : 'bg-muted/20'}`}>
-              <span className="flex items-center gap-2 font-medium">
+          {PREMIUM_FEATURES.map((f) => (
+            <div key={f.label} className="premium-cmp__row">
+              <span className="premium-cmp__f">
                 <span>{FEATURE_ICONS[f.icon] || '•'}</span>{f.label}
               </span>
-              <span className="text-center">
-                {f.free === true ? <Check size={16} className="mx-auto text-green-600" /> : f.free === false ? <X size={16} className="mx-auto text-muted-foreground" /> : <span className="text-xs">{f.free}</span>}
-              </span>
-              <span className="text-center">
-                {f.premium === true ? <Check size={16} className="mx-auto text-primary" /> : f.premium === false ? <X size={16} className="mx-auto text-muted-foreground" /> : <span className="text-xs font-semibold text-primary">{f.premium}</span>}
-              </span>
+              <span className="premium-cmp__c"><ValueCell value={f.free} /></span>
+              <span className="premium-cmp__c"><ValueCell value={f.premium} highlight /></span>
             </div>
           ))}
         </div>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          Subscriptions auto-renew monthly. Cancel anytime from your profile.
-        </p>
+        <p className="premium-ft">Subscriptions auto-renew monthly. Cancel anytime from your profile.</p>
       </div>
     </div>
   );

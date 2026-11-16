@@ -14,7 +14,14 @@ const STATUS_CONFIG = {
   expired: { label: 'Expired', color: '#DC2626', bg: '#FEE2E2', icon: XCircle },
 };
 
-export default function SubscriptionCard({ onCancelled }) {
+const THEME = {
+  light: { card: '#FFFFFF', border: '#E2E8F0', title: '#0F172A', muted: '#64748B', icon: '#2563EB' },
+  dark: { card: '#181b1e', border: '#2c3236', title: '#F4F4F1', muted: '#a7afb4', icon: '#F4A900' },
+};
+
+export default function SubscriptionCard({ onCancelled, variant = 'light' }) {
+  const t = THEME[variant] || THEME.light;
+  const isDark = variant === 'dark';
   const [entitlement, setEntitlement] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -51,8 +58,8 @@ export default function SubscriptionCard({ onCancelled }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center rounded-xl border p-6" style={{ borderColor: '#E2E8F0', background: '#FFFFFF' }}>
-        <Loader2 size={20} className="animate-spin" style={{ color: '#64748B' }} />
+      <div className="flex items-center justify-center rounded-xl border p-6" style={{ borderColor: t.border, background: t.card }}>
+        <Loader2 size={20} className="animate-spin" style={{ color: t.muted }} />
       </div>
     );
   }
@@ -70,11 +77,11 @@ export default function SubscriptionCard({ onCancelled }) {
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border" style={{ borderColor: '#E2E8F0', background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-        <div className="flex items-center justify-between border-b p-4" style={{ borderColor: '#E2E8F0' }}>
+      <div className="overflow-hidden rounded-xl border" style={{ borderColor: t.border, background: t.card, boxShadow: isDark ? '0 18px 40px rgba(0,0,0,0.4)' : '0 1px 3px rgba(0,0,0,0.05)', borderRadius: isDark ? '6px' : undefined }}>
+        <div className="flex items-center justify-between border-b p-4" style={{ borderColor: t.border }}>
           <div className="flex items-center gap-2">
-            <Crown size={18} style={{ color: '#2563EB' }} fill="#2563EB" />
-            <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>{planName}</span>
+            <Crown size={18} style={{ color: t.icon }} fill={t.icon} />
+            <span className="text-sm font-semibold" style={{ color: t.title }}>{planName}</span>
           </div>
           <span
             className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
@@ -97,10 +104,10 @@ export default function SubscriptionCard({ onCancelled }) {
 
           {expiryDate && (
             <div className="flex items-center gap-2">
-              <Calendar size={16} style={{ color: '#64748B' }} />
-              <span className="text-sm" style={{ color: '#64748B' }}>
+              <Calendar size={16} style={{ color: t.muted }} />
+              <span className="text-sm" style={{ color: t.muted }}>
                 {isCancelled ? 'Ends on' : 'Renews on'}{' '}
-                <span className="font-semibold" style={{ color: '#0F172A' }}>
+                <span className="font-semibold" style={{ color: t.title }}>
                   {format(expiryDate, 'd MMM yyyy')}
                 </span>
               </span>
@@ -108,7 +115,7 @@ export default function SubscriptionCard({ onCancelled }) {
           )}
 
           {!isCancelled && !isPastDue && (
-            <p className="text-xs" style={{ color: '#64748B' }}>
+            <p className="text-xs" style={{ color: t.muted }}>
               Auto-renews monthly. Cancel anytime.
             </p>
           )}
@@ -119,7 +126,7 @@ export default function SubscriptionCard({ onCancelled }) {
             <Button
               variant="outline"
               className="w-full min-h-[48px] rounded-lg text-sm font-medium"
-              style={{ borderColor: '#DC2626', color: '#DC2626' }}
+              style={{ borderColor: '#DC2626', color: isDark ? '#f06b6b' : '#DC2626', background: 'transparent', borderRadius: isDark ? '6px' : undefined }}
               onClick={() => setCancelOpen(true)}
             >
               Cancel Subscription
@@ -129,10 +136,10 @@ export default function SubscriptionCard({ onCancelled }) {
       </div>
 
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
-        <AlertDialogContent className="backdrop-blur-sm">
+        <AlertDialogContent className={isDark ? 'border-[#2c3236] bg-[#181b1e] text-[#F4F4F1] backdrop-blur-sm' : 'backdrop-blur-sm'}>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className={isDark ? 'text-[#F4F4F1]' : undefined}>Cancel Subscription?</AlertDialogTitle>
+            <AlertDialogDescription className={isDark ? 'text-[#a7afb4]' : undefined}>
               Your {planName} access will stay active until {expiryDate ? format(expiryDate, 'd MMM yyyy') : 'the end of your current period'}, then revert to the Free plan. You can re-subscribe anytime.
             </AlertDialogDescription>
           </AlertDialogHeader>
