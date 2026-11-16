@@ -63,6 +63,25 @@ export default function NotificationPopUp() {
     return unsub;
   }, [me?.id]);
 
+  // Incoming messages detected by the messaging poll show the same banner,
+  // because message records themselves are private and cannot be subscribed to.
+  useEffect(() => {
+    const handler = (e) => {
+      const d = e?.detail;
+      if (!d?.id || seenIds.current.has(d.id)) return;
+      seenIds.current.add(d.id);
+      setPopups((prev) => [
+        ...prev,
+        { id: d.id, type: 'message', title: d.title, body: d.body, conversation_id: d.conversationId },
+      ]);
+      timersRef.current[d.id] = setTimeout(() => {
+        setPopups((prev) => prev.filter((p) => p.id !== d.id));
+      }, 5000);
+    };
+    window.addEventListener('motoveya:message-popup', handler);
+    return () => window.removeEventListener('motoveya:message-popup', handler);
+  }, []);
+
   const dismiss = (id) => {
     clearTimeout(timersRef.current[id]);
     delete timersRef.current[id];

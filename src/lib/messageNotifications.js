@@ -34,14 +34,29 @@ export async function requestNotificationPermission() {
   return Notification.permission;
 }
 
-export function showMessageNotification({ title, body, conversationId }) {
+export async function showMessageNotification({ title, body, conversationId }) {
   if (!notificationsSupported() || Notification.permission !== 'granted') return;
+  const options = {
+    body: (body || '').slice(0, 200),
+    tag: conversationId,
+    renotify: true,
+    data: { conversationId },
+  };
   try {
-    const n = new Notification(title, {
-      body: (body || '').slice(0, 200),
-      tag: conversationId,
-      renotify: true,
-    });
+    // Phones only show notifications raised by the service worker registration —
+    // `new Notification()` throws or is ignored on mobile browsers.
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.showNotification(title, options);
+        return;
+      }
+    }
+  } catch (e) {
+    /* fall through to the page-level notification */
+  }
+  try {
+    const n = new Notification(title, options);
     n.onclick = () => {
       window.focus();
       n.close();
