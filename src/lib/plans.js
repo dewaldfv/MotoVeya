@@ -42,9 +42,12 @@ export function isAdminUser(user) {
   return user?.role === 'admin' || user?.role === 'moderator';
 }
 
-/** True only while the Service Provider package is paid up. */
+/** True while the Service Provider package is paid up, or an admin granted it. */
 export function isServiceProvider(user) {
-  if (!user || user.account_type !== 'provider') return false;
+  if (!user) return false;
+  // Manual admin grant — independent of any paid package.
+  if (user.provider_grant === 'admin') return true;
+  if (user.account_type !== 'provider') return false;
   if (user.provider_status === 'expired' || user.provider_status === 'none') return false;
   if (user.provider_expiry) {
     const expiry = new Date(user.provider_expiry);

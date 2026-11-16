@@ -55,7 +55,9 @@ export default async function(req) {
     const svc = base44.asServiceRole;
     const staff = isStaff(me);
 
-    if (!staff && !(await hasProviderEntitlement(svc, me.id))) {
+    // An admin-granted provider counts as entitled without a paid package.
+    const entitled = me.provider_grant === 'admin' || (await hasProviderEntitlement(svc, me.id));
+    if (!staff && !entitled) {
       return Response.json(
         { error: 'A Service Provider package is required to manage listings', code: 'provider_required' },
         { status: 403 }

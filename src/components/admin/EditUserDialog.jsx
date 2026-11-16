@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Crown } from 'lucide-react';
+import { Crown, Store } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,12 +22,28 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
       cover_url: user.cover_url || '',
       bio: user.bio || '',
       isPremium: user.subscription_tier === 'premium',
+      isProviderGranted: user.provider_grant === 'admin',
     });
   }, [user]);
 
   if (!user || !form) return null;
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // A paid provider keeps their access when the admin grant is removed.
+  const hasPaidProviderPackage = async () => {
+    try {
+      const subs = await base44.entities.Subscription.filter({ user_id: user.id, plan: 'provider' }, '-created_date', 10);
+      const now = Date.now();
+      return (subs.items || subs).some((s) => (
+        ['active', 'trialing', 'cancelled', 'past_due'].includes(s.status)
+        && (!s.expiry_date || new Date(s.expiry_date).getTime() > now)
+      ));
+    } catch (e) {
+      console.error('Provider subscription lookup failed', e);
+      return true;
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -41,6 +57,21 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
         subscription_tier: form.isPremium ? 'premium' : 'free',
         subscription_status: form.isPremium ? 'active' : 'none',
       };
+
+      if (form.isProviderGranted) {
+        updates.account_type = 'provider';
+        updates.provider_status = 'active';
+        updates.provider_expiry = null;
+        updates.provider_grant = 'admin';
+      } else if (user.provider_grant === 'admin') {
+        updates.provider_grant = 'none';
+        if (!(await hasPaidProviderPackage())) {
+          updates.account_type = 'rider';
+          updates.provider_status = 'none';
+          updates.provider_expiry = null;
+        }
+      }
+
       await base44.entities.User.update(user.id, updates);
 
       // Ensure a Subscription record reflects the admin's choice
@@ -112,6 +143,23 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
               </div>
             </div>
             <Switch checked={form.isPremium} onCheckedChange={(v) => set('isPremium', v)} />
+          </div>
+          <div className="flex items-center justify-between rounded-2xl bg-card p-3">
+            <div className="flex items-center gap-2">
+              <Store size={20} className="text-primary" />
+              <div>
+                <p className="font-semibold">Service Provider</p>
+                <p className="text-xs text-muted-foreground">
+                  {user.account_type === 'provider' && user.provider_grant !== 'admin'
+                    ? 'Active through their paid package. A grant adds access with no payment.'
+                    : 'Grant or revoke provider access without payment'}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={form.isProviderGranted}
+              onCheckedChange={(v) => set('isProviderGranted', v)}
+            />
           </div>
         </div>
         <DialogFooter>

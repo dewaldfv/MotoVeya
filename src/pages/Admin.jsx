@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Check, X, Users, Calendar, Crown, Wrench, MapPin, Pencil } from 'lucide-react';
+import { Shield, Check, X, Users, Calendar, Crown, Wrench, MapPin, Pencil, Store } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import EditUserDialog from '@/components/admin/EditUserDialog';
+import { isServiceProvider } from '@/lib/plans';
 import POISubmitDialog from '@/components/services/POISubmitDialog';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
 import ServiceSubmitDialog from '@/components/services/ServiceSubmitDialog';
@@ -226,6 +227,7 @@ export default function Admin() {
               </div>
               <div className="flex items-center gap-2">
                 {u.subscription_tier === 'premium' && <Badge className="capitalize"><Crown size={12} className="mr-1" />Premium</Badge>}
+                {isServiceProvider(u) && <Badge variant="secondary" className="capitalize"><Store size={12} className="mr-1" />Provider</Badge>}
                 <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="capitalize">{u.role}</Badge>
                 {u.role !== 'organizer' && <Button size="sm" variant="ghost" onClick={() => handleRoleChange(u.id, 'organizer')}>Make Organizer</Button>}
                 {u.role === 'organizer' && <Button size="sm" variant="ghost" onClick={() => handleRoleChange(u.id, 'user')}>Revoke</Button>}

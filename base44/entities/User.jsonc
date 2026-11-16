@@ -129,6 +129,22 @@
         }
       }
     },
+    "provider_grant": {
+      "type": "string",
+      "enum": [
+        "none",
+        "admin"
+      ],
+      "default": "none",
+      "description": "admin when an admin granted Service Provider access without a paid package. Kept separate from Paystack subscription state.",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
     "total_distance_km": {
       "type": "number",
       "default": 0

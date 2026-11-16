@@ -64,8 +64,17 @@ export default async function(req) {
       break;
     }
 
-    const providerEnded = me.account_type === 'provider' && !providerSub;
-    if (providerSub && (me.account_type !== 'provider' || me.provider_status !== 'active')) {
+    // An admin-granted provider keeps access regardless of subscriptions.
+    const adminGranted = me.provider_grant === 'admin';
+    if (adminGranted && (me.account_type !== 'provider' || me.provider_status !== 'active')) {
+      await svc.entities.User.update(me.id, {
+        account_type: 'provider',
+        provider_status: 'active',
+      }).catch(() => {});
+    }
+
+    const providerEnded = !adminGranted && me.account_type === 'provider' && !providerSub;
+    if (!adminGranted && providerSub && (me.account_type !== 'provider' || me.provider_status !== 'active')) {
       await svc.entities.User.update(me.id, {
         account_type: 'provider',
         provider_status: providerSub.status === 'cancelled' ? 'cancelled' : 'active',
@@ -81,7 +90,7 @@ export default async function(req) {
 
     return Response.json({
       is_premium: !!valid,
-      is_provider: !!providerSub,
+      is_provider: !!providerSub || adminGranted,
       provider_expiry: providerSub?.expiry_date || null,
       plan: valid?.plan || 'free',
       status: valid?.status || 'none',
