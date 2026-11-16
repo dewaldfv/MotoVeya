@@ -19,7 +19,7 @@ import GroupMembersDialog from '@/components/community/GroupMembersDialog';
 import FriendsDashboard from '@/components/community/FriendsDashboard';
 import GroupRidesList from '@/components/grouprides/GroupRidesList';
 import MessagesTab from '@/components/messaging/MessagesTab';
-import { isOrganizerOnlyAccount } from '@/lib/plans';
+import { isOrganizerOnlyAccount, isProviderOnlyAccount } from '@/lib/plans';
 import { toast } from 'sonner';
 
 function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
@@ -257,8 +257,8 @@ export default function Community() {
   if (isLoading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
   if (!user) return <LoginPrompt message="Log in to connect with riders" />;
 
-  // Organizer accounts reach riders through chats only.
-  if (isOrganizerOnlyAccount(user)) {
+  // Organizer and Service Provider accounts reach riders through chats only.
+  if (isOrganizerOnlyAccount(user) || isProviderOnlyAccount(user)) {
     return (
       <PullToRefresh onRefresh={handleRefresh}>
         <div className="min-h-screen bg-background p-4 pb-24" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>

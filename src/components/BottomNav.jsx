@@ -21,13 +21,11 @@ export default function BottomNav({ hidden = false }) {
   const { user } = useAuth();
   const isProvider = isProviderOnlyAccount(user);
   const isOrganizer = isOrganizerOnlyAccount(user);
-  // The Service Provider package excludes the Rides tab and Community areas;
-  // the Organizer package only loses the Rides tab.
-  const baseItems = isProvider
-    ? navItems.filter((item) => item.key !== 'rides' && item.key !== 'community')
-    : isOrganizer
-      ? navItems.filter((item) => item.key !== 'rides')
-      : navItems;
+  // The Service Provider and Organizer packages both lose the Rides tab; both keep
+  // Community for chats only.
+  const baseItems = isProvider || isOrganizer
+    ? navItems.filter((item) => item.key !== 'rides')
+    : navItems;
   // Providers and staff reach their dashboard right after Events.
   const visible = canManageServices(user)
     ? baseItems.reduce((acc, item) => item.key === 'events' ? [...acc, item, providerItem] : [...acc, item], [])

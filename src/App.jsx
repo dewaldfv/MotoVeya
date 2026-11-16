@@ -144,7 +144,7 @@ const AuthenticatedApp = () => {
         <Route path="/rides/:id" element={<ProviderRouteGuard blockOrganizers><RideDetail /></ProviderRouteGuard>} />
         <Route path="/events" element={<Events />} />
         <Route path="/events/:id" element={<EventDetail />} />
-        <Route path="/community" element={<ProviderRouteGuard><Community /></ProviderRouteGuard>} />
+        <Route path="/community" element={<Community />} />
         <Route path="/crowd-clips" element={<CrowdClips />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<Admin />} />
