@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Crown, Store } from 'lucide-react';
+import { Crown, Store, ShieldCheck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const GRANT_OPTIONS = [
+  { value: 'none', label: 'No manual grant' },
+  { value: 'organizer', label: 'Organizer' },
+  { value: 'organizer_plus', label: 'Organizer+' },
+  { value: 'provider_plus', label: 'Provider+' },
+  { value: 'gold', label: 'Gold' },
+];
 import { toast } from 'sonner';
 
 export default function EditUserDialog({ user, onClose, onSaved }) {
@@ -23,6 +32,7 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
       bio: user.bio || '',
       isPremium: user.subscription_tier === 'premium',
       isProviderGranted: user.provider_grant === 'admin',
+      planGrant: user.plan_grant || 'none',
     });
   }, [user]);
 
@@ -56,6 +66,7 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
         bio: form.bio,
         subscription_tier: form.isPremium ? 'premium' : 'free',
         subscription_status: form.isPremium ? 'active' : 'none',
+        plan_grant: form.planGrant,
       };
 
       if (form.isProviderGranted) {
@@ -160,6 +171,27 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
               checked={form.isProviderGranted}
               onCheckedChange={(v) => set('isProviderGranted', v)}
             />
+          </div>
+          <div className="rounded-2xl bg-card p-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={20} className="text-primary" />
+              <div>
+                <p className="font-semibold">Plan access grant</p>
+                <p className="text-xs text-muted-foreground">
+                  Grant a package without payment. Their paid subscription stays as it is.
+                </p>
+              </div>
+            </div>
+            <Select value={form.planGrant} onValueChange={(v) => set('planGrant', v)}>
+              <SelectTrigger className="mt-3 min-h-[48px]">
+                <SelectValue placeholder="No manual grant" />
+              </SelectTrigger>
+              <SelectContent>
+                {GRANT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>

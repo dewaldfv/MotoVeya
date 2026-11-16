@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { planIncludes, grantPlan } from '../../shared/planEntitlements.ts';
 
 /**
  * Server-authoritative service listing writer.
@@ -55,8 +56,10 @@ export default async function(req) {
     const svc = base44.asServiceRole;
     const staff = isStaff(me);
 
-    // An admin-granted provider counts as entitled without a paid package.
-    const entitled = me.provider_grant === 'admin' || (await hasProviderEntitlement(svc, me.id));
+    // An admin-granted provider counts as entitled without a paid package, and so
+    // does any admin-granted package that includes provider access.
+    const grantedProvider = planIncludes(grantPlan(me.plan_grant)).provider;
+    const entitled = me.provider_grant === 'admin' || grantedProvider || (await hasProviderEntitlement(svc, me.id));
     if (!staff && !entitled) {
       return Response.json(
         { error: 'A Service Provider package is required to manage listings', code: 'provider_required' },

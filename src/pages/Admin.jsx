@@ -18,6 +18,13 @@ import BroadcastCard from '@/components/admin/BroadcastCard';
 import AdminAlertsTab from '@/components/admin/AdminAlertsTab';
 import { toast } from 'sonner';
 
+const GRANT_LABELS = {
+  organizer: 'Organizer',
+  organizer_plus: 'Organizer+',
+  provider_plus: 'Provider+',
+  gold: 'Gold',
+};
+
 export default function Admin() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -228,6 +235,7 @@ export default function Admin() {
               <div className="flex items-center gap-2">
                 {u.subscription_tier === 'premium' && <Badge className="capitalize"><Crown size={12} className="mr-1" />Premium</Badge>}
                 {isServiceProvider(u) && <Badge variant="secondary" className="capitalize"><Store size={12} className="mr-1" />Provider</Badge>}
+                {GRANT_LABELS[u.plan_grant] && <Badge variant="secondary"><Shield size={12} className="mr-1" />{GRANT_LABELS[u.plan_grant]}</Badge>}
                 <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="capitalize">{u.role}</Badge>
                 {u.role !== 'organizer' && <Button size="sm" variant="ghost" onClick={() => handleRoleChange(u.id, 'organizer')}>Make Organizer</Button>}
                 {u.role === 'organizer' && <Button size="sm" variant="ghost" onClick={() => handleRoleChange(u.id, 'user')}>Revoke</Button>}

@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
-import { PLAN_LABELS, PLAN_RANK, planIncludes } from '../../shared/planEntitlements.ts';
+import { PLAN_LABELS, PLAN_RANK, planIncludes, grantPlan } from '../../shared/planEntitlements.ts';
 
 /** Server-authoritative subscription entitlement. Never trust a client-supplied premium flag. */
 export default async function(req) {
@@ -26,6 +26,10 @@ export default async function(req) {
       if (s.expiry_date && new Date(s.expiry_date) <= now) return true;
       return s.status === 'past_due' && (!s.grace_until || new Date(s.grace_until) <= now);
     };
+
+    // A manual admin grant adds the granted package's access without a payment.
+    const grant = grantPlan(me.plan_grant);
+    const grantIncludes = planIncludes(grant);
 
     const entitlements = { rider: null, provider: null, organizer: null };
     const activePlans = [];
@@ -57,7 +61,7 @@ export default async function(req) {
           subscription_expiry: expiry,
         }).catch(() => {});
       }
-    } else if (me.subscription_tier === 'premium') {
+    } else if (me.subscription_tier === 'premium' && !grantIncludes.rider) {
       await svc.entities.User.update(me.id, {
         subscription_tier: 'free',
         subscription_status: 'expired',
@@ -85,7 +89,7 @@ export default async function(req) {
           provider_expiry: providerSub.expiry_date || null,
         }).catch(() => {});
       }
-    } else if (me.account_type === 'provider') {
+    } else if (me.account_type === 'provider' && !grantIncludes.provider) {
       await svc.entities.User.update(me.id, {
         account_type: 'rider',
         provider_status: 'expired',
@@ -103,18 +107,21 @@ export default async function(req) {
           organizer_expiry: expiry,
         }).catch(() => {});
       }
-    } else if (me.organizer_status === 'active' || me.organizer_status === 'cancelled') {
+    } else if ((me.organizer_status === 'active' || me.organizer_status === 'cancelled') && !grantIncludes.organizer) {
       await svc.entities.User.update(me.id, {
         organizer_status: 'expired',
       }).catch(() => {});
     }
 
+    // The most complete of the paid plan and the admin grant names the account's plan.
+    const effectivePlan = grant && PLAN_RANK.indexOf(grant) < PLAN_RANK.indexOf(plan) ? grant : plan;
+
     return Response.json({
-      is_premium: !!entitlements.rider,
-      is_provider: !!providerSub || adminGranted,
-      is_organizer: !!entitlements.organizer,
-      plan,
-      plan_label: PLAN_LABELS[plan] || 'Free',
+      is_premium: !!entitlements.rider || grantIncludes.rider,
+      is_provider: !!providerSub || adminGranted || grantIncludes.provider,
+      is_organizer: !!entitlements.organizer || grantIncludes.organizer,
+      plan: effectivePlan,
+      plan_label: PLAN_LABELS[effectivePlan] || 'Free',
       status: primary?.status || 'none',
       expiry_date: primary?.expiry_date || null,
       grace_until: primary?.grace_until || null,

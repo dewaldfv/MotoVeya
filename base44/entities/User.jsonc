@@ -145,6 +145,25 @@
         }
       }
     },
+    "plan_grant": {
+      "type": "string",
+      "enum": [
+        "none",
+        "organizer",
+        "organizer_plus",
+        "provider_plus",
+        "gold"
+      ],
+      "default": "none",
+      "description": "Manual package access an admin granted without payment. Kept separate from Paystack subscription state.",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
     "organizer_status": {
       "type": "string",
       "enum": [

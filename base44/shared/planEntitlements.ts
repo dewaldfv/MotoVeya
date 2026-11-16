@@ -55,6 +55,13 @@ export function isKnownPlan(plan: any): boolean {
   return typeof plan === 'string' && Object.prototype.hasOwnProperty.call(PLAN_AMOUNTS, plan);
 }
 
+/** Packages an admin may grant without payment. */
+export const GRANT_PLANS = ['organizer', 'organizer_plus', 'provider_plus', 'gold'];
+
+export function grantPlan(value: any) {
+  return typeof value === 'string' && GRANT_PLANS.includes(value) ? value : null;
+}
+
 export function planIncludes(plan: any) {
   return PLAN_INCLUDES[plan] || { rider: false, provider: false, organizer: false };
 }

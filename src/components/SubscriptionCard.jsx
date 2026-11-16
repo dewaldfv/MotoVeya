@@ -74,6 +74,8 @@ export default function SubscriptionCard({ onCancelled, variant = 'light' }) {
   const graceUntil = entitlement.grace_until ? new Date(entitlement.grace_until) : null;
   const isCancelled = status === 'cancelled';
   const isPastDue = status === 'past_due';
+  // Admin plan grants carry no payment, so there is nothing to cancel.
+  const hasPaidSubscription = !!entitlement.status && entitlement.status !== 'none';
 
   return (
     <>
@@ -114,14 +116,14 @@ export default function SubscriptionCard({ onCancelled, variant = 'light' }) {
             </div>
           )}
 
-          {!isCancelled && !isPastDue && (
+          {hasPaidSubscription && !isCancelled && !isPastDue && (
             <p className="text-xs" style={{ color: t.muted }}>
               Auto-renews monthly. Cancel anytime.
             </p>
           )}
         </div>
 
-        {!isCancelled && (
+        {hasPaidSubscription && !isCancelled && (
           <div className="p-4 pt-0">
             <Button
               variant="outline"

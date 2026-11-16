@@ -96,11 +96,23 @@ export function isAdminUser(user) {
   return user?.role === 'admin' || user?.role === 'moderator';
 }
 
+/** The package an admin granted without payment, if any. */
+export function grantedPlan(user) {
+  const grant = user?.plan_grant;
+  if (!grant || grant === 'none') return null;
+  return PLANS_BY_ID[grant]?.includes ? PLANS_BY_ID[grant] : null;
+}
+
+function grantIncludes(user, access) {
+  return !!grantedPlan(user)?.includes.includes(access);
+}
+
 /** True while the Service Provider access is paid up, or an admin granted it. */
 export function isServiceProvider(user) {
   if (!user) return false;
   // Manual admin grant — independent of any paid package.
   if (user.provider_grant === 'admin') return true;
+  if (grantIncludes(user, 'provider')) return true;
   if (user.account_type !== 'provider') return false;
   if (user.provider_status === 'expired' || user.provider_status === 'none') return false;
   if (user.provider_expiry) {
@@ -113,6 +125,7 @@ export function isServiceProvider(user) {
 /** True while the Organizer access is paid up (Organizer, Organizer+ or Gold). */
 export function isOrganizer(user) {
   if (!user) return false;
+  if (grantIncludes(user, 'organizer')) return true;
   if (user.organizer_status !== 'active' && user.organizer_status !== 'cancelled') return false;
   if (user.organizer_expiry && new Date(user.organizer_expiry) < new Date()) return false;
   return true;
@@ -129,7 +142,9 @@ export function canCreateEvents(user) {
 }
 
 export function isPremiumUser(user) {
-  if (!user || user.subscription_tier !== 'premium') return false;
+  if (!user) return false;
+  if (grantIncludes(user, 'rider')) return true;
+  if (user.subscription_tier !== 'premium') return false;
   if (user.subscription_expiry) {
     const expiry = new Date(user.subscription_expiry);
     if (expiry < new Date()) return false;
