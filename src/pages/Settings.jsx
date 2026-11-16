@@ -8,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { isBackgroundTrackingEnabled, setBackgroundTrackingEnabled, hasSeenBgExplainer, setBgExplainerSeen } from '@/lib/rideCache';
 import { usePremium } from '@/hooks/usePremium';
 import SubscriptionCard from '@/components/SubscriptionCard';
-import { enableNotifications, notificationsSupported, notificationPermission } from '@/lib/enableNotifications';
+import { enableNotifications, notificationsSupported, notificationPermission, notificationSetupMessage } from '@/lib/enableNotifications';
+import { getPushStatus } from '@/lib/pushSubscription';
 import { toast } from 'sonner';
 import { getScreenOrientationPreference, setScreenOrientationPreference, applyScreenOrientation } from '@/lib/screenOrientation';
 
@@ -46,6 +47,7 @@ export default function Settings() {
   const [showBgExplainer, setShowBgExplainer] = useState(false);
   const [autoJoinVoice, setAutoJoinVoice] = useState(false);
   const [notifPerm, setNotifPerm] = useState(() => notificationPermission());
+  const [notifSubscribed, setNotifSubscribed] = useState(false);
   const [enablingNotif, setEnablingNotif] = useState(false);
   const [screenOrientation, setScreenOrientation] = useState(() => getScreenOrientationPreference());
   const { isPremium, refresh: refreshPremium } = usePremium();
@@ -136,14 +138,32 @@ export default function Settings() {
     toast.success('Background Tracking enabled');
   };
 
+  const refreshNotifStatus = async () => {
+    const status = await getPushStatus();
+    setNotifPerm(status.permission);
+    setNotifSubscribed(status.subscribed);
+  };
+
+  useEffect(() => {
+    refreshNotifStatus();
+  }, []);
+
   const handleEnableNotifications = async () => {
+    if (enablingNotif) return;
+    if (notifPerm === 'denied') {
+      toast.error('Notifications are blocked — allow them for this site in your browser settings');
+      return;
+    }
     setEnablingNotif(true);
     try {
       const result = await enableNotifications();
-      setNotifPerm(result);
-      if (result === 'granted') toast.success('Notifications enabled');
-      else if (result === 'denied') toast.error('Notifications blocked');
-      else if (result === 'unsupported') toast.error('Notifications not supported on this device');
+      setNotifPerm(result.permission);
+      setNotifSubscribed(result.subscribed);
+      if (result.subscribed) {
+        toast.success('Notifications enabled for this device');
+      } else {
+        toast.error(notificationSetupMessage(result.reason) || 'Notifications could not be enabled');
+      }
     } catch (e) {
       toast.error('Could not enable notifications');
     } finally {
@@ -203,23 +223,29 @@ export default function Settings() {
 
         <Section title="🔔 Notifications">
           {notificationsSupported() ? (
-            notifPerm === 'granted' ? (
-              <Row icon={Bell} label="Notifications Enabled ✓" value="On" last />
-            ) : notifPerm === 'denied' ? (
-              <>
-                <Row icon={Bell} label="Notifications Blocked" value="Off" last />
-                <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                  Blocked — update site permissions to allow notifications.
-                </p>
-              </>
-            ) : (
-              <>
-                <Row icon={Bell} label="Enable Notifications" onClick={enablingNotif ? undefined : handleEnableNotifications} last />
-                <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                  Get push alerts for new messages and ride invites, even when the app is closed.
-                </p>
-              </>
-            )
+            <>
+              <Row
+                icon={Bell}
+                label={
+                  enablingNotif ? 'Setting Up Notifications…'
+                  : notifSubscribed ? 'Notifications Enabled'
+                  : notifPerm === 'denied' ? 'Notifications Blocked'
+                  : notifPerm === 'granted' ? 'Finish Notification Setup'
+                  : 'Enable Notifications'
+                }
+                value={notifSubscribed ? 'On' : notifPerm === 'denied' ? 'Off' : undefined}
+                onClick={enablingNotif ? undefined : handleEnableNotifications}
+                last />
+              <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                {notifSubscribed
+                  ? 'Push alerts are on for this device — new messages and ride invites arrive even when the app is closed.'
+                  : notifPerm === 'denied'
+                    ? 'Notifications are blocked for this site. Allow them in your browser settings, then tap above to finish setup.'
+                    : notifPerm === 'granted'
+                      ? 'Permission is allowed, but this device is not registered for background alerts yet. Tap above to finish setup.'
+                      : 'Get push alerts for new messages and ride invites, even when the app is closed.'}
+              </p>
+            </>
           ) : (
             <Row icon={Bell} label="Notifications Not Supported" value="—" last />
           )}

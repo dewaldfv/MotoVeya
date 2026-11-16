@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import SelectSheet from '@/components/SelectSheet';
+import { enableNotifications } from '@/lib/enableNotifications';
 
 export const INTEREST_OPTIONS = [
   'Breakfast Runs', 'Charity Rides', 'Adventure Riding', 'Touring', 'Racing',
@@ -83,10 +84,10 @@ export function LocationStep({ onNext, saving }) {
 
 export function NotificationsStep({ onNext, saving }) {
   const request = async () => {
+    // Also creates the device's push subscription so alerts arrive when the
+    // app is closed, not just permission.
     try {
-      if ('Notification' in window && Notification.permission === 'default') {
-        await Notification.requestPermission();
-      }
+      await enableNotifications();
     } catch { /* ignore */ }
     onNext();
   };

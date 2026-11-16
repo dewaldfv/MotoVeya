@@ -89,3 +89,26 @@ export async function ensurePushSubscription() {
     return { ok: false, reason: 'error', error: e?.message };
   }
 }
+
+// Reports what this device actually has right now, so the UI can never claim
+// notifications are on when the push subscription was never stored.
+export async function getPushStatus() {
+  if (!pushSupported()) return { permission: 'unsupported', subscribed: false };
+  const permission = Notification.permission;
+  if (permission !== 'granted') return { permission, subscribed: false };
+
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    if (!sub) return { permission, subscribed: false };
+
+    const me = await base44.auth.me().catch(() => null);
+    if (!me) return { permission, subscribed: false };
+
+    const rows = await base44.entities.PushSubscription.filter({ endpoint: sub.endpoint }, '-created_date', 10);
+    const subscribed = (rows || []).some((r) => r.user_id === me.id);
+    return { permission, subscribed };
+  } catch (e) {
+    return { permission, subscribed: false };
+  }
+}

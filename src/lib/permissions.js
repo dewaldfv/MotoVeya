@@ -83,8 +83,8 @@ async function requestNotifications() {
   if (notificationPermission() === 'granted') return 'granted';
   if (notificationPermission() === 'denied') return 'denied';
   const outcome = await enableNotifications();
-  if (outcome === 'granted') return 'granted';
-  return outcome === 'unsupported' ? 'unsupported' : 'denied';
+  if (outcome.permission === 'granted') return 'granted';
+  return outcome.permission === 'unsupported' ? 'unsupported' : 'denied';
 }
 
 async function requestMedia(key) {
