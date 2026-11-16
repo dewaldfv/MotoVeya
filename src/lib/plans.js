@@ -136,9 +136,9 @@ export function canManageServices(user) {
   return isAdminUser(user) || isServiceProvider(user);
 }
 
-/** Organizers (and premium riders) may submit events. */
+/** Only Organizers (Organizer, Organizer+, Gold) and admins may submit events. */
 export function canCreateEvents(user) {
-  return isAdminUser(user) || isPremiumUser(user) || isOrganizer(user);
+  return isAdminUser(user) || isOrganizer(user);
 }
 
 export function isPremiumUser(user) {

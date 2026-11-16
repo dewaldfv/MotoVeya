@@ -12,11 +12,17 @@ export const RIDER_HIGHLIGHTS = [
   'Ride History & Statistics',
 ];
 
+/** What the Premium Rider tier deliberately leaves out — publishing. */
+const RIDER_EXCLUDES = [
+  'Add your own events — Organizer plan',
+  'Add service listings — Provider plan',
+];
+
 /** Organizer benefits. */
 export const ORGANIZER_PERKS = [
-  'Motorcycle Events — View + Discounts',
   'Submit and organise your own events',
   'Your events shown on the rider map',
+  'Motorcycle Events — View + Discounts',
 ];
 
 /** Feature bullets shown inside each plan banner. */
@@ -31,13 +37,15 @@ export const PLAN_BANNER_FEATURES = {
     'Group Size — 32 riders',
     'Live Rider Tracking',
     'Premium Route Planning',
+    'Organise and promote your own events',
     PROVIDER_PERKS[0],
     PROVIDER_PERKS[2],
-    'Organise and promote your own events',
   ],
 };
 
 /** What a plan deliberately leaves out, shown muted in its banner. */
 export const PLAN_BANNER_EXCLUDES = {
-  provider: PROVIDER_EXCLUDES,
+  premium: RIDER_EXCLUDES,
+  organizer: ['Add service listings — Provider plan'],
+  provider: [...PROVIDER_EXCLUDES, 'Add your own events — Organizer plan'],
 };

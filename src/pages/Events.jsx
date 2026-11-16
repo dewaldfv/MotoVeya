@@ -45,7 +45,7 @@ export default function Events() {
 
   const user = data?.user ?? null;
   const tabEvents = tab === 'upcoming' ? (data?.upcoming ?? []) : (data?.past ?? []);
-  const canEdit = (ev) => user && (user.role === 'admin' || ev.created_by_id === user.id);
+  const canEdit = (ev) => !!user && (user.role === 'admin' || (canCreateEvents(user) && ev.created_by_id === user.id));
   const canSubmitEvents = canCreateEvents(user);
   const canSubmit = !!user;
   const handleSubmitPress = () => {
@@ -160,9 +160,9 @@ export default function Events() {
         <PremiumUpgradePrompt
           open={upgradeOpen}
           onOpenChange={setUpgradeOpen}
-          title="Premium event submission"
-          description="Submitting events is a Premium feature. Upgrade to share your rides and gatherings with riders across South Africa."
-          benefits={['Submit unlimited events', 'Reach every rider on the map', 'Manage your own listings']}
+          title="Organizer plan required"
+          description="Submitting events is an Organizer feature. The Organizer plan opens event submission, and Organizer+ or Gold add the full Premium Rider features too."
+          benefits={['Submit unlimited events', 'Reach every rider on the map', 'Manage the events you own']}
         />
 
         <EventSubmitDialog open={submitOpen} onOpenChange={setSubmitOpen} onSubmitted={() => queryClient.invalidateQueries({ queryKey: ['events'] })} editEvent={editEvent} onEditClose={() => setEditEvent(null)} />

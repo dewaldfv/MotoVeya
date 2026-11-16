@@ -11,7 +11,7 @@ import { formatEventDateRange } from '@/lib/eventDate';
 import { safeHttpUrl } from '@/lib/safeUrl';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
 import EventGallery from '@/components/events/EventGallery';
-import { isOrganizerOnlyAccount, isPremiumUser } from '@/lib/plans';
+import { isOrganizerOnlyAccount, isPremiumUser, canCreateEvents } from '@/lib/plans';
 import { messageContact } from '@/lib/contactChat';
 
 export default function EventDetail() {
@@ -103,7 +103,7 @@ export default function EventDetail() {
         </div>
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-2xl font-bold">{event.title}</h1>
-          {user && (user.role === 'admin' || (user.role === 'organizer' && event.created_by_id === user.id)) && <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}><Pencil size={14} className="mr-1" /> Edit</Button>}
+          {user && canCreateEvents(user) && (user.role === 'admin' || event.created_by_id === user.id) && <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}><Pencil size={14} className="mr-1" /> Edit</Button>}
         </div>
         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"><Calendar size={16} /> {date}</div>
         <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground"><MapPin size={16} /> {event.venue_name}</div>

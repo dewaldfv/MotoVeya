@@ -30,10 +30,17 @@ function isStaff(me) {
   return me?.role === 'admin' || me?.role === 'moderator';
 }
 
-async function hasProviderEntitlement(svc, userId) {
+// Provider, Provider+ and Gold all carry service listing access.
+const PROVIDER_PLANS = ['provider', 'provider_plus', 'gold'];
+
+async function hasProviderEntitlement(svc, me) {
   const now = new Date();
-  const subs = await svc.entities.Subscription.filter({ user_id: userId, plan: 'provider' }, '-created_date', 10);
-  return subs.some((s) => {
+  if (me?.account_type === 'provider' && me?.provider_status === 'active') {
+    if (!me.provider_expiry || new Date(me.provider_expiry) > now) return true;
+  }
+  const subs = await svc.entities.Subscription.filter({ user_id: me.id }, '-created_date', 20);
+  return (subs || []).some((s) => {
+    if (!PROVIDER_PLANS.includes(s.plan)) return false;
     if (!['active', 'trialing', 'cancelled', 'past_due'].includes(s.status)) return false;
     if (s.expiry_date && new Date(s.expiry_date) <= now) return false;
     return true;
@@ -59,7 +66,7 @@ export default async function(req) {
     // An admin-granted provider counts as entitled without a paid package, and so
     // does any admin-granted package that includes provider access.
     const grantedProvider = planIncludes(grantPlan(me.plan_grant)).provider;
-    const entitled = me.provider_grant === 'admin' || grantedProvider || (await hasProviderEntitlement(svc, me.id));
+    const entitled = me.provider_grant === 'admin' || grantedProvider || (await hasProviderEntitlement(svc, me));
     if (!staff && !entitled) {
       return Response.json(
         { error: 'A Service Provider package is required to manage listings', code: 'provider_required' },

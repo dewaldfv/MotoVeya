@@ -157,17 +157,16 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
         lng: form.lng ? Number(form.lng) : undefined,
         entry_fee_zar: form.entry_fee_zar ? Number(form.entry_fee_zar) : 0,
       };
+      // The backend verifies the organizer entitlement before anything is written.
+      const response = await base44.functions.invoke('submit-event', {
+        action: editEvent ? 'edit' : 'create',
+        event_id: editEvent?.id,
+        data: payload,
+      });
+      if (response.data?.error) throw new Error(response.data.error);
       if (editEvent) {
-        const me = await base44.auth.me();
-        if (me?.role === 'admin') {
-          await base44.entities.Event.update(editEvent.id, { ...payload, status: 'approved' });
-          toast.success('Event updated and published');
-        } else {
-          await base44.entities.EventEditRequest.create({ event_id: editEvent.id, submitted_by_id: me.id, change_payload: JSON.stringify(payload), status: 'pending', submitted_at: new Date().toISOString() });
-          toast.success('Changes submitted for admin approval');
-        }
+        toast.success(response.data?.edit_request ? 'Changes submitted for admin approval' : 'Event updated and published');
       } else {
-        await base44.entities.Event.create({ ...payload, status: 'pending' });
         toast.success('Event submitted! Awaiting admin approval.');
       }
       onOpenChange(false);
@@ -182,7 +181,7 @@ export default function EventSubmitDialog({ open, onOpenChange, onSubmitted, edi
       setForm({ title: '', description: '', event_date: '', end_date: '', venue_name: '', lat: '', lng: '', contact_phone: '', contact_email: '', booking_link: '', entry_fee_zar: '', category: 'rally', photo_urls: [] });
     } catch (e) {
       console.error(e);
-      toast.error('Failed to submit event');
+      toast.error(e?.response?.data?.error || 'Failed to submit event');
     } finally {
       setSaving(false);
     }
