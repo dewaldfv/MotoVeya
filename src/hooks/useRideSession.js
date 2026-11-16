@@ -10,7 +10,7 @@ import { useSpeedLimit } from '@/hooks/useSpeedLimit';
 import { saveRideState, getActiveRide, clearActiveRide, savePendingRide, getPendingRides, clearPendingRide } from '@/lib/rideCache';
 import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '@/lib/emergencyCache';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
-import { isProviderOnlyAccount } from '@/lib/plans';
+import { isRideModeBlocked } from '@/lib/plans';
 
 function normalizeBearing(deg) {
   return ((Number(deg) % 360) + 360) % 360;
@@ -42,8 +42,8 @@ function getCurrentPosition() {
 }
 
 export function useRideSession({ user, bike, fuelProfile, services = [], autoDetectEnabled = true, notifyFriends = true }) {
-  // The Service Provider package excludes ride mode entirely — manual and automatic.
-  const rideModeBlocked = useMemo(() => isProviderOnlyAccount(user), [user]);
+  // The Service Provider and Organizer packages exclude ride mode entirely — manual and automatic.
+  const rideModeBlocked = useMemo(() => isRideModeBlocked(user), [user]);
   const [rideStatus, setRideStatus] = useState('idle');
   const [userPos, setUserPos] = useState(() => {
     try {
@@ -919,7 +919,7 @@ export function useRideSession({ user, bike, fuelProfile, services = [], autoDet
 
   const startRide = async (destOverride, originOverride, routeWaypoints = [], replayTrack = null) => {
     if (rideModeBlocked) {
-      toast.error('Ride mode is not available on Service Provider accounts');
+      toast.error('Ride mode is not available on your account');
       return;
     }
     const motionPermissionGranted = await requestMotionPermission();

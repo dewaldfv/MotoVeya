@@ -2,7 +2,7 @@ import { Map, Route, Calendar, Users, User, Clapperboard, Store } from 'lucide-r
 import { useTabHistory } from '@/lib/TabHistoryContext';
 import useKeyboardVisible from '@/hooks/useKeyboardVisible';
 import { useAuth } from '@/lib/AuthContext';
-import { isProviderOnlyAccount, canManageServices } from '@/lib/plans';
+import { isProviderOnlyAccount, isOrganizerOnlyAccount, canManageServices } from '@/lib/plans';
 
 const navItems = [
 { key: 'map', icon: Map, label: 'Map' },
@@ -20,10 +20,14 @@ export default function BottomNav({ hidden = false }) {
   const keyboardVisible = useKeyboardVisible();
   const { user } = useAuth();
   const isProvider = isProviderOnlyAccount(user);
-  // The Service Provider package excludes the Rides tab and Community areas.
+  const isOrganizer = isOrganizerOnlyAccount(user);
+  // The Service Provider package excludes the Rides tab and Community areas;
+  // the Organizer package only loses the Rides tab.
   const baseItems = isProvider
     ? navItems.filter((item) => item.key !== 'rides' && item.key !== 'community')
-    : navItems;
+    : isOrganizer
+      ? navItems.filter((item) => item.key !== 'rides')
+      : navItems;
   // Providers and staff reach their dashboard right after Events.
   const visible = canManageServices(user)
     ? baseItems.reduce((acc, item) => item.key === 'events' ? [...acc, item, providerItem] : [...acc, item], [])

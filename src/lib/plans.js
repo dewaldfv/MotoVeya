@@ -147,6 +147,23 @@ export function isProviderOnlyAccount(user) {
   return isServiceProvider(user) && !isPremiumUser(user);
 }
 
+/**
+ * Accounts whose only paid access is the Organizer package. They discover events
+ * and chat with riders, while ride mode, the Rides page and the provider
+ * dashboard stay out of reach. Organizer+ and Gold also carry rider access, so
+ * they are never treated as organizer-only.
+ */
+export function isOrganizerOnlyAccount(user) {
+  if (!user || isAdminUser(user)) return false;
+  if (!isOrganizer(user)) return false;
+  return !isPremiumUser(user) && !isServiceProvider(user);
+}
+
+/** Ride mode is unavailable on the Service Provider and Organizer packages. */
+export function isRideModeBlocked(user) {
+  return isProviderOnlyAccount(user) || isOrganizerOnlyAccount(user);
+}
+
 export function requiresPremium(feature, user) {
   const premiumFeatures = [
     'friends', 'live_tracking',
