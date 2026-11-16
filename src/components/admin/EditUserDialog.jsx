@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Crown, Store, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+// Selections that grant one access directly rather than a whole package.
+const FEATURE_GRANTS = ['premium_rider', 'provider'];
+
 const GRANT_OPTIONS = [
   { value: 'none', label: 'No manual grant' },
+  { value: 'premium_rider', label: 'Premium Rider' },
+  { value: 'provider', label: 'Service Provider' },
   { value: 'organizer', label: 'Organizer' },
   { value: 'organizer_plus', label: 'Organizer+' },
   { value: 'provider_plus', label: 'Provider+' },
@@ -30,9 +34,11 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
       avatar_url: user.avatar_url || '',
       cover_url: user.cover_url || '',
       bio: user.bio || '',
-      isPremium: user.subscription_tier === 'premium',
-      isProviderGranted: user.provider_grant === 'admin',
-      planGrant: user.plan_grant || 'none',
+      planGrant: user.plan_grant && user.plan_grant !== 'none'
+        ? user.plan_grant
+        : user.provider_grant === 'admin'
+          ? 'provider'
+          : user.subscription_tier === 'premium' ? 'premium_rider' : 'none',
     });
   }, [user]);
 
@@ -58,18 +64,23 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const packageGrant = FEATURE_GRANTS.includes(form.planGrant) ? 'none' : form.planGrant;
+      // A package grant carries its own rider access, so a paid rider tier is left untouched.
+      const riderPremium = form.planGrant === 'premium_rider'
+        || (packageGrant !== 'none' && user.subscription_tier === 'premium');
+
       const updates = {
         nickname: form.nickname,
         motorcycle_club: form.motorcycle_club,
         avatar_url: form.avatar_url,
         cover_url: form.cover_url,
         bio: form.bio,
-        subscription_tier: form.isPremium ? 'premium' : 'free',
-        subscription_status: form.isPremium ? 'active' : 'none',
-        plan_grant: form.planGrant,
+        subscription_tier: riderPremium ? 'premium' : 'free',
+        subscription_status: riderPremium ? 'active' : 'none',
+        plan_grant: packageGrant,
       };
 
-      if (form.isProviderGranted) {
+      if (form.planGrant === 'provider') {
         updates.account_type = 'provider';
         updates.provider_status = 'active';
         updates.provider_expiry = null;
@@ -90,15 +101,15 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
         const subs = await base44.entities.Subscription.filter({ user_id: user.id }, '-created_date', 5);
         if (subs.length > 0) {
           await base44.entities.Subscription.update(subs[0].id, {
-            plan: form.isPremium ? 'premium' : 'free',
+            plan: riderPremium ? 'premium' : 'free',
             status: 'active',
           });
         } else {
           await base44.entities.Subscription.create({
             user_id: user.id,
-            plan: form.isPremium ? 'premium' : 'free',
+            plan: riderPremium ? 'premium' : 'free',
             status: 'active',
-            amount_zar: form.isPremium ? 69.99 : 0,
+            amount_zar: riderPremium ? 69.99 : 0,
             purchase_date: new Date().toISOString(),
             auto_renew: true,
           });
@@ -145,40 +156,13 @@ export default function EditUserDialog({ user, onClose, onSaved }) {
             <Label>Bio</Label>
             <Textarea value={form.bio} onChange={(e) => set('bio', e.target.value)} placeholder="Optional" rows={3} />
           </div>
-          <div className="flex items-center justify-between rounded-2xl bg-card p-3">
-            <div className="flex items-center gap-2">
-              <Crown size={20} className="text-primary" />
-              <div>
-                <p className="font-semibold">Premium Rider</p>
-                <p className="text-xs text-muted-foreground">Grant or revoke Premium access</p>
-              </div>
-            </div>
-            <Switch checked={form.isPremium} onCheckedChange={(v) => set('isPremium', v)} />
-          </div>
-          <div className="flex items-center justify-between rounded-2xl bg-card p-3">
-            <div className="flex items-center gap-2">
-              <Store size={20} className="text-primary" />
-              <div>
-                <p className="font-semibold">Service Provider</p>
-                <p className="text-xs text-muted-foreground">
-                  {user.account_type === 'provider' && user.provider_grant !== 'admin'
-                    ? 'Active through their paid package. A grant adds access with no payment.'
-                    : 'Grant or revoke provider access without payment'}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={form.isProviderGranted}
-              onCheckedChange={(v) => set('isProviderGranted', v)}
-            />
-          </div>
           <div className="rounded-2xl bg-card p-3">
             <div className="flex items-center gap-2">
               <ShieldCheck size={20} className="text-primary" />
               <div>
                 <p className="font-semibold">Plan access grant</p>
                 <p className="text-xs text-muted-foreground">
-                  Grant a package without payment. Their paid subscription stays as it is.
+                  Grant rider, provider or a package without payment. Their paid subscription stays as it is.
                 </p>
               </div>
             </div>
