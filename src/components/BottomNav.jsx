@@ -1,8 +1,8 @@
-import { Map, Route, Calendar, Users, User, Clapperboard } from 'lucide-react';
+import { Map, Route, Calendar, Users, User, Clapperboard, Store } from 'lucide-react';
 import { useTabHistory } from '@/lib/TabHistoryContext';
 import useKeyboardVisible from '@/hooks/useKeyboardVisible';
 import { useAuth } from '@/lib/AuthContext';
-import { isServiceProvider } from '@/lib/plans';
+import { isServiceProvider, canManageServices } from '@/lib/plans';
 
 const navItems = [
 { key: 'map', icon: Map, label: 'Map' },
@@ -12,15 +12,22 @@ const navItems = [
 { key: 'crowd-clips', icon: Clapperboard, label: 'Clips' },
 { key: 'profile', icon: User, label: 'Profile' }];
 
+const providerItem = { key: 'provider', icon: Store, label: 'Dashboard' };
+
 
 export default function BottomNav({ hidden = false }) {
   const { currentTab, switchToTab } = useTabHistory();
   const keyboardVisible = useKeyboardVisible();
   const { user } = useAuth();
+  const isProvider = isServiceProvider(user);
   // The Service Provider package excludes the Rides tab and Community areas.
-  const visible = isServiceProvider(user)
+  const baseItems = isProvider
     ? navItems.filter((item) => item.key !== 'rides' && item.key !== 'community')
     : navItems;
+  // Providers and staff reach their dashboard right after Events.
+  const visible = canManageServices(user)
+    ? baseItems.reduce((acc, item) => item.key === 'events' ? [...acc, item, providerItem] : [...acc, item], [])
+    : baseItems;
 
   return (
     <nav

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Trophy, Shield, Crown, SlidersHorizontal, Info, MessageCircle, LifeBuoy, HelpCircle, Store, Pencil } from 'lucide-react';
+import { Trophy, Shield, Crown, SlidersHorizontal, Info, MessageCircle, LifeBuoy, HelpCircle, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import BikeCard from '@/components/profile/BikeCard';
 import EditProfileDialog from '@/components/profile/EditProfileDialog';
 import EmergencySafetySheet from '@/components/profile/EmergencySafetySheet';
 import SubscriptionCard from '@/components/SubscriptionCard';
-import { isServiceProvider, isAdminUser } from '@/lib/plans';
+import { isServiceProvider } from '@/lib/plans';
 import { toast } from 'sonner';
 
 const coerceBike = (form) => ({
@@ -115,7 +115,6 @@ export default function Profile() {
 
   const isPremium = user?.subscription_tier === 'premium';
   const isProvider = isServiceProvider(user);
-  const isStaff = isAdminUser(user);
 
   const openAddBike = () => {
     setEditingBike(null);
@@ -259,13 +258,6 @@ export default function Profile() {
             details="Administrator access"
             delay={0.72}
             onClick={() => navigate('/admin')} />}
-
-          <MenuCard
-            icon={Store}
-            title={isProvider || isStaff ? 'Provider Dashboard' : 'Become a Service Provider'}
-            subtitle={isProvider || isStaff ? 'Manage your shop listings, contact info and views' : 'R29.99/month · 10 listing slots'}
-            delay={0.726}
-            onClick={() => navigate(isProvider || isStaff ? '/provider-dashboard' : '/provider/join')} />
 
           <MenuCard
             icon={LifeBuoy}
