@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { PLAN_LABELS, PLAN_RANK, planIncludes } from '../../shared/planEntitlements.ts';
 
 /** Server-authoritative subscription entitlement. Never trust a client-supplied premium flag. */
 export default async function(req) {
@@ -11,76 +12,80 @@ export default async function(req) {
     const now = new Date();
     const subs = await svc.entities.Subscription.filter({ user_id: me.id }, '-created_date', 50);
 
-    let valid = null;
-    for (const s of subs) {
-      if (s.plan !== 'premium') continue;
+    // A subscription still inside its paid period counts, including a cancelled
+    // one until it lapses, and a past-due one inside its grace window.
+    const isUsable = (s) => {
+      if (s.status === 'active' || s.status === 'trialing') return !s.expiry_date || new Date(s.expiry_date) > now;
+      if (s.status === 'past_due') return !!s.grace_until && new Date(s.grace_until) > now;
+      if (s.status === 'cancelled') return !!s.expiry_date && new Date(s.expiry_date) > now;
+      return false;
+    };
 
-      if (s.status === 'active' || s.status === 'trialing') {
-        if (!s.expiry_date || new Date(s.expiry_date) > now) {
-          valid = s;
-          break;
-        }
-      } else if (s.status === 'past_due') {
-        // Premium stays valid during the grace window.
-        if (s.grace_until && new Date(s.grace_until) > now) {
-          valid = s;
-          break;
-        }
-        // Grace expired — lazily revoke.
-        if (!s.grace_until || new Date(s.grace_until) <= now) {
-          await svc.entities.Subscription.update(s.id, { status: 'expired' }).catch(() => {});
-          await svc.entities.User.update(me.id, {
-            subscription_tier: 'free',
-            subscription_status: 'expired',
-          }).catch(() => {});
-        }
-      } else if (s.status === 'cancelled') {
-        // Cancelled but still within the paid period.
-        if (s.expiry_date && new Date(s.expiry_date) > now) {
-          valid = s;
-          break;
-        }
-        // Period ended — close it out so the rider's tier matches their entitlement.
-        if (s.expiry_date && new Date(s.expiry_date) <= now) {
-          await svc.entities.Subscription.update(s.id, { status: 'expired' }).catch(() => {});
-          await svc.entities.User.update(me.id, {
-            subscription_tier: 'free',
-            subscription_status: 'expired',
-          }).catch(() => {});
-        }
-      }
-    }
+    const ended = (s) => {
+      if (s.status === 'expired') return false;
+      if (s.expiry_date && new Date(s.expiry_date) <= now) return true;
+      return s.status === 'past_due' && (!s.grace_until || new Date(s.grace_until) <= now);
+    };
 
-    // ---- Service Provider package entitlement ----
-    let providerSub = null;
+    const entitlements = { rider: null, provider: null, organizer: null };
+    const activePlans = [];
+
     for (const s of subs) {
-      if (s.plan !== 'provider') continue;
-      if (!['active', 'trialing', 'cancelled', 'past_due'].includes(s.status)) continue;
-      if (s.expiry_date && new Date(s.expiry_date) <= now) {
-        await svc.entities.Subscription.update(s.id, { status: 'expired' }).catch(() => {});
+      if (!s.plan || s.plan === 'free') continue;
+      if (!isUsable(s)) {
+        // Lapsed — close it out so the stored record matches the rider's access.
+        if (ended(s)) await svc.entities.Subscription.update(s.id, { status: 'expired' }).catch(() => {});
         continue;
       }
-      providerSub = s;
-      break;
+      activePlans.push(s.plan);
+      const includes = planIncludes(s.plan);
+      if (includes.rider && !entitlements.rider) entitlements.rider = s;
+      if (includes.provider && !entitlements.provider) entitlements.provider = s;
+      if (includes.organizer && !entitlements.organizer) entitlements.organizer = s;
     }
 
+    const plan = PLAN_RANK.find((id) => activePlans.includes(id)) || 'free';
+    const primary = entitlements.rider || entitlements.provider || entitlements.organizer;
+
+    // ---- Rider (premium) entitlement ----
+    if (entitlements.rider) {
+      const expiry = entitlements.rider.expiry_date || null;
+      if (me.subscription_tier !== 'premium' || me.subscription_expiry !== expiry) {
+        await svc.entities.User.update(me.id, {
+          subscription_tier: 'premium',
+          subscription_status: entitlements.rider.status === 'cancelled' ? 'cancelled' : 'active',
+          subscription_expiry: expiry,
+        }).catch(() => {});
+      }
+    } else if (me.subscription_tier === 'premium') {
+      await svc.entities.User.update(me.id, {
+        subscription_tier: 'free',
+        subscription_status: 'expired',
+      }).catch(() => {});
+    }
+
+    // ---- Service Provider entitlement ----
     // An admin-granted provider keeps access regardless of subscriptions.
     const adminGranted = me.provider_grant === 'admin';
-    if (adminGranted && (me.account_type !== 'provider' || me.provider_status !== 'active')) {
-      await svc.entities.User.update(me.id, {
-        account_type: 'provider',
-        provider_status: 'active',
-      }).catch(() => {});
-    }
+    const providerSub = entitlements.provider;
 
-    const providerEnded = !adminGranted && me.account_type === 'provider' && !providerSub;
-    if (!adminGranted && providerSub && (me.account_type !== 'provider' || me.provider_status !== 'active')) {
-      await svc.entities.User.update(me.id, {
-        account_type: 'provider',
-        provider_status: providerSub.status === 'cancelled' ? 'cancelled' : 'active',
-        provider_expiry: providerSub.expiry_date || null,
-      }).catch(() => {});
-    } else if (providerEnded) {
+    if (adminGranted) {
+      if (me.account_type !== 'provider' || me.provider_status !== 'active') {
+        await svc.entities.User.update(me.id, {
+          account_type: 'provider',
+          provider_status: 'active',
+        }).catch(() => {});
+      }
+    } else if (providerSub) {
+      const status = providerSub.status === 'cancelled' ? 'cancelled' : 'active';
+      if (me.account_type !== 'provider' || me.provider_status !== status) {
+        await svc.entities.User.update(me.id, {
+          account_type: 'provider',
+          provider_status: status,
+          provider_expiry: providerSub.expiry_date || null,
+        }).catch(() => {});
+      }
+    } else if (me.account_type === 'provider') {
       await svc.entities.User.update(me.id, {
         account_type: 'rider',
         provider_status: 'expired',
@@ -88,16 +93,35 @@ export default async function(req) {
       }).catch(() => {});
     }
 
+    // ---- Organizer entitlement ----
+    if (entitlements.organizer) {
+      const status = entitlements.organizer.status === 'cancelled' ? 'cancelled' : 'active';
+      const expiry = entitlements.organizer.expiry_date || null;
+      if (me.organizer_status !== status || me.organizer_expiry !== expiry) {
+        await svc.entities.User.update(me.id, {
+          organizer_status: status,
+          organizer_expiry: expiry,
+        }).catch(() => {});
+      }
+    } else if (me.organizer_status === 'active' || me.organizer_status === 'cancelled') {
+      await svc.entities.User.update(me.id, {
+        organizer_status: 'expired',
+      }).catch(() => {});
+    }
+
     return Response.json({
-      is_premium: !!valid,
+      is_premium: !!entitlements.rider,
       is_provider: !!providerSub || adminGranted,
+      is_organizer: !!entitlements.organizer,
+      plan,
+      plan_label: PLAN_LABELS[plan] || 'Free',
+      status: primary?.status || 'none',
+      expiry_date: primary?.expiry_date || null,
+      grace_until: primary?.grace_until || null,
+      billing_cycle: primary?.billing_cycle || null,
+      auto_renew: primary?.auto_renew ?? null,
       provider_expiry: providerSub?.expiry_date || null,
-      plan: valid?.plan || 'free',
-      status: valid?.status || 'none',
-      expiry_date: valid?.expiry_date || null,
-      grace_until: valid?.grace_until || null,
-      billing_cycle: valid?.billing_cycle || null,
-      auto_renew: valid?.auto_renew ?? null,
+      organizer_expiry: entitlements.organizer?.expiry_date || null,
     });
   } catch (error) {
     console.error('get-current-entitlement error:', error);

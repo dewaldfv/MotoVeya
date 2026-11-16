@@ -1,5 +1,5 @@
 export default async function(req) {
-  return Response.json({ error: 'Premium trials are no longer available. Premium is R89.99 per month.' }, { status: 410 });
+  return Response.json({ error: 'Premium trials are no longer available. Premium is R69.99 per month.' }, { status: 410 });
   /*
   try {
     const base44 = createClientFromRequest(req);

@@ -1,9 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { secrets } from 'base44:runtime';
+import { PLAN_AMOUNTS, PLAN_LABELS, isKnownPlan, planForAmount, applyPlanEntitlements } from '../../shared/planEntitlements.ts';
 
 const MONTHLY_PERIOD_DAYS = 30;
-// Amount per package in kobo/cents.
-const PACKAGE_AMOUNTS = { premium: 8999, provider: 2999 };
 
 // Extract subscription_code + email_token from the verify response.
 // Paystack includes a `subscription` object on plan-based transaction verifications.
@@ -62,8 +61,8 @@ export default async function(req) {
 
     const metadata = tx.metadata || {};
     const cycle = 'monthly';
-    const plan = metadata.plan === 'provider' ? 'provider' : 'premium';
-    if (Number(tx.amount) !== PACKAGE_AMOUNTS[plan]) {
+    const plan = isKnownPlan(metadata.plan) ? metadata.plan : planForAmount(tx.amount);
+    if (!plan || Number(tx.amount) !== PLAN_AMOUNTS[plan]) {
       return Response.json({ error: 'Unexpected payment amount' }, { status: 400 });
     }
 
@@ -124,19 +123,7 @@ export default async function(req) {
         });
       }
 
-      if (plan === 'provider') {
-        await svc.entities.User.update(me.id, {
-          account_type: 'provider',
-          provider_status: 'active',
-          provider_expiry: periodEnd.toISOString(),
-        });
-      } else {
-        await svc.entities.User.update(me.id, {
-          subscription_tier: 'premium',
-          subscription_status: 'active',
-          subscription_expiry: periodEnd.toISOString(),
-        });
-      }
+      await applyPlanEntitlements(svc, me.id, plan, periodEnd);
       console.log(`${plan} activated via verify for user ${me.id} (ref ${reference})`);
     } else if (subInfo?.subscription_code && !existing[0].paystack_subscription_code) {
       // Backfill subscription code if the webhook didn't capture it yet.
@@ -146,7 +133,7 @@ export default async function(req) {
       });
     }
 
-    return Response.json({ status: 'success', active: true, plan });
+    return Response.json({ status: 'success', active: true, plan, plan_label: PLAN_LABELS[plan] });
   } catch (error) {
     console.error('verify-paystack-payment error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });

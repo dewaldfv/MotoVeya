@@ -71,11 +71,11 @@ const FAQS = [
       },
       {
         q: 'How much does Premium cost?',
-        a: 'Premium is R89.99 per month.'
+        a: 'Premium is R69.99 per month.'
       },
       {
         q: 'How do I pay for Premium?',
-        a: 'Payments are processed securely through Paystack. Go to Go Premium and subscribe for R89.99 per month. You will be redirected to Paystack checkout, where available payment methods are shown.',
+        a: 'Payments are processed securely through Paystack. Open Plans & Pricing and subscribe from R29.99 per month. You will be redirected to Paystack checkout, where available payment methods are shown.',
       },
       {
         q: 'How do I cancel my subscription?',

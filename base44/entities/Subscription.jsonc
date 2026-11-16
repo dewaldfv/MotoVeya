@@ -10,7 +10,11 @@
       "enum": [
         "free",
         "premium",
-        "provider"
+        "provider",
+        "provider_plus",
+        "organizer",
+        "organizer_plus",
+        "gold"
       ],
       "default": "free"
     },

@@ -10,7 +10,7 @@ import CalendarExportButton from '@/components/CalendarExportButton';
 import PullToRefresh from '@/components/PullToRefresh';
 import EventFilters, { matchesDatePreset, matchesEventSearch } from '@/components/events/EventFilters';
 import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
-import { isPremiumUser } from '@/lib/plans';
+import { canCreateEvents } from '@/lib/plans';
 import { formatEventDateRange } from '@/lib/eventDate';
 
 const CATS = ['all', 'rally', 'breakfast_run', 'pub_ride', 'birthday_bash', 'camping', 'track_day', 'charity_ride', 'bike_night', 'scenic_ride', 'day_jol', 'other'];
@@ -45,11 +45,11 @@ export default function Events() {
 
   const user = data?.user ?? null;
   const tabEvents = tab === 'upcoming' ? (data?.upcoming ?? []) : (data?.past ?? []);
-  const canEdit = (ev) => user && (user.role === 'admin' || (user.role === 'organizer' && ev.created_by_id === user.id));
-  const isPremium = isPremiumUser(user);
+  const canEdit = (ev) => user && (user.role === 'admin' || ev.created_by_id === user.id);
+  const canSubmitEvents = canCreateEvents(user);
   const canSubmit = !!user;
   const handleSubmitPress = () => {
-    if (isPremium) setSubmitOpen(true);
+    if (canSubmitEvents) setSubmitOpen(true);
     else setUpgradeOpen(true);
   };
   const searched = tabEvents.filter(

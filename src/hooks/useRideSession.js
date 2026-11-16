@@ -10,7 +10,7 @@ import { useSpeedLimit } from '@/hooks/useSpeedLimit';
 import { saveRideState, getActiveRide, clearActiveRide, savePendingRide, getPendingRides, clearPendingRide } from '@/lib/rideCache';
 import { cacheEmergencyData, getPendingEmergency, clearPendingEmergency } from '@/lib/emergencyCache';
 import { processRouteData, getRouteProgress, haversine } from '@/lib/navigation';
-import { isServiceProvider } from '@/lib/plans';
+import { isProviderOnlyAccount } from '@/lib/plans';
 
 function normalizeBearing(deg) {
   return ((Number(deg) % 360) + 360) % 360;
@@ -43,7 +43,7 @@ function getCurrentPosition() {
 
 export function useRideSession({ user, bike, fuelProfile, services = [], autoDetectEnabled = true, notifyFriends = true }) {
   // The Service Provider package excludes ride mode entirely — manual and automatic.
-  const rideModeBlocked = useMemo(() => isServiceProvider(user), [user]);
+  const rideModeBlocked = useMemo(() => isProviderOnlyAccount(user), [user]);
   const [rideStatus, setRideStatus] = useState('idle');
   const [userPos, setUserPos] = useState(() => {
     try {

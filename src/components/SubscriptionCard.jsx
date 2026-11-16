@@ -37,7 +37,7 @@ export default function SubscriptionCard({ onCancelled }) {
     setCancelling(true);
     try {
       await base44.functions.invoke('cancel-paystack-subscription', {});
-      toast.success('Subscription cancelled — Premium stays active until your current period ends.');
+      toast.success('Subscription cancelled — access stays active until your current period ends.');
       await fetchEntitlement();
       onCancelled?.();
     } catch (e) {
@@ -57,8 +57,9 @@ export default function SubscriptionCard({ onCancelled }) {
     );
   }
 
-  if (!entitlement?.is_premium) return null;
+  if (!entitlement || (!entitlement.is_premium && !entitlement.is_provider && !entitlement.is_organizer)) return null;
 
+  const planName = entitlement.plan_label || 'Premium';
   const status = entitlement.status || 'active';
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.active;
   const StatusIcon = config.icon;
@@ -73,7 +74,7 @@ export default function SubscriptionCard({ onCancelled }) {
         <div className="flex items-center justify-between border-b p-4" style={{ borderColor: '#E2E8F0' }}>
           <div className="flex items-center gap-2">
             <Crown size={18} style={{ color: '#2563EB' }} fill="#2563EB" />
-            <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>Premium</span>
+            <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>{planName}</span>
           </div>
           <span
             className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
@@ -89,7 +90,7 @@ export default function SubscriptionCard({ onCancelled }) {
             <div className="flex items-start gap-2 rounded-lg p-3" style={{ background: '#FEF3C7' }}>
               <AlertTriangle size={16} className="mt-0.5 shrink-0" style={{ color: '#D97706' }} />
               <p className="text-xs" style={{ color: '#92400E' }}>
-                Payment failed. Premium stays active until {format(graceUntil, 'd MMM yyyy')}. Update your card to avoid losing access.
+                Payment failed. {planName} stays active until {format(graceUntil, 'd MMM yyyy')}. Update your card to avoid losing access.
               </p>
             </div>
           )}
@@ -132,11 +133,11 @@ export default function SubscriptionCard({ onCancelled }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
             <AlertDialogDescription>
-              Your Premium will stay active until {expiryDate ? format(expiryDate, 'd MMM yyyy') : 'the end of your current period'}, then revert to the Free plan. You can re-subscribe anytime.
+              Your {planName} access will stay active until {expiryDate ? format(expiryDate, 'd MMM yyyy') : 'the end of your current period'}, then revert to the Free plan. You can re-subscribe anytime.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>Keep Premium</AlertDialogCancel>
+            <AlertDialogCancel disabled={cancelling}>Keep {planName}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
               disabled={cancelling}

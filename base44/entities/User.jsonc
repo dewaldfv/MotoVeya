@@ -145,6 +145,35 @@
         }
       }
     },
+    "organizer_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "active",
+        "cancelled",
+        "expired"
+      ],
+      "default": "none",
+      "description": "Organizer package access, set from a verified payment (Organizer, Organizer+ or Gold).",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "organizer_expiry": {
+      "type": "string",
+      "format": "date-time",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
     "total_distance_km": {
       "type": "number",
       "default": 0

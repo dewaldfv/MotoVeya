@@ -1,11 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { secrets } from 'base44:runtime';
+import { PLAN_AMOUNTS, PLAN_LABELS, isKnownPlan, planForAmount, applyPlanEntitlements } from '../../shared/planEntitlements.ts';
 
 const GRACE_PERIOD_DAYS = 7;
 const MONTHLY_PERIOD_DAYS = 30;
-// Amount per package in kobo/cents.
-const PACKAGE_AMOUNTS = { premium: 8999, provider: 2999 };
-const planForAmount = (amount) => (Number(amount) === PACKAGE_AMOUNTS.provider ? 'provider' : 'premium');
 
 async function verifyPaystackSignature(body, signatureHeader, secret) {
   const encoder = new TextEncoder();
@@ -40,6 +38,31 @@ function extractSubscriptionInfo(data) {
     };
   }
   return null;
+}
+
+// Which package a charge belongs to: the metadata we set at checkout first, then
+// the Paystack plan code already recorded on the rider's subscription, then the
+// amount as a last resort (recurring charges may not echo the metadata back).
+async function resolvePlanForCharge(svc, data, metadata) {
+  if (isKnownPlan(metadata.plan)) return metadata.plan;
+
+  const planCode = data.plan?.plan_code || metadata.paystack_plan_code;
+  if (planCode) {
+    const byPlanCode = await svc.entities.Subscription.filter({ paystack_plan_code: planCode }, '-created_date', 5);
+    if (byPlanCode[0]?.plan) return byPlanCode[0].plan;
+  }
+
+  const subInfo = extractSubscriptionInfo(data);
+  if (subInfo?.subscription_code) {
+    const bySub = await svc.entities.Subscription.filter(
+      { paystack_subscription_code: subInfo.subscription_code },
+      '-created_date',
+      5
+    );
+    if (bySub[0]?.plan) return bySub[0].plan;
+  }
+
+  return planForAmount(data.amount);
 }
 
 // Resolve the user from metadata, subscription_code, or customer email.
@@ -96,8 +119,10 @@ export default async function(req) {
         console.error(`charge.success: unexpected currency ${data.currency}`);
         return Response.json({ error: 'Unexpected currency' }, { status: 400 });
       }
-      const plan = metadata.plan === 'provider' ? 'provider' : planForAmount(data.amount);
-      if (Number(data.amount) !== PACKAGE_AMOUNTS[plan]) {
+      const plan = isKnownPlan(metadata.plan)
+        ? metadata.plan
+        : await resolvePlanForCharge(base44, data, metadata);
+      if (!plan || Number(data.amount) !== PLAN_AMOUNTS[plan]) {
         console.error(`charge.success: unexpected amount ${data.amount}`);
         return Response.json({ error: 'Unexpected amount' }, { status: 400 });
       }
@@ -171,21 +196,9 @@ export default async function(req) {
         });
       }
 
-      if (plan === 'provider') {
-        await base44.entities.User.update(userId, {
-          account_type: 'provider',
-          provider_status: 'active',
-          provider_expiry: periodEnd.toISOString(),
-        });
-      } else {
-        await base44.entities.User.update(userId, {
-          subscription_tier: 'premium',
-          subscription_status: 'active',
-          subscription_expiry: periodEnd.toISOString(),
-        });
-      }
+      await applyPlanEntitlements(base44, userId, plan, periodEnd);
 
-      console.log(`${plan} activated/extended for user ${userId} (ref ${reference})`);
+      console.log(`${PLAN_LABELS[plan]} activated/extended for user ${userId} (ref ${reference})`);
       return Response.json({ received: true });
     }
 

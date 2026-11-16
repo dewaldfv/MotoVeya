@@ -17,7 +17,7 @@ import BikeCard from '@/components/profile/BikeCard';
 import EditProfileDialog from '@/components/profile/EditProfileDialog';
 import EmergencySafetySheet from '@/components/profile/EmergencySafetySheet';
 import SubscriptionCard from '@/components/SubscriptionCard';
-import { isServiceProvider } from '@/lib/plans';
+import { isProviderOnlyAccount } from '@/lib/plans';
 import { toast } from 'sonner';
 
 const coerceBike = (form) => ({
@@ -114,7 +114,7 @@ export default function Profile() {
   }, [user, rides, refills, bikes]);
 
   const isPremium = user?.subscription_tier === 'premium';
-  const isProvider = isServiceProvider(user);
+  const isProvider = isProviderOnlyAccount(user);
 
   const openAddBike = () => {
     setEditingBike(null);
@@ -210,7 +210,7 @@ export default function Profile() {
               <h3 className="font-bold">Upgrade to Premium</h3>
             </div>
             <p className="relative mt-1 text-sm text-muted-foreground">Rider Down alerts within 20 km, 32-rider groups, friends network.</p>
-            <Button className="relative mt-3 min-h-[48px] w-full" onClick={() => navigate('/premium')}>Go Premium — R89.99/month</Button>
+            <Button className="relative mt-3 min-h-[48px] w-full" onClick={() => navigate('/premium')}>Go Premium — R69.99/month</Button>
           </motion.div>
         }
 

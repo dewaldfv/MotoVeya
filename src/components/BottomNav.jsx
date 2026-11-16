@@ -2,7 +2,7 @@ import { Map, Route, Calendar, Users, User, Clapperboard, Store } from 'lucide-r
 import { useTabHistory } from '@/lib/TabHistoryContext';
 import useKeyboardVisible from '@/hooks/useKeyboardVisible';
 import { useAuth } from '@/lib/AuthContext';
-import { isServiceProvider, canManageServices } from '@/lib/plans';
+import { isProviderOnlyAccount, canManageServices } from '@/lib/plans';
 
 const navItems = [
 { key: 'map', icon: Map, label: 'Map' },
@@ -19,7 +19,7 @@ export default function BottomNav({ hidden = false }) {
   const { currentTab, switchToTab } = useTabHistory();
   const keyboardVisible = useKeyboardVisible();
   const { user } = useAuth();
-  const isProvider = isServiceProvider(user);
+  const isProvider = isProviderOnlyAccount(user);
   // The Service Provider package excludes the Rides tab and Community areas.
   const baseItems = isProvider
     ? navItems.filter((item) => item.key !== 'rides' && item.key !== 'community')

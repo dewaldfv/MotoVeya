@@ -1,7 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { secrets } from 'base44:runtime';
+import { PLAN_LABELS } from '../../shared/planEntitlements.ts';
 
-/** Cancels a user's Paystack subscription at period end. Premium stays active until expiry_date. */
+/** Cancels a user's Paystack subscription at period end. The paid plan stays active until expiry_date. */
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -12,7 +13,7 @@ export default async function(req) {
     // No payment_provider filter: premium plans granted in-app or by trial carry
     // no provider, and filtering them out left those riders unable to cancel.
     const subs = await svc.entities.Subscription.filter(
-      { user_id: me.id, plan: 'premium' },
+      { user_id: me.id },
       '-created_date',
       10
     );
@@ -21,6 +22,8 @@ export default async function(req) {
     if (!activeSub) {
       return Response.json({ error: 'No active subscription to cancel' }, { status: 400 });
     }
+
+    const planName = PLAN_LABELS[activeSub.plan] || 'Premium';
 
     const isPaystack = !!activeSub.paystack_subscription_code && !!activeSub.paystack_email_token;
 
@@ -44,7 +47,7 @@ export default async function(req) {
       await svc.entities.Notification.create({
         type: 'group_update',
         title: 'Subscription Cancelled',
-        body: `Your Premium subscription has been cancelled. You'll keep Premium access until ${endStr}, then revert to Free.`,
+        body: `Your ${planName} subscription has been cancelled. You'll keep ${planName} access until ${endStr}, then revert to Free.`,
         recipient_id: me.id,
         is_read: false,
         action_url: '/premium',
@@ -87,7 +90,7 @@ export default async function(req) {
     await svc.entities.Notification.create({
       type: 'group_update',
       title: 'Subscription Cancelled',
-      body: `Your Premium subscription has been cancelled. You'll keep Premium access until ${expiryStr}, then revert to Free.`,
+      body: `Your ${planName} subscription has been cancelled. You'll keep ${planName} access until ${expiryStr}, then revert to Free.`,
       recipient_id: me.id,
       is_read: false,
       data: JSON.stringify({ subscription_id: activeSub.id, expiry_date: activeSub.expiry_date }),
@@ -99,8 +102,8 @@ export default async function(req) {
       if (me.email) {
         await svc.integrations.Core.SendEmail({
           to: me.email,
-          subject: 'MotoVeya Premium — Subscription Cancelled',
-          body: `Hi ${me.full_name || 'Rider'},\n\nYour MotoVeya Premium subscription has been cancelled. You'll keep Premium access until ${expiryStr}, after which it will revert to the Free plan.\n\nYou can re-subscribe anytime from the app.\n\n— The MotoVeya Team`,
+          subject: `MotoVeya ${planName} — Subscription Cancelled`,
+          body: `Hi ${me.full_name || 'Rider'},\n\nYour MotoVeya ${planName} subscription has been cancelled. You'll keep ${planName} access until ${expiryStr}, after which it will revert to the Free plan.\n\nYou can re-subscribe anytime from the app.\n\n— The MotoVeya Team`,
         });
       }
     } catch (e) {

@@ -9,7 +9,7 @@ import ImmersiveRideHud from '@/components/ImmersiveRideHud';
 import RideWarningSheet from '@/components/RideWarningSheet';
 import NextTurnArrow from '@/components/NextTurnArrow';
 import { getServiceCategory, formatDistance } from '@/lib/serviceCategories';
-import { isServiceProvider } from '@/lib/plans';
+import { isProviderOnlyAccount } from '@/lib/plans';
 import { haversine } from '@/lib/navigation';
 
 export default function NavigationOverlay({
@@ -131,7 +131,7 @@ export default function NavigationOverlay({
           {user?.subscription_tier === 'premium' && (
             <RideInviteToggle enabled={notifyFriends} onChange={setNotifyFriends} />
           )}
-          {!isServiceProvider(user) && <button
+          {!isProviderOnlyAccount(user) && <button
             onClick={() => startRide()}
             className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 landscape:max-w-xs landscape:mx-auto"
           >

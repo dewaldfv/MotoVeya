@@ -1,36 +1,31 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
+import { PLAN_AMOUNTS, PLAN_LABELS, isKnownPlan } from '../../shared/planEntitlements.ts';
 
 const PLAN_CURRENCY = 'ZAR';
 const PLAN_INTERVAL = 'monthly';
 
-// Supported packages. Amounts are in kobo/cents.
-const PACKAGES = {
-  premium: {
-    amount: 8999, // R89.99
-    name: 'MotoVeya Premium Monthly',
-    callback_path: '/premium',
-  },
-  provider: {
-    amount: 2999, // R29.99
-    name: 'MotoVeya Service Provider Monthly',
-    callback_path: '/provider/join',
-  },
-};
+// Where Paystack sends the rider back after paying. Provider is enrolled from its
+// own screen; every other package returns to the plans screen.
+const CALLBACK_PATHS = { provider: '/provider/join' };
+
+const planName = (plan) => `MotoVeya ${PLAN_LABELS[plan]} Monthly`;
 
 // Keep PAYSTACK_SECRET_KEY server-side in Base44.
 
 // Resolve the recurring plan dynamically so a stale/deleted plan code never
-// breaks checkout. Reuses an existing plan matching amount/currency/interval,
+// breaks checkout. Reuses an existing plan matching this package's name,
 // otherwise creates one. Works across test/live key swaps.
-async function resolvePlanCode(secret, amount, name) {
+async function resolvePlanCode(secret, plan) {
+  const amount = PLAN_AMOUNTS[plan];
+  const name = planName(plan);
   const listRes = await fetch('https://api.paystack.co/plan', {
     headers: { Authorization: `Bearer ${secret}` },
   });
   const listData = await listRes.json().catch(() => ({}));
   const plans = Array.isArray(listData?.data) ? listData.data : [];
   const match = plans.find(
-    (p) => Number(p.amount) === amount && p.currency === PLAN_CURRENCY && p.interval === PLAN_INTERVAL
+    (p) => p.name === name && Number(p.amount) === amount && p.currency === PLAN_CURRENCY && p.interval === PLAN_INTERVAL
   );
   if (match?.plan_code) return match.plan_code;
 
@@ -79,16 +74,16 @@ export default async function(req) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { billing_cycle, origin } = body;
-    const plan = body.plan === 'provider' ? 'provider' : 'premium';
-    const pkg = PACKAGES[plan];
+    const { origin } = body;
+    const plan = isKnownPlan(body.plan) ? body.plan : 'premium';
+    const amount = PLAN_AMOUNTS[plan];
     // MotoVeya currently uses monthly Paystack plans.
     // Annual billing is not enabled until annual Paystack plans exist.
     const cycle = 'monthly';
     const reference = `motogo_${plan}_${cycle}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     const appId = secrets.get('BASE44_APP_ID') || '';
     const secret = secrets.get('PAYSTACK_SECRET_KEY');
-    const planCode = await resolvePlanCode(secret, pkg.amount, pkg.name);
+    const planCode = await resolvePlanCode(secret, plan);
 
     // Strict origin whitelist to prevent open-redirect via callback_url injection
     const TRUSTED_ORIGINS = [
@@ -97,6 +92,7 @@ export default async function(req) {
     ];
     const candidateOrigin = (typeof origin === 'string' ? origin : '') || req.headers.get('origin') || '';
     const appOrigin = TRUSTED_ORIGINS.includes(candidateOrigin) ? candidateOrigin : TRUSTED_ORIGINS[0];
+    const callbackPath = CALLBACK_PATHS[plan] || '/premium';
 
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -107,11 +103,11 @@ export default async function(req) {
       body: JSON.stringify({
         email: me.email,
         // Paystack uses the plan for the recurring subscription amount.
-        amount: pkg.amount,
+        amount,
         currency: PLAN_CURRENCY,
         plan: planCode,
         reference,
-        callback_url: `${appOrigin}${pkg.callback_path}?status=success&plan=${plan}`,
+        callback_url: `${appOrigin}${callbackPath}?status=success&plan=${plan}`,
         metadata: {
           user_id: me.id,
           user_email: me.email,
