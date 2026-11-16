@@ -439,13 +439,27 @@ Deno.serve(async (req) => {
     if (action === 'delete_conversation') {
       const { conversation_id } = body;
       if (!conversation_id) return Response.json({ error: 'Missing conversation_id' }, { status: 400 });
-      const conv = await svc.entities.Conversation.get(conversation_id);
-      if (!conv) return Response.json({ error: 'Forbidden' }, { status: 403 });
+      const conv = await svc.entities.Conversation.get(conversation_id).catch(() => null);
+      // Already gone (e.g. removed on another device) — treat as a successful delete.
+      if (!conv) return Response.json({ success: true, already_deleted: true });
       const allowed = await canAccessConversation(svc, conv, user.id);
-      if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
-      const msgs = await svc.entities.Message.filter({ conversation_id }, 'created_date', 1000);
-      await Promise.all((msgs || []).map((m) => svc.entities.Message.delete(m.id).catch(() => {})));
-      await svc.entities.Conversation.delete(conversation_id);
+      if (!allowed) {
+        return Response.json({ error: 'You no longer have access to this chat' }, { status: 403 });
+      }
+
+      // Clear the messages in one batch so long group threads don't time out.
+      await svc.entities.Message.deleteMany({ conversation_id }).catch((e) => {
+        console.error('message cleanup failed', e?.message);
+      });
+      await svc.entities.ConversationRead.deleteMany({ conversation_id }).catch(() => {});
+      await svc.entities.Notification.deleteMany({ conversation_id }).catch(() => {});
+
+      try {
+        await svc.entities.Conversation.delete(conversation_id);
+      } catch (e) {
+        const gone = await svc.entities.Conversation.get(conversation_id).catch(() => null);
+        if (gone) throw e;
+      }
       return Response.json({ success: true });
     }
 

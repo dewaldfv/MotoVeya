@@ -99,10 +99,16 @@ export default function ConversationList({ user, onSelect }) {
     if (!conv) return;
     try {
       await base44.functions.invoke('messaging-secure', { action: 'delete_conversation', conversation_id: conv.id });
+      // Drop it from the list immediately, then confirm against the server.
+      queryClient.setQueryData(['conversations'], (old = []) => (old || []).filter((c) => c.id !== conv.id));
       await queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
       toast.success('Chat deleted');
-    } catch (e) { console.error(e); toast.error('Could not delete chat'); }
+    } catch (e) {
+      console.error(e);
+      const msg = e?.response?.data?.error || e?.data?.error || e?.message;
+      toast.error(msg || 'Could not delete chat');
+    }
   };
 
   if (showNew) {
