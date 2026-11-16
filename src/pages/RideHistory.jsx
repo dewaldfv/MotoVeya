@@ -5,6 +5,8 @@ import { ChevronLeft, Search, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import RideHistoryCard from '@/components/rides/RideHistoryCard';
 import SelectSheet from '@/components/SelectSheet';
+import PremiumLockedSection from '@/components/premium/PremiumLockedSection';
+import { isPremiumUser } from '@/lib/plans';
 
 export default function RideHistory() {
   const navigate = useNavigate();
@@ -21,6 +23,9 @@ export default function RideHistory() {
       return (await base44.entities.Ride.filter({ status: 'completed' }, '-ride_date', 200)) || [];
     },
   });
+
+  const { data: me } = useQuery({ queryKey: ['me'], queryFn: () => base44.auth.me() });
+  const isPremium = isPremiumUser(me);
 
   const { data: bikes = [] } = useQuery({
     queryKey: ['bikes-list'],
@@ -128,9 +133,15 @@ export default function RideHistory() {
             <p className="text-muted-foreground">No rides match your filters.</p>
           </div>
         ) : (
-          <div className="mt-4 space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
-            {filtered.map((r) => <RideHistoryCard key={r.id} ride={r} />)}
-          </div>
+          <PremiumLockedSection
+            locked={!isPremium}
+            title="Ride history is Premium"
+            message="Upgrade to Premium to see every ride you've logged, with full stats and routes."
+          >
+            <div className="mt-4 space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
+              {filtered.map((r) => <RideHistoryCard key={r.id} ride={r} />)}
+            </div>
+          </PremiumLockedSection>
         )}
       </div>
     </div>
