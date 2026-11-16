@@ -8,8 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { isBackgroundTrackingEnabled, setBackgroundTrackingEnabled, hasSeenBgExplainer, setBgExplainerSeen } from '@/lib/rideCache';
 import { usePremium } from '@/hooks/usePremium';
 import SubscriptionCard from '@/components/SubscriptionCard';
-import { enableNotifications, notificationsSupported, notificationPermission, notificationSetupMessage } from '@/lib/enableNotifications';
-import { getPushStatus } from '@/lib/pushSubscription';
+import { enableNotifications, notificationsSupported, notificationPermission, notificationSetupMessage, getNotificationStatus } from '@/lib/enableNotifications';
 import { toast } from 'sonner';
 import { getScreenOrientationPreference, setScreenOrientationPreference, applyScreenOrientation } from '@/lib/screenOrientation';
 
@@ -48,6 +47,7 @@ export default function Settings() {
   const [autoJoinVoice, setAutoJoinVoice] = useState(false);
   const [notifPerm, setNotifPerm] = useState(() => notificationPermission());
   const [notifSubscribed, setNotifSubscribed] = useState(false);
+  const [notifNative, setNotifNative] = useState(false);
   const [enablingNotif, setEnablingNotif] = useState(false);
   const [screenOrientation, setScreenOrientation] = useState(() => getScreenOrientationPreference());
   const { isPremium, refresh: refreshPremium } = usePremium();
@@ -139,9 +139,10 @@ export default function Settings() {
   };
 
   const refreshNotifStatus = async () => {
-    const status = await getPushStatus();
+    const status = await getNotificationStatus();
     setNotifPerm(status.permission);
     setNotifSubscribed(status.subscribed);
+    setNotifNative(!!status.native);
   };
 
   useEffect(() => {
@@ -151,7 +152,11 @@ export default function Settings() {
   const handleEnableNotifications = async () => {
     if (enablingNotif) return;
     if (notifPerm === 'denied') {
-      toast.error('Notifications are blocked — allow them for this site in your browser settings');
+      toast.error(
+        notifNative
+          ? 'Notifications are blocked — allow them for MotoVeya in your phone settings'
+          : 'Notifications are blocked — allow them for this site in your browser settings'
+      );
       return;
     }
     setEnablingNotif(true);
@@ -159,7 +164,11 @@ export default function Settings() {
       const result = await enableNotifications();
       setNotifPerm(result.permission);
       setNotifSubscribed(result.subscribed);
-      if (result.subscribed) {
+      if (result.native) {
+        setNotifNative(true);
+        if (result.permission === 'granted') toast.success('Android notifications allowed for MotoVeya');
+        else toast.error('Notifications were not allowed — you can turn them on in your phone settings');
+      } else if (result.subscribed) {
         toast.success('Notifications enabled for this device');
       } else {
         toast.error(notificationSetupMessage(result.reason) || 'Notifications could not be enabled');
@@ -228,22 +237,34 @@ export default function Settings() {
                 icon={Bell}
                 label={
                   enablingNotif ? 'Setting Up Notifications…'
+                  : notifNative
+                    ? notifPerm === 'granted' ? 'Notifications Allowed' : notifPerm === 'denied' ? 'Notifications Blocked' : 'Enable Notifications'
                   : notifSubscribed ? 'Notifications Enabled'
                   : notifPerm === 'denied' ? 'Notifications Blocked'
                   : notifPerm === 'granted' ? 'Finish Notification Setup'
                   : 'Enable Notifications'
                 }
-                value={notifSubscribed ? 'On' : notifPerm === 'denied' ? 'Off' : undefined}
+                value={
+                  notifNative
+                    ? notifPerm === 'granted' ? 'On' : notifPerm === 'denied' ? 'Off' : undefined
+                    : notifSubscribed ? 'On' : notifPerm === 'denied' ? 'Off' : undefined
+                }
                 onClick={enablingNotif ? undefined : handleEnableNotifications}
                 last />
               <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                {notifSubscribed
-                  ? 'Push alerts are on for this device — new messages and ride invites arrive even when the app is closed.'
-                  : notifPerm === 'denied'
-                    ? 'Notifications are blocked for this site. Allow them in your browser settings, then tap above to finish setup.'
-                    : notifPerm === 'granted'
-                      ? 'Permission is allowed, but this device is not registered for background alerts yet. Tap above to finish setup.'
-                      : 'Get push alerts for new messages and ride invites, even when the app is closed.'}
+                {notifNative
+                  ? notifPerm === 'granted'
+                    ? 'Android allows MotoVeya notifications — alerts appear in the app while it is running.'
+                    : notifPerm === 'denied'
+                      ? 'Blocked in Android settings. Allow notifications for MotoVeya in your phone’s app settings, then tap above.'
+                      : 'Allow Android notifications so MotoVeya can alert you on this phone.'
+                  : notifSubscribed
+                    ? 'Push alerts are on for this device — new messages and ride invites arrive even when the app is closed.'
+                    : notifPerm === 'denied'
+                      ? 'Notifications are blocked for this site. Allow them in your browser settings, then tap above to finish setup.'
+                      : notifPerm === 'granted'
+                        ? 'Permission is allowed, but this device is not registered for background alerts yet. Tap above to finish setup.'
+                        : 'Get push alerts for new messages and ride invites, even when the app is closed.'}
               </p>
             </>
           ) : (

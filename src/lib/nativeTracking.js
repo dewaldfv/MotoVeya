@@ -155,6 +155,42 @@ export function requestNativeCameraAndMicrophone() {
   });
 }
 
+// --- Notifications (Android) ---
+// The Android shell owns the POST_NOTIFICATIONS permission; the WebView cannot
+// see it through the web Notification API, so ask the bridge instead.
+export function isNativeNotificationSupported() {
+  const bridge = getNativeBridge();
+  return typeof bridge?.requestNotificationPermission === 'function';
+}
+
+export function isNativeNotificationPermissionGranted() {
+  const bridge = getNativeBridge();
+  try { return !!bridge?.isNotificationPermissionGranted?.(); } catch { return false; }
+}
+
+export function requestNativeNotificationPermission() {
+  const bridge = getNativeBridge();
+  if (typeof bridge?.requestNotificationPermission !== 'function') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const callbackName = '__motoveyaNotificationPermissionResult';
+    let settled = false;
+    const finish = (granted) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      try { delete window[callbackName]; } catch {}
+      resolve(!!granted);
+    };
+    const timeoutId = setTimeout(() => finish(false), 30000);
+    window[callbackName] = finish;
+    try {
+      bridge.requestNotificationPermission(callbackName);
+    } catch {
+      finish(false);
+    }
+  });
+}
+
 export async function startNativeLocationTracking() {
   if (!isNativeLocationTrackingAvailable()) return { started: false, native: false };
   // Only foreground location is required to run a location foreground service.

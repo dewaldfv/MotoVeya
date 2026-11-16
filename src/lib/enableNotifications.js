@@ -1,12 +1,39 @@
 import { ensurePushSubscription, getPushStatus, pushSupported } from '@/lib/pushSubscription';
+import {
+  isNativeNotificationPermissionGranted,
+  isNativeNotificationSupported,
+  requestNativeNotificationPermission,
+} from '@/lib/nativeTracking';
+
+// Android shell: OS permission only. Web push subscriptions do not exist inside
+// a WebView, so nothing here may claim the device is registered for push.
+export function nativeNotificationsAvailable() {
+  return isNativeNotificationSupported();
+}
 
 export function notificationsSupported() {
-  return pushSupported();
+  return isNativeNotificationSupported() || pushSupported();
 }
 
 export function notificationPermission() {
+  if (isNativeNotificationSupported()) {
+    return isNativeNotificationPermissionGranted() ? 'granted' : 'default';
+  }
   if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
   return Notification.permission;
+}
+
+// Current state for the Settings row: { permission, subscribed, native }.
+export async function getNotificationStatus() {
+  if (isNativeNotificationSupported()) {
+    return {
+      native: true,
+      permission: isNativeNotificationPermissionGranted() ? 'granted' : 'default',
+      subscribed: false,
+    };
+  }
+  const status = await getPushStatus();
+  return { ...status, native: false };
 }
 
 const REASON_MESSAGES = {
@@ -22,10 +49,22 @@ export function notificationSetupMessage(reason) {
   return REASON_MESSAGES[reason] || null;
 }
 
-// Requests notification permission on a user gesture, then registers the
-// service worker + Web Push subscription and persists it.
-// Returns { permission, subscribed, reason } describing the real outcome.
+// Native: asks Android for POST_NOTIFICATIONS.
+// Web: requests permission, then registers the service worker + Web Push
+// subscription and persists it.
+// Returns { permission, subscribed, native, reason } describing the real outcome.
 export async function enableNotifications() {
+  if (isNativeNotificationSupported()) {
+    const granted = await requestNativeNotificationPermission();
+    if (granted === null) return { permission: 'unsupported', subscribed: false, native: true, reason: 'unsupported' };
+    return {
+      permission: granted ? 'granted' : 'denied',
+      subscribed: false,
+      native: true,
+      reason: granted ? null : 'denied',
+    };
+  }
+
   if (!pushSupported()) return { permission: 'unsupported', subscribed: false, reason: 'unsupported' };
 
   let permission = 'default';

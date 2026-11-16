@@ -18,10 +18,33 @@ class MotoVeyaNativeBridge(
     companion object {
         const val LOCATION_PERMISSION_REQUEST = 7402
         const val BACKGROUND_LOCATION_REQUEST = 7403
+        const val NOTIFICATION_PERMISSION_REQUEST = 7404
         const val PREFS_NAME = "motoveya_prefs"
         const val PREF_ORIENTATION = "screen_orientation"
     }
     private var pendingLocationCallback: String? = null
+    private var pendingNotificationCallback: String? = null
+
+    /** Android 13+ gates notifications behind POST_NOTIFICATIONS; older versions always allow them. */
+    @JavascriptInterface
+    fun isNotificationPermissionGranted(): Boolean =
+        android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+    @JavascriptInterface
+    fun requestNotificationPermission(callbackName: String): Boolean {
+        if (isNotificationPermissionGranted()) {
+            invokeCallback(callbackName, true)
+            return true
+        }
+        pendingNotificationCallback = sanitize(callbackName)
+        ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            NOTIFICATION_PERMISSION_REQUEST
+        )
+        return false
+    }
 
     @JavascriptInterface
     fun requestCameraAndMicrophonePermissions(callbackName: String): Boolean {
@@ -123,6 +146,10 @@ class MotoVeyaNativeBridge(
                 // Start the service as soon as foreground location is granted.
                 pendingLocationCallback?.let { invokeCallback(it, locationGranted) }
                 pendingLocationCallback = null
+            }
+            NOTIFICATION_PERMISSION_REQUEST -> {
+                pendingNotificationCallback?.let { invokeCallback(it, isNotificationPermissionGranted()) }
+                pendingNotificationCallback = null
             }
             BACKGROUND_LOCATION_REQUEST -> {
                 // Background location result — tracking can proceed either way,
