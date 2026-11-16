@@ -23,7 +23,9 @@ async function resolvePlanCode(secret, plan) {
     headers: { Authorization: `Bearer ${secret}` },
   });
   const listData = await listRes.json().catch(() => ({}));
-  const plans = Array.isArray(listData?.data) ? listData.data : [];
+  // Paystack keeps deleted plans in the list response; initializing a checkout
+  // with one fails with "Plan not found", so only live plans can be reused.
+  const plans = (Array.isArray(listData?.data) ? listData.data : []).filter((p) => !p.is_deleted);
   const match = plans.find(
     (p) => p.name === name && Number(p.amount) === amount && p.currency === PLAN_CURRENCY && p.interval === PLAN_INTERVAL
   );

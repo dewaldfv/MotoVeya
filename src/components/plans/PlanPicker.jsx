@@ -3,6 +3,7 @@ import { Check, Crown, Loader2, Store, CalendarDays, Sparkles } from 'lucide-rea
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { PLANS } from '@/lib/plans';
+import { checkoutErrorMessage } from '@/lib/checkoutError';
 import { toast } from 'sonner';
 
 const ACCESS_META = {
@@ -34,7 +35,7 @@ export default function PlanPicker({ currentPlan = null, onSubscribed }) {
       toast.error('Could not start checkout. Please try again.');
     } catch (e) {
       console.error(e);
-      toast.error('Checkout failed. Please try again.');
+      toast.error(checkoutErrorMessage(e));
     } finally {
       setBusyPlan(null);
       onSubscribed?.();
