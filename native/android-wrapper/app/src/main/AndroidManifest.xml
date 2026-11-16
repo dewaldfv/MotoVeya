@@ -19,28 +19,15 @@
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.MotoVeya">
 
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="motoveya_alerts" />
-
         <activity
             android:name=".nativebridge.MotoVeyaWebViewActivity"
             android:exported="true"
-            android:launchMode="singleTop"
             android:screenOrientation="unspecified">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <service
-            android:name=".nativebridge.MotoVeyaMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
 
         <service
             android:name=".nativebridge.MotoVeyaLocationForegroundService"

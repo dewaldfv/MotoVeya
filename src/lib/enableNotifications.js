@@ -4,7 +4,6 @@ import {
   isNativeNotificationSupported,
   requestNativeNotificationPermission,
 } from '@/lib/nativeTracking';
-import { getNativePushStatus, syncNativePush } from '@/lib/nativePush';
 
 // Android shell: OS permission only. Web push subscriptions do not exist inside
 // a WebView, so nothing here may claim the device is registered for push.
@@ -27,11 +26,10 @@ export function notificationPermission() {
 // Current state for the Settings row: { permission, subscribed, native }.
 export async function getNotificationStatus() {
   if (isNativeNotificationSupported()) {
-    const status = await getNativePushStatus();
     return {
       native: true,
-      permission: status.permission,
-      subscribed: !!status.registered,
+      permission: isNativeNotificationPermissionGranted() ? 'granted' : 'default',
+      subscribed: false,
     };
   }
   const status = await getPushStatus();
@@ -59,15 +57,11 @@ export async function enableNotifications() {
   if (isNativeNotificationSupported()) {
     const granted = await requestNativeNotificationPermission();
     if (granted === null) return { permission: 'unsupported', subscribed: false, native: true, reason: 'unsupported' };
-    if (!granted) return { permission: 'denied', subscribed: false, native: true, reason: 'denied' };
-    // Permission alone does not deliver alerts: the phone's push token must be
-    // registered with the account first.
-    const registered = await syncNativePush();
     return {
-      permission: 'granted',
-      subscribed: !!registered.registered,
+      permission: granted ? 'granted' : 'denied',
+      subscribed: false,
       native: true,
-      reason: registered.registered ? null : 'subscribe',
+      reason: granted ? null : 'denied',
     };
   }
 

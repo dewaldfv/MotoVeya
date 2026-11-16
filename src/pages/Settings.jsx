@@ -237,25 +237,27 @@ export default function Settings() {
                 icon={Bell}
                 label={
                   enablingNotif ? 'Setting Up Notifications…'
-                  : notifPerm === 'denied' ? 'Notifications Blocked'
+                  : notifNative
+                    ? notifPerm === 'granted' ? 'Notifications Allowed' : notifPerm === 'denied' ? 'Notifications Blocked' : 'Enable Notifications'
                   : notifSubscribed ? 'Notifications Enabled'
+                  : notifPerm === 'denied' ? 'Notifications Blocked'
                   : notifPerm === 'granted' ? 'Finish Notification Setup'
                   : 'Enable Notifications'
                 }
                 value={
-                  notifSubscribed ? 'On' : notifPerm === 'denied' ? 'Off' : undefined
+                  notifNative
+                    ? notifPerm === 'granted' ? 'On' : notifPerm === 'denied' ? 'Off' : undefined
+                    : notifSubscribed ? 'On' : notifPerm === 'denied' ? 'Off' : undefined
                 }
                 onClick={enablingNotif ? undefined : handleEnableNotifications}
                 last />
               <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">
                 {notifNative
-                  ? notifPerm === 'denied'
-                    ? 'Blocked in Android settings. Allow notifications for MotoVeya in your phone’s app settings, then tap above.'
-                    : notifSubscribed
-                      ? 'Push alerts are on for this phone — messages, ride invites and safety alerts arrive even when MotoVeya is closed.'
-                      : notifPerm === 'granted'
-                        ? 'Android allows notifications, but this phone is not registered for push alerts yet. Tap above to finish setup — this needs the latest MotoVeya app build.'
-                        : 'Allow Android notifications so MotoVeya can alert you on this phone, even when the app is closed.'
+                  ? notifPerm === 'granted'
+                    ? 'Android allows MotoVeya notifications — alerts appear in the app while it is running.'
+                    : notifPerm === 'denied'
+                      ? 'Blocked in Android settings. Allow notifications for MotoVeya in your phone’s app settings, then tap above.'
+                      : 'Allow Android notifications so MotoVeya can alert you on this phone.'
                   : notifSubscribed
                     ? 'Push alerts are on for this device — new messages and ride invites arrive even when the app is closed.'
                     : notifPerm === 'denied'

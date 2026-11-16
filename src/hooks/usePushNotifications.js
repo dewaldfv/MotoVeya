@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { ensurePushSubscription, pushPermissionGranted } from '@/lib/pushSubscription';
-import { isNativeNotificationSupported } from '@/lib/nativeTracking';
-import { syncNativePush } from '@/lib/nativePush';
 
 // Keeps this device's Web Push subscription alive so incoming messages reach
 // the rider while the app is minimized or closed. Also relays service-worker
@@ -13,23 +11,15 @@ export function usePushNotifications() {
     let swMessageHandler = null;
 
     const claimSubscription = async () => {
-      if (cancelled) return;
-      // Registering requires a signed-in user; skip quietly before login.
+      if (cancelled || !pushPermissionGranted()) return;
+      // Subscribing requires a signed-in user; skip quietly before login.
       const authed = await base44.auth.isAuthenticated().catch(() => false);
       if (!authed || cancelled) return;
-      // Android shell: the WebView has no Push API, so hand the FCM token to
-      // the server instead of creating a browser subscription.
-      if (isNativeNotificationSupported()) {
-        await syncNativePush();
-        return;
-      }
-      if (!pushPermissionGranted()) return;
       await ensurePushSubscription();
     };
 
     const run = async () => {
       try {
-        await claimSubscription();
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
         swMessageHandler = (event) => {
@@ -49,6 +39,9 @@ export function usePushNotifications() {
           }
         };
         navigator.serviceWorker.addEventListener('message', swMessageHandler);
+
+        // A returning rider may have granted permission after the first launch.
+        await claimSubscription();
       } catch (e) {
         // Push is best-effort — never block the app on it.
       }

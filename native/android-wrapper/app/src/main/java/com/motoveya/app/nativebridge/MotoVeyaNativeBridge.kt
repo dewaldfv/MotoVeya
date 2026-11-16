@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.firebase.messaging.FirebaseMessaging
 
 class MotoVeyaNativeBridge(
     private val activity: Activity,
@@ -45,35 +44,6 @@ class MotoVeyaNativeBridge(
             NOTIFICATION_PERMISSION_REQUEST
         )
         return false
-    }
-
-    /**
-     * Native push: the WebView cannot read the FCM token, so the shell hands it
-     * over. The web layer registers it with the account, which is what makes
-     * server-side alerts reach this phone while the app is closed.
-     */
-    @JavascriptInterface
-    fun isNativePushAvailable(): Boolean = true
-
-    @JavascriptInterface
-    fun requestPushToken(callbackName: String): Boolean {
-        activity.runOnUiThread {
-            try {
-                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                    val token = if (task.isSuccessful) task.result ?: "" else ""
-                    if (token.isNotEmpty()) {
-                        activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                            .edit()
-                            .putString(MotoVeyaMessagingService.PREF_PUSH_TOKEN, token)
-                            .apply()
-                    }
-                    invokeCallbackString(callbackName, token)
-                }
-            } catch (e: Exception) {
-                invokeCallbackString(callbackName, "")
-            }
-        }
-        return true
     }
 
     @JavascriptInterface
@@ -246,12 +216,5 @@ class MotoVeyaNativeBridge(
     private fun invokeCallback(callbackName: String, granted: Boolean) {
         val safe = sanitize(callbackName)
         activity.runOnUiThread { webView.evaluateJavascript("window.$safe($granted);", null) }
-    }
-
-    private fun invokeCallbackString(callbackName: String, value: String) {
-        val safe = sanitize(callbackName)
-        activity.runOnUiThread {
-            webView.evaluateJavascript("window.$safe(${org.json.JSONObject.quote(value)});", null)
-        }
     }
 }
