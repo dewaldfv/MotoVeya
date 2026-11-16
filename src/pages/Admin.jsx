@@ -237,8 +237,7 @@ export default function Admin() {
                 {isServiceProvider(u) && <Badge variant="secondary" className="capitalize"><Store size={12} className="mr-1" />Provider</Badge>}
                 {GRANT_LABELS[u.plan_grant] && <Badge variant="secondary"><Shield size={12} className="mr-1" />{GRANT_LABELS[u.plan_grant]}</Badge>}
                 <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="capitalize">{u.role}</Badge>
-                {u.role !== 'organizer' && <Button size="sm" variant="ghost" onClick={() => handleRoleChange(u.id, 'organizer')}>Make Organizer</Button>}
-                {u.role === 'organizer' && <Button size="sm" variant="ghost" onClick={() => handleRoleChange(u.id, 'user')}>Revoke</Button>}
+                {u.role === 'organizer' && <Button size="sm" variant="ghost" onClick={() => handleRoleChange(u.id, 'user')}>Revoke Organizer</Button>}
                 <Button size="sm" variant="ghost" onClick={() => setEditUser(u)}>Edit</Button>
               </div>
             </div>
