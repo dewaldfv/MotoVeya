@@ -18,6 +18,7 @@ import RideHistory from '@/pages/RideHistory';
 import RideDetail from '@/pages/RideDetail';
 import Events from '@/pages/Events';
 import EventDetail from '@/pages/EventDetail';
+import Services from '@/pages/Services';
 import Community from '@/pages/Community';
 import CrowdClips from '@/pages/CrowdClips';
 import Profile from '@/pages/Profile';
@@ -144,6 +145,7 @@ const AuthenticatedApp = () => {
         <Route path="/rides/:id" element={<ProviderRouteGuard blockOrganizers><RideDetail /></ProviderRouteGuard>} />
         <Route path="/events" element={<Events />} />
         <Route path="/events/:id" element={<EventDetail />} />
+        <Route path="/services" element={<Services />} />
         <Route path="/community" element={<Community />} />
         <Route path="/crowd-clips" element={<CrowdClips />} />
         <Route path="/profile" element={<Profile />} />

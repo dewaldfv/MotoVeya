@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, MapPin, Plus, Pencil } from 'lucide-react';
+import { Calendar, MapPin, Plus, Pencil, Wrench, ChevronRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +81,20 @@ export default function Events() {
             )}
           </div>
         </div>
+
+        <Link
+          to="/services"
+          className="mb-4 flex items-center gap-3 rounded-2xl bg-primary p-4 text-primary-foreground shadow-lg transition-transform active:scale-[0.99]"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15">
+            <Wrench size={24} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] opacity-70">Services</p>
+            <h2 className="text-base font-extrabold leading-tight">Workshops, tyres, gear &amp; roadside help</h2>
+          </div>
+          <ChevronRight size={20} className="shrink-0" />
+        </Link>
 
         <div className="mb-3 flex rounded-2xl bg-card p-1">
           <button

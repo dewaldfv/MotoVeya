@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import PullToRefresh from '@/components/PullToRefresh';
-import ServicesTab from '@/components/services/ServicesTab';
 import FoodDrinkTab from '@/components/services/FoodDrinkTab';
 import QrScanner from '@/components/QrScanner';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
@@ -278,7 +277,6 @@ export default function Community() {
             <TabsTrigger value="groups" className="flex-1 text-xs px-1">Groups</TabsTrigger>
             <TabsTrigger value="friends" className="flex-1 text-xs px-1">Friends</TabsTrigger>
             <TabsTrigger value="messages" className="flex-1 text-xs px-1">Chats</TabsTrigger>
-            <TabsTrigger value="services" className="flex-1 text-xs px-1">Services</TabsTrigger>
             <TabsTrigger value="food-drink" className="flex-1 text-xs px-1"><UtensilsCrossed size={13} className="mr-0.5" /> Food</TabsTrigger>
           </TabsList>
 
@@ -376,10 +374,6 @@ export default function Community() {
 
           <TabsContent value="messages">
             <MessagesTab user={user} initialConversation={initialConversation} />
-          </TabsContent>
-
-          <TabsContent value="services">
-            <ServicesTab user={user} />
           </TabsContent>
 
           <TabsContent value="food-drink">
