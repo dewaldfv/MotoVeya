@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   requestNotificationPermission,
-  showMessageNotification,
   getActiveConversationId,
 } from '@/lib/messageNotifications';
+import { hasAlert, messageAlertKey } from '@/lib/notificationDedupe';
 
 // Fires OS-level notifications for incoming messages the user is not
 // currently viewing. Mounted once at the app layout level (post-auth).
@@ -38,14 +38,21 @@ export function useMessageNotifications() {
           // Already reading this thread — no banner needed.
           if (getActiveConversationId() === c.id) return;
 
+          // One message, one alert: the server's Notification record normally
+          // shows the banner first, so a chat already alerted is skipped here.
+          // Device push alerts are handled by the service worker, which stays
+          // silent while a window is focused.
+          const messageKey = messageAlertKey({ conversationId: c.id, messageAt: c.last_message_at });
+          if (hasAlert(messageKey)) return;
+
           const title = c.is_group ? c.group_name || 'Group chat' : c.other_participant_name || 'Rider';
           const body = c.last_message_preview;
 
-          showMessageNotification({ title, body, conversationId: c.id });
           window.dispatchEvent(
             new CustomEvent('motoveya:message-popup', {
               detail: {
-                id: `${c.id}_${c.last_message_at}`,
+                id: messageKey || `${c.id}_${c.last_message_at}`,
+                messageKey,
                 title,
                 body,
                 conversationId: c.id,

@@ -39,7 +39,15 @@ export async function sendPushToUsers(svc, userIds, payload) {
     return { sent: 0, error: e.message };
   }
   const idSet = new Set(ids);
-  const mine = (subs || []).filter((s) => idSet.has(s.user_id));
+  // One push per device: stale duplicate rows for the same endpoint would make
+  // the same message buzz the phone more than once.
+  const seenEndpoints = new Set();
+  const mine = (subs || []).filter((s) => {
+    if (!idSet.has(s.user_id)) return false;
+    if (seenEndpoints.has(s.endpoint)) return false;
+    seenEndpoints.add(s.endpoint);
+    return true;
+  });
   if (mine.length === 0) return { sent: 0 };
   const payloadStr = JSON.stringify(payload || {});
   let sent = 0;

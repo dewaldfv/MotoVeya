@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { MessageCircle, Siren, AlertTriangle, Navigation, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import { claimAlert, messageAlertKey } from '@/lib/notificationDedupe';
 
 const ALERT_TYPES = new Set(['message', 'crash_alert', 'distress_alert', 'ride_invite']);
 
@@ -51,6 +52,22 @@ export default function NotificationPopUp() {
       if (seenIds.current.has(n.id)) return;
       seenIds.current.add(n.id);
 
+      // The same chat message also reaches the app through the conversation
+      // poll. Both paths derive the same key, so only one banner is shown.
+      if (n.type === 'message') {
+        let payload = {};
+        try {
+          payload = typeof n.data === 'string' ? JSON.parse(n.data || '{}') : n.data || {};
+        } catch (e) {
+          payload = {};
+        }
+        const key = messageAlertKey({
+          conversationId: n.conversation_id || payload.conversation_id,
+          messageAt: payload.message_at,
+        });
+        if (!claimAlert(key)) return;
+      }
+
       setPopups((prev) => [
         ...prev,
         { id: n.id, type: n.type, title: n.title, body: n.body, conversation_id: n.conversation_id },
@@ -70,6 +87,7 @@ export default function NotificationPopUp() {
       const d = e?.detail;
       if (!d?.id || seenIds.current.has(d.id)) return;
       seenIds.current.add(d.id);
+      if (!claimAlert(d.messageKey)) return;
       setPopups((prev) => [
         ...prev,
         { id: d.id, type: 'message', title: d.title, body: d.body, conversation_id: d.conversationId },

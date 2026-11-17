@@ -192,7 +192,9 @@ Deno.serve(async (req) => {
         recipient_id: recipient_id,
         conversation_id: conv.id,
         action_url: '/community',
-        data: JSON.stringify({ conversation_id: conv.id, sender_id: user.id }),
+        // message_at identifies this exact message so the app can show a
+        // single alert for it across notification and polling paths.
+        data: JSON.stringify({ conversation_id: conv.id, sender_id: user.id, message_at: now }),
         is_read: false,
       }).catch(() => {});
 
@@ -289,7 +291,7 @@ Deno.serve(async (req) => {
           body: preview,
           recipient_id: rid,
           conversation_id,
-          data: JSON.stringify({ conversation_id, sender_id: user.id, is_group: true }),
+          data: JSON.stringify({ conversation_id, sender_id: user.id, is_group: true, message_at: now }),
           is_read: false,
         }).catch(() => {});
       }
