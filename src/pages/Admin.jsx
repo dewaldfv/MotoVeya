@@ -14,6 +14,7 @@ import POISubmitDialog from '@/components/services/POISubmitDialog';
 import EventSubmitDialog from '@/components/EventSubmitDialog';
 import ServiceSubmitDialog from '@/components/services/ServiceSubmitDialog';
 import ArchivedEventPhotos from '@/components/admin/ArchivedEventPhotos';
+import EventCoordinateWarning from '@/components/admin/EventCoordinateWarning';
 import BroadcastCard from '@/components/admin/BroadcastCard';
 import AdminAlertsTab from '@/components/admin/AdminAlertsTab';
 import RemoveRecordDialog from '@/components/admin/RemoveRecordDialog';
@@ -200,7 +201,10 @@ export default function Admin() {
             <div key={ev.id} className="rounded-2xl bg-card p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <Badge variant="secondary" className="mb-1 capitalize">{ev.category?.replace('_', ' ')}</Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="capitalize">{ev.category?.replace('_', ' ')}</Badge>
+                    <EventCoordinateWarning event={ev} />
+                  </div>
                   <h3 className="font-bold">{ev.title}</h3>
                   <p className="text-sm text-muted-foreground">{ev.venue_name} · {new Date(ev.event_date).toLocaleDateString('en-ZA')}</p>
                   {ev.description && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{ev.description}</p>}
@@ -214,7 +218,7 @@ export default function Admin() {
             </div>
           ))}
 
-          <div className="mt-6 border-t pt-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-bold">All Existing Events</h2><p className="text-xs text-muted-foreground">View and directly update any existing event.</p></div><Badge variant="outline">{allEvents.length}</Badge></div><div className="space-y-2">{allEvents.map((ev) => <div key={ev.id} className="flex items-center gap-3 rounded-2xl bg-card p-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold truncate">{ev.title}</h3><Badge variant={ev.status === 'approved' ? 'default' : ev.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">{ev.status || 'pending'}</Badge></div><p className="text-sm text-muted-foreground">{ev.venue_name} · {new Date(ev.event_date).toLocaleDateString('en-ZA')}</p><p className="text-xs text-muted-foreground capitalize">{ev.category?.replace('_', ' ') || 'Event'}</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="secondary" onClick={() => setEditEvent(ev)}><Pencil size={16} className="mr-1" /> Edit</Button><Button size="sm" variant="outline" className="text-destructive" onClick={() => setRemoveTarget({ type: 'event', record: ev })}><Trash2 size={16} className="mr-1" /> Remove</Button></div></div>)}</div></div>
+          <div className="mt-6 border-t pt-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-bold">All Existing Events</h2><p className="text-xs text-muted-foreground">View and directly update any existing event.</p></div><Badge variant="outline">{allEvents.length}</Badge></div><div className="space-y-2">{allEvents.map((ev) => <div key={ev.id} className="flex items-center gap-3 rounded-2xl bg-card p-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold truncate">{ev.title}</h3><Badge variant={ev.status === 'approved' ? 'default' : ev.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">{ev.status || 'pending'}</Badge><EventCoordinateWarning event={ev} /></div><p className="text-sm text-muted-foreground">{ev.venue_name} · {new Date(ev.event_date).toLocaleDateString('en-ZA')}</p><p className="text-xs text-muted-foreground capitalize">{ev.category?.replace('_', ' ') || 'Event'}</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="secondary" onClick={() => setEditEvent(ev)}><Pencil size={16} className="mr-1" /> Edit</Button><Button size="sm" variant="outline" className="text-destructive" onClick={() => setRemoveTarget({ type: 'event', record: ev })}><Trash2 size={16} className="mr-1" /> Remove</Button></div></div>)}</div></div>
         </TabsContent>
 
         <TabsContent value="services" className="space-y-3">
