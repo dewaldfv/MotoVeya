@@ -9,6 +9,7 @@ import EventSubmitDialog from '@/components/EventSubmitDialog';
 import CalendarExportButton from '@/components/CalendarExportButton';
 import PullToRefresh from '@/components/PullToRefresh';
 import EventFilters, { matchesDatePreset, matchesEventSearch } from '@/components/events/EventFilters';
+import DeletePastEventDialog from '@/components/events/DeletePastEventDialog';
 import PremiumUpgradePrompt from '@/components/premium/PremiumUpgradePrompt';
 import { canCreateEvents } from '@/lib/plans';
 import { formatEventDateRange } from '@/lib/eventDate';
@@ -46,6 +47,7 @@ export default function Events() {
   const user = data?.user ?? null;
   const tabEvents = tab === 'upcoming' ? (data?.upcoming ?? []) : (data?.past ?? []);
   const canEdit = (ev) => !!user && (user.role === 'admin' || (canCreateEvents(user) && ev.created_by_id === user.id));
+  const isAdmin = user?.role === 'admin';
   const canSubmitEvents = canCreateEvents(user);
   const canSubmit = !!user;
   const handleSubmitPress = () => {
@@ -151,7 +153,12 @@ export default function Events() {
                   </div>
                 </div>
                 </Link>
-                {canEdit(ev) && <Button size="sm" variant="secondary" className="absolute right-3 top-3 shadow-lg" onClick={() => setEditEvent(ev)}><Pencil size={14} className="mr-1" /> Edit</Button>}
+                {(canEdit(ev) || (isAdmin && tab === 'past')) && (
+                  <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
+                    {canEdit(ev) && <Button size="sm" variant="secondary" className="shadow-lg" onClick={() => setEditEvent(ev)}><Pencil size={14} className="mr-1" /> Edit</Button>}
+                    {isAdmin && tab === 'past' && <DeletePastEventDialog event={ev} onDeleted={handleRefresh} />}
+                  </div>
+                )}
               </div>
             ))}
           </div>
