@@ -65,7 +65,11 @@ export default function Admin() {
       let requests = [];
       try { requests = await base44.entities.EventEditRequest.list('-created_date', 50); } catch (e) { console.error(e); }
       setEditRequests(requests || []);
-      setPendingEvents(pending || []); setAllEvents(events || []); setPendingServices(pendingSvc || []); setAllServices(services || []); setCrashAlerts(crashData || []); setDistressAlerts(distressData || []);
+      // Removed records leave the active portal entirely: they are not listed,
+      // cannot be edited or removed again, and drop out of the counters.
+      const activeEvents = (events || []).filter((e) => e.status !== 'removed');
+      const activeServices = (services || []).filter((s) => s.status !== 'removed');
+      setPendingEvents(pending || []); setAllEvents(activeEvents); setPendingServices(pendingSvc || []); setAllServices(activeServices); setCrashAlerts(crashData || []); setDistressAlerts(distressData || []);
       try { const userData = await base44.entities.User.list('-created_date', 50); setUsers(userData || []); } catch (e) { console.error(e); }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
