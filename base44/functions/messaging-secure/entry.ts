@@ -453,6 +453,40 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    // Tells the person who submitted an event or service listing that an admin
+    // removed it, including the reason. An in-app notification only.
+    if (action === 'notify_removal') {
+      if (user.role !== 'admin' && user.role !== 'moderator') {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      const { kind, record_id, reason } = body;
+      if (!record_id || !reason || !reason.trim()) {
+        return Response.json({ error: 'Missing record_id or reason' }, { status: 400 });
+      }
+      const isService = kind === 'service';
+      const rec = isService
+        ? await svc.entities.Service.get(record_id).catch(() => null)
+        : await svc.entities.Event.get(record_id).catch(() => null);
+      if (!rec) return Response.json({ error: 'Record not found' }, { status: 404 });
+      const recipientId = isService ? (rec.provider_id || rec.created_by_id) : rec.created_by_id;
+      if (!recipientId) return Response.json({ error: 'No submitter for this record' }, { status: 400 });
+
+      const name = isService ? rec.name : rec.title;
+      const notifBody = `Your ${isService ? 'service listing' : 'event'} "${name}" was removed by a MotoVeya admin. Reason: ${reason.trim()}`;
+
+      await svc.entities.Notification.create({
+        type: 'removal_notice',
+        title: isService ? 'Service Listing Removed' : 'Event Removed',
+        body: notifBody,
+        recipient_id: recipientId,
+        is_read: false,
+        data: JSON.stringify(isService ? { service_id: rec.id, reason: reason.trim() } : { event_id: rec.id, reason: reason.trim() }),
+        action_url: isService ? '/community' : '/events',
+      });
+
+      return Response.json({ success: true, recipient_id: recipientId });
+    }
+
     if (action === 'archive_conversation') {
       const { conversation_id } = body;
       if (!conversation_id) return Response.json({ error: 'Missing conversation_id' }, { status: 400 });

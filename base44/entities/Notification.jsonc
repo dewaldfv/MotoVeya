@@ -13,7 +13,8 @@
         "friend_request",
         "nearby_event",
         "group_update",
-        "message"
+        "message",
+        "removal_notice"
       ]
     },
     "title": {

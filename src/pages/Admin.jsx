@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Check, X, Users, Calendar, Crown, Wrench, MapPin, Pencil, Store } from 'lucide-react';
+import { Shield, Check, X, Users, Calendar, Crown, Wrench, MapPin, Pencil, Store, Trash2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import ServiceSubmitDialog from '@/components/services/ServiceSubmitDialog';
 import ArchivedEventPhotos from '@/components/admin/ArchivedEventPhotos';
 import BroadcastCard from '@/components/admin/BroadcastCard';
 import AdminAlertsTab from '@/components/admin/AdminAlertsTab';
+import RemoveRecordDialog from '@/components/admin/RemoveRecordDialog';
 import { toast } from 'sonner';
 
 const GRANT_LABELS = {
@@ -37,6 +38,7 @@ export default function Admin() {
   const [distressAlerts, setDistressAlerts] = useState([]);
   const [rejectTarget, setRejectTarget] = useState(null); // { type: 'event'|'service', record }
   const [rejectReason, setRejectReason] = useState('');
+  const [removeTarget, setRemoveTarget] = useState(null); // { type: 'event'|'service', record }
   const [editUser, setEditUser] = useState(null);
   const [poiSubmitOpen, setPoiSubmitOpen] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
@@ -109,6 +111,43 @@ export default function Admin() {
       loadAll();
     } catch (e) { console.error(e); toast.error('Could not reject'); }
   };
+  // Removes an event or service from MotoVeya in any status, then tells the
+  // submitter why through an in-app notification.
+  const handleRemove = async (reason) => {
+    if (!removeTarget) return;
+    const isService = removeTarget.type === 'service';
+    const record = removeTarget.record;
+    try {
+      await base44.entities[isService ? 'Service' : 'Event'].update(record.id, {
+        status: 'removed',
+        removal_reason: reason,
+        removed_at: new Date().toISOString(),
+      });
+      try {
+        await base44.functions.invoke('messaging-secure', {
+          action: 'notify_removal',
+          kind: isService ? 'service' : 'event',
+          record_id: record.id,
+          reason,
+        });
+      } catch (e) {
+        console.error('notify_removal', e);
+        toast.warning('Removed, but the submitter notification could not be sent');
+      }
+      if (!record.created_by_id && !record.provider_id) {
+        toast.success(`${isService ? 'Service' : 'Event'} removed`);
+      } else {
+        toast.success(`${isService ? 'Service' : 'Event'} removed — submitter notified with your reason`);
+      }
+      setRemoveTarget(null);
+      loadAll();
+    } catch (e) {
+      console.error(e);
+      toast.error(`Could not remove this ${isService ? 'service' : 'event'}`);
+      throw e;
+    }
+  };
+
   const handleRoleChange = async (userId, newRole) => { try { await base44.entities.User.update(userId, { role: newRole }); toast.success('Role updated'); loadAll(); } catch (e) { console.error(e); } };
 
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-primary" /></div>;
@@ -171,7 +210,7 @@ export default function Admin() {
             </div>
           ))}
 
-          <div className="mt-6 border-t pt-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-bold">All Existing Events</h2><p className="text-xs text-muted-foreground">View and directly update any existing event.</p></div><Badge variant="outline">{allEvents.length}</Badge></div><div className="space-y-2">{allEvents.map((ev) => <div key={ev.id} className="flex items-center gap-3 rounded-2xl bg-card p-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold truncate">{ev.title}</h3><Badge variant={ev.status === 'approved' ? 'default' : ev.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">{ev.status || 'pending'}</Badge></div><p className="text-sm text-muted-foreground">{ev.venue_name} · {new Date(ev.event_date).toLocaleDateString('en-ZA')}</p><p className="text-xs text-muted-foreground capitalize">{ev.category?.replace('_', ' ') || 'Event'}</p></div><Button size="sm" variant="secondary" onClick={() => setEditEvent(ev)}><Pencil size={16} className="mr-1" /> Edit</Button></div>)}</div></div>
+          <div className="mt-6 border-t pt-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-bold">All Existing Events</h2><p className="text-xs text-muted-foreground">View and directly update any existing event.</p></div><Badge variant="outline">{allEvents.length}</Badge></div><div className="space-y-2">{allEvents.map((ev) => <div key={ev.id} className="flex items-center gap-3 rounded-2xl bg-card p-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold truncate">{ev.title}</h3><Badge variant={ev.status === 'approved' ? 'default' : ev.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">{ev.status || 'pending'}</Badge></div><p className="text-sm text-muted-foreground">{ev.venue_name} · {new Date(ev.event_date).toLocaleDateString('en-ZA')}</p><p className="text-xs text-muted-foreground capitalize">{ev.category?.replace('_', ' ') || 'Event'}</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="secondary" onClick={() => setEditEvent(ev)}><Pencil size={16} className="mr-1" /> Edit</Button><Button size="sm" variant="outline" className="text-destructive" onClick={() => setRemoveTarget({ type: 'event', record: ev })}><Trash2 size={16} className="mr-1" /> Remove</Button></div></div>)}</div></div>
         </TabsContent>
 
         <TabsContent value="services" className="space-y-3">
@@ -218,7 +257,10 @@ export default function Admin() {
                     <p className="text-sm text-muted-foreground">{[svc.town, svc.province].filter(Boolean).join(', ') || svc.address || 'No address'}</p>
                     <p className="text-xs text-muted-foreground capitalize">{svc.category?.replace(/_/g, ' ') || 'Service'}</p>
                   </div>
-                  <Button size="sm" variant="secondary" onClick={() => setEditService(svc)}><Pencil size={16} className="mr-1" /> Edit</Button>
+                  <div className="flex shrink-0 gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setEditService(svc)}><Pencil size={16} className="mr-1" /> Edit</Button>
+                    <Button size="sm" variant="outline" className="text-destructive" onClick={() => setRemoveTarget({ type: 'service', record: svc })}><Trash2 size={16} className="mr-1" /> Remove</Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -282,6 +324,12 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RemoveRecordDialog
+        target={removeTarget}
+        onCancel={() => setRemoveTarget(null)}
+        onConfirm={handleRemove}
+      />
 
       <POISubmitDialog
         open={poiSubmitOpen}

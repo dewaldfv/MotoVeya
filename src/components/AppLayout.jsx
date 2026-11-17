@@ -9,6 +9,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import RideResumeBanner from './RideResumeBanner';
 import VoiceChannelProvider from './voice/VoiceChannelProvider';
 import NotificationPopUp from './NotificationPopUp';
+import RemovalNoticeBanner from './notices/RemovalNoticeBanner';
 import OrientationPermissionPrompt from './OrientationPermissionPrompt';
 import { getActiveRide } from '@/lib/rideCache';
 import { isRideModeBlocked } from '@/lib/plans';
@@ -102,6 +103,7 @@ export default function AppLayout() {
       data-orientation={isLandscape ? 'landscape' : 'portrait'}
     >
       <NotificationPopUp />
+      <RemovalNoticeBanner />
       <OrientationPermissionPrompt />
       {hasActiveRide && !rideActive && !isRideModeBlocked(user) && <RideResumeBanner />}
       <AnimatePresence mode="wait" initial={false}>

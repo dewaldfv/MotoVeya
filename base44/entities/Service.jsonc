@@ -98,6 +98,14 @@
     "rejection_reason": {
       "type": "string"
     },
+    "removal_reason": {
+      "type": "string",
+      "description": "Reason an admin gave when removing the listing. Shared with the submitter."
+    },
+    "removed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "rating": {
       "type": "number"
     },
@@ -132,7 +140,8 @@
       "enum": [
         "pending",
         "approved",
-        "rejected"
+        "rejected",
+        "removed"
       ],
       "default": "approved"
     }

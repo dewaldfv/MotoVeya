@@ -49,12 +49,21 @@
         "pending",
         "approved",
         "rejected",
-        "cancelled"
+        "cancelled",
+        "removed"
       ],
       "default": "pending"
     },
     "rejection_reason": {
       "type": "string"
+    },
+    "removal_reason": {
+      "type": "string",
+      "description": "Reason an admin gave when removing the event. Shared with the organiser."
+    },
+    "removed_at": {
+      "type": "string",
+      "format": "date-time"
     },
     "category": {
       "type": "string",
