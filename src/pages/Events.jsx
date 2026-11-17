@@ -91,7 +91,7 @@ export default function Events() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] opacity-70">Services</p>
-            <h2 className="text-base font-extrabold leading-tight">Workshops, tyres, gear &amp; roadside help</h2>
+            <h2 className="text-base font-extrabold leading-tight">Workshops, gear, food &amp; roadside help</h2>
           </div>
           <ChevronRight size={20} className="shrink-0" />
         </Link>

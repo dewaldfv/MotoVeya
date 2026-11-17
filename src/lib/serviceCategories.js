@@ -20,14 +20,14 @@ export const SERVICE_CATEGORIES = [
   { key: 'food_breakfast', label: 'Breakfast Spots', short: 'Breakfast', emoji: '🥓', color: '#eab308' },
   { key: 'accommodation', label: 'Accommodation', short: 'Accommodation', emoji: '🛏️', color: '#8b5cf6' },
   { key: 'fuel', label: 'Fuel Stations', short: 'Fuel', emoji: '⛽', color: '#22c55e' },
-  { key: 'food', label: 'Food', short: 'Food', emoji: '🍔', color: '#f59e0b' },
-  { key: 'pub', label: 'Pubs & Bars', short: 'Pubs', emoji: '🍺', color: '#a855f7' },
-  { key: 'dealership', label: 'Motorcycle Dealerships', short: 'Dealers', emoji: '🏍️', color: '#06b6d4' },
 ];
 
 // Categories that are no longer offered in any menu, kept only so existing
 // listings that still use them keep their name, icon and colour.
 const LEGACY_CATEGORIES = [
+  { key: 'food', label: 'Food', short: 'Food', emoji: '🍔', color: '#f59e0b' },
+  { key: 'pub', label: 'Pubs & Bars', short: 'Pubs', emoji: '🍺', color: '#a855f7' },
+  { key: 'dealership', label: 'Motorcycle Dealerships', short: 'Dealers', emoji: '🏍️', color: '#06b6d4' },
   { key: 'electrical', label: 'Electrical Repairs', short: 'Electrical', emoji: '⚡', color: '#eab308' },
   { key: 'suspension', label: 'Suspension Specialists', short: 'Suspension', emoji: '🛠', color: '#0ea5e9' },
   { key: 'chains_sprockets', label: 'Chains & Sprockets', short: 'Chains', emoji: '⛓', color: '#71717a' },

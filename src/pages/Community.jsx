@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Ticket, Siren, QrCode as QrIcon, Share2, UtensilsCrossed } from 'lucide-react';
+import { Users, UserPlus, Ticket, Siren, QrCode as QrIcon, Share2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import LoginPrompt from '@/components/LoginPrompt';
 import PullToRefresh from '@/components/PullToRefresh';
-import FoodDrinkTab from '@/components/services/FoodDrinkTab';
 import QrScanner from '@/components/QrScanner';
 import ShareCodeSheet from '@/components/ShareCodeSheet';
 import GroupMembersDialog from '@/components/community/GroupMembersDialog';
@@ -27,7 +26,7 @@ export default function Community() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState(() => location.state?.tab || 'groups');
+  const [activeTab, setActiveTab] = useState(() => (['groups', 'friends', 'messages'].includes(location.state?.tab) ? location.state.tab : 'groups'));
   const [initialConversation, setInitialConversation] = useState(
     () => location.state?.initialConversation || (location.state?.conversationId ? { id: location.state.conversationId } : null)
   );
@@ -277,7 +276,6 @@ export default function Community() {
             <TabsTrigger value="groups" className="flex-1 text-xs px-1">Groups</TabsTrigger>
             <TabsTrigger value="friends" className="flex-1 text-xs px-1">Friends</TabsTrigger>
             <TabsTrigger value="messages" className="flex-1 text-xs px-1">Chats</TabsTrigger>
-            <TabsTrigger value="food-drink" className="flex-1 text-xs px-1"><UtensilsCrossed size={13} className="mr-0.5" /> Food</TabsTrigger>
           </TabsList>
 
           <TabsContent value="groups" className="space-y-4">
@@ -376,9 +374,6 @@ export default function Community() {
             <MessagesTab user={user} initialConversation={initialConversation} />
           </TabsContent>
 
-          <TabsContent value="food-drink">
-            <FoodDrinkTab user={user} />
-          </TabsContent>
         </Tabs>
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
